@@ -1,0 +1,132 @@
+/* CSS Fixes for Editor Interface */
+
+/* Fix for sidebar interaction */
+.editor-sidebar {
+  /* Ensure sidebar has proper z-index */
+  position: relative;
+  z-index: 10;
+}
+
+.sidebar-handle {
+  /* Style for the sidebar handle */
+  cursor: col-resize;
+  transition: all 0.2s ease;
+  z-index: 15;
+}
+
+.sidebar-handle:hover {
+  background: rgba(70, 70, 70, 0.5);
+}
+
+/* Fix for overlay button */
+.canvas-toolbar {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 30; /* Higher z-index to stay on top */
+  display: flex;
+  gap: 8px;
+}
+
+/* Upload button styling */
+.upload-button-container {
+  position: relative;
+}
+
+.upload-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.upload-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Better panel content spacing */
+.panel-content {
+  padding: 15px;
+}
+
+/* Panel styles */
+.editor-panel {
+  margin-bottom: 1rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(30, 30, 30, 0.7);
+}
+
+.panel-header {
+  background: rgba(30, 30, 30, 0.9);
+  padding: 10px 15px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Panel hover effects */
+.panel-header:hover {
+  background: rgba(50, 50, 50, 0.9);
+}
+
+/* Make sliders easier to grab */
+input[type="range"] {
+  height: 10px;
+  margin: 12px 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+}
+
+/* Fix console errors related to event propagation */
+.canvas-area {
+  position: relative;
+  z-index: 1;
+}
+
+/* Upload button styles */
+.upload-button {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.upload-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}
+
+.upload-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Menu item styles */
+.menu-item {
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.menu-item.active {
+  background-color: rgba(59, 130, 246, 0.2);
+  font-weight: 500;
+}

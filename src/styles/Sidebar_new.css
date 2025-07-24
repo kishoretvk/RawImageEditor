@@ -1,0 +1,334 @@
+/* Sidebar Styles */
+
+.sidebar {
+  width: 300px;
+  background-color: #252525;
+  border-right: 1px solid #3a3a3a;
+  height: 100%;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+  color: #e0e0e0;
+}
+
+.sidebar.collapsed {
+  width: 0;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #3a3a3a;
+  background-color: #2a2a2a;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #f0f0f0;
+}
+
+.reset-button {
+  background: linear-gradient(135deg, #4a9eff, #0078d4);
+  border: none;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.reset-button:hover {
+  background: linear-gradient(135deg, #5bb0ff, #1088e4);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+/* Image info section */
+.image-info-section {
+  padding: 15px;
+  border-bottom: 1px solid #3a3a3a;
+  background-color: #2a2a2a;
+}
+
+.image-info-section h4 {
+  margin: 0 0 10px 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #f0f0f0;
+}
+
+.image-info {
+  background-color: #333;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #444;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  color: #b0b0b0;
+  font-size: 13px;
+}
+
+.info-value {
+  color: #e0e0e0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Adjustment sections */
+.adjustment-section {
+  border-bottom: 1px solid #3a3a3a;
+  padding: 15px;
+}
+
+.adjustment-section h4 {
+  margin: 0 0 15px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f0f0f0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.9rem;
+}
+
+/* Individual adjustment items */
+.adjustment-item {
+  margin-bottom: 15px;
+}
+
+.adjustment-item:last-child {
+  margin-bottom: 0;
+}
+
+.adjustment-item label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.adjustment-label {
+  font-size: 13px;
+  color: #c0c0c0;
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.adjustment-value {
+  font-size: 12px;
+  color: #4a9eff;
+  font-weight: 600;
+  min-width: 50px;
+  text-align: right;
+}
+
+/* Range sliders */
+.adjustment-item input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: linear-gradient(90deg, #444 0%, #555 100%);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.adjustment-item input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, #4a9eff, #0078d4);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s;
+}
+
+.adjustment-item input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(74, 158, 255, 0.5);
+}
+
+.adjustment-item input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, #4a9eff, #0078d4);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s;
+}
+
+.adjustment-item input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(74, 158, 255, 0.5);
+}
+
+/* Checkbox styles */
+.checkbox-label {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px !important;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #4a9eff;
+  cursor: pointer;
+}
+
+.checkbox-label .adjustment-label {
+  margin: 0;
+  font-size: 13px;
+  color: #c0c0c0;
+}
+
+/* Button groups */
+.button-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rotate-button {
+  background-color: #3a3a3a;
+  border: 1px solid #555;
+  color: #e0e0e0;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.rotate-button:hover {
+  background-color: #4a4a4a;
+  border-color: #4a9eff;
+  color: #4a9eff;
+}
+
+/* Preset buttons */
+.preset-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.preset-button {
+  background-color: #3a3a3a;
+  border: 1px solid #555;
+  color: #c0c0c0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.preset-button:hover {
+  background-color: #4a4a4a;
+  border-color: #4a9eff;
+  color: #4a9eff;
+}
+
+.preset-button.active {
+  background: linear-gradient(135deg, #4a9eff, #0078d4);
+  border-color: #4a9eff;
+  color: white;
+  box-shadow: 0 2px 6px rgba(74, 158, 255, 0.3);
+}
+
+/* Scrollbar styling */
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: #2a2a2a;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+  border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #5a5a5a;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    position: absolute;
+    z-index: 1000;
+    height: 100vh;
+  }
+  
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+  }
+}
+
+/* Professional visual enhancements */
+.adjustment-section:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.adjustment-item:hover .adjustment-label {
+  color: #e0e0e0;
+}
+
+.adjustment-item input[type="range"]:focus {
+  outline: 2px solid rgba(74, 158, 255, 0.3);
+  outline-offset: 2px;
+}
+
+/* Advanced range slider track coloring based on value */
+.adjustment-item input[type="range"] {
+  background: linear-gradient(90deg, 
+    #4a9eff 0%, 
+    #4a9eff var(--value, 50%), 
+    #444 var(--value, 50%), 
+    #444 100%);
+}
+
+/* Special styling for professional sections */
+.adjustment-section h4 {
+  position: relative;
+}
+
+.adjustment-section h4::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 30px;
+  height: 2px;
+  background: linear-gradient(90deg, #4a9eff, #0078d4);
+  border-radius: 1px;
+}

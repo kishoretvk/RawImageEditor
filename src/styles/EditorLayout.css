@@ -1,0 +1,95 @@
+/* EditorLayout Styles */
+
+.editor-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+}
+
+/* Header */
+.editor-header {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  height: 60px;
+  background-color: #2a2a2a;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-right: auto;
+  color: #fff;
+}
+
+.sidebar-toggle {
+  background: transparent;
+  border: none;
+  color: #e0e0e0;
+  font-size: 18px;
+  padding: 5px 10px;
+  cursor: pointer;
+  margin-left: 10px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.sidebar-toggle:hover {
+  background-color: #3a3a3a;
+}
+
+/* Main content area */
+.editor-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Canvas area */
+.canvas-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #161616;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Upload prompt */
+.upload-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #7a7a7a;
+  padding: 20px;
+}
+
+.upload-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.supported-formats {
+  font-size: 0.9rem;
+  margin-top: 10px;
+  color: #5a5a5a;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .editor-content {
+    flex-direction: column;
+  }
+  
+  .sidebar-toggle {
+    display: none;
+  }
+}

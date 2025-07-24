@@ -1,0 +1,48 @@
+// PATCH: Integrate RAW-to-JPEG preview for Histogram in EditorPage.jsx
+// 1. Add state for jpegPreview
+// 2. On upload, if RAW, convert to JPEG and set jpegPreview
+// 3. Pass jpegPreview to Histogram
+
+import React, { useState, useEffect } from 'react';
+import { convertRawToJpeg } from '../utils/imageProcessing';
+import { isRawFile } from '../utils/rawFileDetector';
+import Histogram from '../components/Histogram';
+// ...existing imports...
+
+const EditorPage = () => {
+  // ...existing state...
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [jpegPreview, setJpegPreview] = useState(null);
+  // ...existing state...
+
+  // Handle file upload
+  const handleFileUpload = async (file) => {
+    setUploadedImage(file);
+    if (file && file.filename && isRawFile(file.filename)) {
+      const jpegResult = await convertRawToJpeg(file);
+      setJpegPreview(jpegResult.preview);
+    } else {
+      setJpegPreview(file.url || file.preview);
+    }
+  };
+
+  // ...existing useEffect for editedImageUrl...
+
+  return (
+    <EditorLayout /* ...props... */>
+      {!uploadedImage ? (
+        <div className="upload-area">
+          <FileUploader onFileUpload={handleFileUpload} />
+        </div>
+      ) : (
+        <div className="image-workspace">
+          {/* ...existing UI... */}
+          <Histogram imageUrl={jpegPreview} />
+          {/* ...existing UI... */}
+        </div>
+      )}
+    </EditorLayout>
+  );
+};
+
+export default EditorPage;
