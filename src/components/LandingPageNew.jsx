@@ -1,17 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
+import BeforeAfterDemo from './BeforeAfterDemo';
 import cheetahImg from '../assets/images/cheetah-hotirontal.jpg';
-import elephantImg from '../assets/images/elephant-hotirontal.jpg';
 import natureImg from '../assets/images/nature-horizontal.jpg';
 import newyorkImg from '../assets/images/newyork-night.jpg';
 import northernlightsImg from '../assets/images/northernlights.jpg';
 import './LandingPage.css';
 
 const LandingPage = () => {
-  const [sharpening, setSharpening] = useState(0);
-  const [noiseReduction, setNoiseReduction] = useState(0);
-  const [sliderPosition, setSliderPosition] = useState(50);
-
   return (
     <div className="landing-page">
       {/* Navigation Menu */}
@@ -42,70 +38,7 @@ const LandingPage = () => {
       <section className="interactive-preview">
         <div className="container">
           <h2 className="section-title">See the Difference</h2>
-          <div className="preview-demo">
-            <div className="image-comparison">
-              <div className="comparison-container">
-                <img src={cheetahImg} alt="Original" className="base-image" />
-                <div 
-                  className="overlay-image" 
-                  style={{
-                    clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)`,
-                    filter: `contrast(${1 + sharpening * 0.3}) brightness(${1 - noiseReduction * 0.2})`
-                  }}
-                >
-                  <img src={elephantImg} alt="Processed" />
-                </div>
-                <div 
-                  className="slider-handle"
-                  style={{left: `${sliderPosition}%`}}
-                  onMouseDown={(e) => {
-                    const handleMove = (event) => {
-                      const rect = e.target.parentElement.getBoundingClientRect();
-                      const position = ((event.clientX - rect.left) / rect.width) * 100;
-                      setSliderPosition(Math.max(0, Math.min(100, position)));
-                    };
-                    document.addEventListener('mousemove', handleMove);
-                    document.addEventListener('mouseup', () => {
-                      document.removeEventListener('mousemove', handleMove);
-                    }, { once: true });
-                  }}
-                >
-                  <div className="handle-line"></div>
-                </div>
-              </div>
-              <div className="labels">
-                <span className="before-label">Before</span>
-                <span className="after-label">After</span>
-              </div>
-            </div>
-            
-            <div className="controls">
-              <div className="control-group">
-                <label>Sharpening: {sharpening.toFixed(2)}</label>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="3" 
-                  step="0.01" 
-                  value={sharpening}
-                  onChange={(e) => setSharpening(Number(e.target.value))}
-                  className="slider"
-                />
-              </div>
-              <div className="control-group">
-                <label>Noise Reduction: {noiseReduction.toFixed(2)}</label>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="1" 
-                  step="0.01" 
-                  value={noiseReduction}
-                  onChange={(e) => setNoiseReduction(Number(e.target.value))}
-                  className="slider"
-                />
-              </div>
-            </div>
-          </div>
+          <BeforeAfterDemo />
         </div>
       </section>
 

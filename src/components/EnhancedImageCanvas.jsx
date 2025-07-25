@@ -439,7 +439,7 @@ const applyProfessionalFilters = (ctx, image, edits = {}) => {
   ctx.putImageData(imageData, 0, 0);
 };
 
-const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed }) => {
+const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false, sliderPosition = 50, onSliderChange }) => {
   const canvasRef = useRef(null);
   const originalCanvasRef = useRef(null);
   const processedCanvasRef = useRef(null);
@@ -515,6 +515,9 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed }) => {
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [lastTouchDistance, setLastTouchDistance] = useState(0);
+  
+  // Slider drag handling
+  const [isSliderDragging, setIsSliderDragging] = useState(false);
 
   const getTouchDistance = (touches) => {
     const dx = touches[0].clientX - touches[1].clientX;
@@ -523,6 +526,20 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed }) => {
   };
 
   const handleTouchStart = useCallback((e) => {
+    if (showSlider && e.touches.length === 1) {
+      // Check if touch is on slider handle
+      const rect = canvasRef.current.getBoundingClientRect();
+      const touchX = e.touches[0].clientX - rect.left;
+      const sliderX = (rect.width * sliderPosition) / 100;
+      
+      // If touch is near slider handle (within 20px), start dragging
+      if (Math.abs(touchX - sliderX) < 20) {
+        setIsSliderDragging(true);
+        e.preventDefault();
+        return;
+      }
+    }
+    
     if (e.touches.length === 1 && zoomLevel > 1) {
       setIsPanning(true);
       setPanStart({
@@ -534,9 +551,18 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed }) => {
       const distance = getTouchDistance(e.touches);
       setLastTouchDistance(distance);
     }
-  }, [zoomLevel, panOffset]);
+  }, [zoomLevel, panOffset, showSlider, sliderPosition]);
 
   const handleTouchMove = useCallback((e) => {
+    if (isSliderDragging && showSlider && e.touches.length === 1) {
+      e.preventDefault();
+      const rect = canvasRef.current.getBoundingClientRect();
+      const touchX = e.touches[0].clientX - rect.left;
+      const newPosition = Math.max(0, Math.min(100, (touchX / rect.width) * 100));
+      if (onSliderChange) onSliderChange(newPosition);
+      return;
+    }
+    
     if (isPanning && e.touches.length === 1) {
       e.preventDefault();
       setPanOffset({
@@ -551,10 +577,11 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed }) => {
       setZoomLevel(newZoom);
       setLastTouchDistance(distance);
     }
-  }, [isPanning, panStart, lastTouchDistance, zoomLevel]);
+  }, [isPanning, panStart, lastTouchDistance, zoomLevel, isSliderDragging, showSlider, onSliderChange]);
 
   const handleTouchEnd = useCallback(() => {
     setIsPanning(false);
+    setIsSliderDragging(false);
     setLastTouchDistance(0);
   }, []);
 
@@ -786,27 +813,54 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed }) => {
               // Apply filters to processed canvas
               applyProfessionalFilters(processedCtx, tempImg, edits);
               
-              // Show before/after comparison on display canvas
-              const width = displayCanvas.width;
-              const height = displayCanvas.height;
-              
-              // Clear display canvas
-              displayCtx.clearRect(0, 0, width, height);
-              
-              // Draw original on left half
-              displayCtx.drawImage(originalCanvas, 0, 0, width/2, height, 0, 0, width/2, height);
-              
-              // Draw processed on right half
-              displayCtx.drawImage(processedCanvas, width/2, 0, width/2, height, width/2, 0, width/2, height);
-              
-              // Draw divider line
-              displayCtx.strokeStyle = '#4a9eff';
-              displayCtx.lineWidth = 2;
-              displayCtx.setLineDash([5, 5]);
-              displayCtx.beginPath();
-              displayCtx.moveTo(width/2, 0);
-              displayCtx.lineTo(width/2, height);
-              displayCtx.stroke();
+          // Show before/after comparison on display canvas with slider
+          const width = displayCanvas.width;
+          const height = displayCanvas.height;
+          const sliderX = showSlider ? (width * sliderPosition / 100) : width / 2;
+          
+          // Clear display canvas
+          displayCtx.clearRect(0, 0, width, height);
+          
+          // Draw original image
+          displayCtx.drawImage(originalCanvas, 0, 0, width, height);
+          
+          // Draw processed image with clipping
+          displayCtx.save();
+          displayCtx.beginPath();
+          displayCtx.rect(sliderX, 0, width - sliderX, height);
+          displayCtx.clip();
+          displayCtx.drawImage(processedCanvas, 0, 0, width, height);
+          displayCtx.restore();
+          
+          // Draw slider line if enabled
+          if (showSlider) {
+            displayCtx.strokeStyle = '#4a9eff';
+            displayCtx.lineWidth = 2;
+            displayCtx.setLineDash([5, 5]);
+            displayCtx.beginPath();
+            displayCtx.moveTo(sliderX, 0);
+            displayCtx.lineTo(sliderX, height);
+            displayCtx.stroke();
+            
+            // Draw slider handle
+            displayCtx.setLineDash([]);
+            displayCtx.fillStyle = '#4a9eff';
+            displayCtx.beginPath();
+            displayCtx.arc(sliderX, height / 2, 10, 0, Math.PI * 2);
+            displayCtx.fill();
+            displayCtx.strokeStyle = '#fff';
+            displayCtx.lineWidth = 2;
+            displayCtx.stroke();
+          } else {
+            // Draw divider line for split view
+            displayCtx.strokeStyle = '#4a9eff';
+            displayCtx.lineWidth = 2;
+            displayCtx.setLineDash([5, 5]);
+            displayCtx.beginPath();
+            displayCtx.moveTo(width/2, 0);
+            displayCtx.lineTo(width/2, height);
+            displayCtx.stroke();
+          }
               
               console.log('[EnhancedImageCanvas] Filters applied');
               setIsProcessing(false);
@@ -852,10 +906,50 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed }) => {
     maxWidth: '100%',
     maxHeight: '100%',
     objectFit: 'contain',
-    cursor: zoomLevel > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default',
+    cursor: showSlider ? 'ew-resize' : (zoomLevel > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default'),
     transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
     transition: isPanning ? 'none' : 'transform 0.3s ease'
-  }), [canvasSize, zoomLevel, isPanning, panOffset]);
+  }), [canvasSize, zoomLevel, isPanning, panOffset, showSlider]);
+
+  // Mouse event handlers for slider
+  const handleMouseDown = useCallback((e) => {
+    if (!showSlider) return;
+    
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const sliderX = (rect.width * sliderPosition) / 100;
+    
+    // If mouse is near slider handle (within 20px), start dragging
+    if (Math.abs(mouseX - sliderX) < 20) {
+      setIsSliderDragging(true);
+      e.preventDefault();
+    }
+  }, [showSlider, sliderPosition]);
+
+  const handleMouseMove = useCallback((e) => {
+    if (isSliderDragging && showSlider) {
+      e.preventDefault();
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const newPosition = Math.max(0, Math.min(100, (mouseX / rect.width) * 100));
+      if (onSliderChange) onSliderChange(newPosition);
+    }
+  }, [isSliderDragging, showSlider, onSliderChange]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsSliderDragging(false);
+  }, []);
+
+  // Add mouse event listeners to document
+  useEffect(() => {
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [handleMouseMove, handleMouseUp]);
 
   return (
     <div className={`image-canvas-container ${isFullscreen ? 'fullscreen' : ''}`}>
@@ -933,6 +1027,7 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed }) => {
             ref={canvasRef}
             className={`main-canvas ${isLoading || error ? 'hidden' : ''}`}
             style={displayStyle}
+            onMouseDown={handleMouseDown}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}

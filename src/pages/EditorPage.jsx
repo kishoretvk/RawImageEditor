@@ -14,8 +14,10 @@ import EffectsPanel from '../components/editorPanels/EffectsPanel';
 import GeometryPanel from '../components/editorPanels/GeometryPanel';
 import AdvancedPanel from '../components/editorPanels/AdvancedPanel';
 import FileUploader from '../components/FileUploader';
-import ImageCanvas from '../components/ImageCanvas';
+import EnhancedImageCanvas from '../components/EnhancedImageCanvas';
 import EditorLayout from '../components/EditorLayout';
+import PresetManager from '../components/PresetManager';
+import SliderControl from '../components/SliderControl';
 
 // Enhanced collapsible panel wrapper
 function CollapsibleControlPanel({ title, children, defaultOpen = true }) {
@@ -87,6 +89,7 @@ const EditorPage = () => {
   });
   const [showPreview, setShowPreview] = useState(true);
   const [editedImageUrl, setEditedImageUrl] = useState(null);
+  const [sliderPosition, setSliderPosition] = useState(50);
 
   // Update edited image when adjustments change
   useEffect(() => {
@@ -237,6 +240,39 @@ const EditorPage = () => {
             <AdvancedPanel advanced={advanced} onChange={setAdvanced} />
           </CollapsibleControlPanel>
 
+          <CollapsibleControlPanel title="Presets" defaultOpen={false}>
+            <PresetManager 
+              onApplyPreset={(presetSettings) => {
+                // Apply preset settings to all adjustment categories
+                setAdjustments(prev => ({...prev, ...presetSettings}));
+                setColorAdjustments(prev => ({...prev, ...presetSettings}));
+                setSharpness(prev => ({...prev, ...presetSettings}));
+                setEffects(prev => ({...prev, ...presetSettings}));
+                setGeometry(prev => ({...prev, ...presetSettings}));
+                setAdvanced(prev => ({...prev, ...presetSettings}));
+              }}
+              currentEdits={{
+                ...adjustments,
+                ...colorAdjustments,
+                ...sharpness,
+                ...effects,
+                ...geometry,
+                ...advanced
+              }}
+            />
+          </CollapsibleControlPanel>
+
+          <CollapsibleControlPanel title="Slider Control" defaultOpen={false}>
+            <SliderControl 
+              value={sliderPosition}
+              onChange={setSliderPosition}
+              min={0}
+              max={100}
+              step={1}
+              label="Before/After Slider"
+            />
+          </CollapsibleControlPanel>
+
           <CollapsibleControlPanel title="Quick Actions" defaultOpen={true} style={{ marginBottom: 16 }}>
             <div className="quick-actions">
               <button onClick={handleReset} className="btn btn-warning btn-block">
@@ -267,11 +303,17 @@ const EditorPage = () => {
               <div className="comparison-container">
                 <div className="image-section">
                   <div className="image-label">Original</div>
-                  <ImageCanvas imageSrc={jpegPreview} edits={{}} />
+                  <EnhancedImageCanvas 
+                    imageSrc={jpegPreview} 
+                    edits={{}} 
+                    showSlider={true}
+                    sliderPosition={sliderPosition}
+                    onSliderChange={setSliderPosition}
+                  />
                 </div>
                 <div className="image-section">
                   <div className="image-label">Edited</div>
-                  <ImageCanvas 
+                  <EnhancedImageCanvas 
                     imageSrc={jpegPreview} 
                     edits={{
                       ...adjustments,
@@ -281,6 +323,9 @@ const EditorPage = () => {
                       ...geometry,
                       ...advanced
                     }} 
+                    showSlider={true}
+                    sliderPosition={sliderPosition}
+                    onSliderChange={setSliderPosition}
                   />
                 </div>
               </div>
@@ -295,7 +340,7 @@ const EditorPage = () => {
             </div>
           ) : (
             <div className="single-image-view">
-              <ImageCanvas 
+              <EnhancedImageCanvas 
                 imageSrc={jpegPreview} 
                 edits={{
                   ...adjustments,
@@ -305,6 +350,9 @@ const EditorPage = () => {
                   ...geometry,
                   ...advanced
                 }} 
+                showSlider={false} // No slider in single view
+                sliderPosition={sliderPosition}
+                onSliderChange={setSliderPosition}
               />
               <div className="preview-controls">
                 <button 

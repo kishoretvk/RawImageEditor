@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import BatchProcessor from '../components/BatchProcessor';
 import '../styles/pages.css';
 
 const WorkflowPage = () => {
@@ -21,7 +22,7 @@ const WorkflowPage = () => {
         <div className="container">
           <h1>Workflow Management</h1>
           <p>Streamline your image processing workflow</p>
-          {/* Workflow functionality will go here */}
+          <BatchProcessor />
         </div>
       </div>
     </div>
