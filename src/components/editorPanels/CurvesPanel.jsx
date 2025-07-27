@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { useCurve } from '../../context/CurveContext';
+import { useCurve } from '../../context/CurveContext.jsx';
 import CurveEditor from '../CurveEditor';
 import PanelWrapper from '../PanelWrapper';
 

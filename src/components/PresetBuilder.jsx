@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
+import { useCurve } from '../context/CurveContext.jsx';
 
 const PresetBuilder = ({ onSave, currentEdits }) => {
+  // Only use curve context if we have curve edits
+  const hasCurveEdits = currentEdits?.curveRgb || currentEdits?.curveR || currentEdits?.curveG || currentEdits?.curveB || currentEdits?.curveLuminance;
+  const { curves } = hasCurveEdits ? useCurve() : { curves: {} };
   const [name, setName] = useState('');
   const [settings, setSettings] = useState({
     exposure: 0,
@@ -18,7 +22,23 @@ const PresetBuilder = ({ onSave, currentEdits }) => {
   });
 
   const handleSave = () => {
-    if (name) onSave({ name, settings });
+    if (name) {
+      // Include curve data in the preset
+      const presetWithCurves = {
+        name,
+        settings: {
+          ...settings,
+          curves: {
+            curveRgb: curves.curveRgb,
+            curveR: curves.curveR,
+            curveG: curves.curveG,
+            curveB: curves.curveB,
+            curveLuminance: curves.curveLuminance
+          }
+        }
+      };
+      onSave(presetWithCurves);
+    }
   };
 
   const handleReset = () => {

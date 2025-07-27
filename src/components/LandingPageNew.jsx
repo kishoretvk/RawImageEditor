@@ -115,12 +115,7 @@ const LandingPage = () => {
             <p className="hero-subtitle">Transform your RAW images with precision and style</p>
             <div className="flex gap-4">
               <Link to="/editor" className="cta-button">Start Editing</Link>
-              <button 
-                className="cta-button secondary" 
-                onClick={() => scrollToSection('interactive-preview')}
-              >
-                View Features
-              </button>
+              <Link to="/demo" className="cta-button secondary">View Demo</Link>
               <button 
                 className="cta-button tertiary" 
                 onClick={handleSeeTheDifference}

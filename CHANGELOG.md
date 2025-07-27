@@ -64,6 +64,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hasselblad: .3fr
 - Mamiya: .mef
 
+## [1.1.0] - 2025-07-27
+
+### Added
+- **Enhanced Landing Page**
+  - Interactive before/after demo with real editing capabilities
+  - Improved visual design and user experience
+  - Better showcase of professional features
+
+- **Advanced Editing Components**
+  - UnifiedSlider component for consistent slider controls
+  - ImageSlider component for before/after comparisons
+  - BeforeAfterDemo component for landing page showcase
+
+- **Workflow Automation**
+  - BatchWorkflowProcessor for batch image processing
+  - PresetManager for saving and applying editing presets
+  - WorkflowBuilder for creating custom processing workflows
+
+- **Cross-Platform Support**
+  - Enhanced touch support for mobile devices
+  - Improved responsive design for all screen sizes
+  - Better performance on low-end devices
+
+### Changed
+- **UI/UX Improvements**
+  - Modernized editor interface with collapsible panels
+  - Improved slider controls with better visual feedback
+  - Enhanced color scheme and typography
+
+- **Performance Optimizations**
+  - Optimized image processing algorithms
+  - Improved memory management for large images
+  - Better caching strategies for repeated operations
+
+### Fixed
+- **Bug Fixes**
+  - Resolved issues with RAW file processing
+  - Fixed memory leaks in image processing pipeline
+  - Improved error handling for unsupported formats
+
 ## [Unreleased]
 
 ### Planned Features

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import PresetBuilder from './PresetBuilder';
-import { useCurve } from '../context/CurveContext';
+import { useCurve } from '../context/CurveContext.jsx';
 
 const PresetManager = ({ onApplyPreset, currentEdits }) => {
-  const { curves } = useCurve();
+  // Only use curve context if we have curve edits
+  const hasCurveEdits = currentEdits?.curveRgb || currentEdits?.curveR || currentEdits?.curveG || currentEdits?.curveB || currentEdits?.curveLuminance;
+  const { curves } = hasCurveEdits ? useCurve() : { curves: {} };
   const [presets, setPresets] = useState([]);
   const [showBuilder, setShowBuilder] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');

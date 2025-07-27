@@ -391,13 +391,15 @@ const BeforeAfterDemo = forwardRef((props, ref) => {
             zIndex: 2
           }}
         >
-          <EnhancedImageCanvas 
-            imageSrc={currentImage}
-            edits={currentImage.edits}
-            showSlider={false}
-            onProcessed={(data) => console.log('Processed:', data)}
-            style={{ width: '100%', height: '100%' }}
-          />
+        <EnhancedImageCanvas 
+          imageSrc={currentImage}
+          edits={currentImage.edits}
+          showSlider={true}
+          sliderPosition={sliderPosition}
+          onSliderChange={setSliderPosition}
+          onProcessed={(data) => console.log('Processed:', data)}
+          style={{ width: '100%', height: '100%' }}
+        />
         </div>
         
         {/* Original image (LEFT SIDE) */}

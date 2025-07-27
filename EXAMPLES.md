@@ -1,6 +1,6 @@
-# RAW Processor API Examples
+# RAW Image Editor Examples
 
-This document provides examples of how to use the RAW Image Editor's processing capabilities.
+This document provides examples of how to use the RAW Image Editor's components and processing capabilities.
 
 ## Basic RAW Processing
 
@@ -269,6 +269,168 @@ const analyzeRAWFile = (file) => {
     console.log('Format not supported:', recommendation.message);
   }
 };
+```
+
+## Using the BeforeAfterDemo Component
+
+```jsx
+import React from 'react';
+import BeforeAfterDemo from './components/BeforeAfterDemo';
+
+const DemoPage = () => {
+  return (
+    <div>
+      <h1>Image Editing Demo</h1>
+      <BeforeAfterDemo />
+    </div>
+  );
+};
+
+export default DemoPage;
+```
+
+## Using the ImageSlider Component
+
+```jsx
+import React, { useState } from 'react';
+import ImageSlider from './components/ImageSlider';
+
+const ImageComparison = ({ originalImage, editedImage }) => {
+  const [sliderPosition, setSliderPosition] = useState(50);
+  
+  return (
+    <div style={{ width: '100%', height: '400px' }}>
+      <ImageSlider
+        originalImage={originalImage}
+        editedImage={editedImage}
+        initialPosition={sliderPosition}
+        onPositionChange={setSliderPosition}
+      />
+    </div>
+  );
+};
+
+export default ImageComparison;
+```
+
+## Using the UnifiedSlider Component
+
+```jsx
+import React, { useState } from 'react';
+import UnifiedSlider from './components/UnifiedSlider';
+
+const EditControls = () => {
+  const [exposure, setExposure] = useState(0);
+  const [contrast, setContrast] = useState(0);
+  
+  return (
+    <div>
+      <div>
+        <label>Exposure: {exposure.toFixed(2)}</label>
+        <UnifiedSlider
+          min={-2}
+          max={2}
+          step={0.01}
+          value={exposure}
+          onChange={setExposure}
+          label="Exposure"
+        />
+      </div>
+      
+      <div>
+        <label>Contrast: {contrast.toFixed(0)}</label>
+        <UnifiedSlider
+          min={-100}
+          max={100}
+          step={1}
+          value={contrast}
+          onChange={setContrast}
+          label="Contrast"
+        />
+      </div>
+    </div>
+  );
+};
+
+export default EditControls;
+```
+
+## Using the BatchWorkflowProcessor Component
+
+```jsx
+import React, { useState, useEffect } from 'react';
+import BatchWorkflowProcessor from './components/BatchWorkflowProcessor';
+
+const WorkflowPage = () => {
+  const [workflows, setWorkflows] = useState([]);
+  const [presets, setPresets] = useState([]);
+
+  // Load workflows and presets from localStorage on component mount
+  useEffect(() => {
+    const savedWorkflows = localStorage.getItem('imageEditorWorkflows');
+    if (savedWorkflows) {
+      try {
+        setWorkflows(JSON.parse(savedWorkflows));
+      } catch (e) {
+        console.error('Failed to parse workflows', e);
+      }
+    }
+    
+    const savedPresets = localStorage.getItem('imageEditorPresets');
+    if (savedPresets) {
+      try {
+        setPresets(JSON.parse(savedPresets));
+      } catch (e) {
+        console.error('Failed to parse presets', e);
+      }
+    }
+  }, []);
+
+  // Save workflows to localStorage whenever they change
+  const handleWorkflowsChange = (updatedWorkflows) => {
+    setWorkflows(updatedWorkflows);
+    localStorage.setItem('imageEditorWorkflows', JSON.stringify(updatedWorkflows));
+  };
+
+  return (
+    <div>
+      <h1>Workflow Management</h1>
+      <BatchWorkflowProcessor 
+        workflows={workflows}
+        presets={presets}
+        onWorkflowsChange={handleWorkflowsChange}
+      />
+    </div>
+  );
+};
+
+export default WorkflowPage;
+```
+
+## Using the PresetManager Component
+
+```jsx
+import React from 'react';
+import PresetManager from './components/PresetManager';
+
+const EditorSidebar = ({ currentEdits, onApplyPreset }) => {
+  return (
+    <div>
+      <h2>Edit Controls</h2>
+      {/* Other edit controls */}
+      
+      <div>
+        <h3>Presets</h3>
+        <PresetManager 
+          onApplyPreset={onApplyPreset}
+          currentEdits={currentEdits}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default EditorSidebar;
 ```
 
 For more examples and advanced usage, see the [component implementations](../src/components/) in the source code.

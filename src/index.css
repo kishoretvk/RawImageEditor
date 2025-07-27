@@ -1,3 +1,6 @@
+@import './styles/unified-slider.css';
+@import './styles/batch-workflow.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

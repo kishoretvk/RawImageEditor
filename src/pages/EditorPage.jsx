@@ -481,11 +481,20 @@ const EditorPage = () => {
                     ...geometry,
                     ...advanced
                   }} 
-                  showSlider={false}
+                  showSlider={true}
                   sliderPosition={sliderPosition}
                   onSliderChange={setSliderPosition}
                   hideControls={true}
                   hideFullscreen={false}
+                />
+              </div>
+              <div className="slider-control-container">
+                <UnifiedSlider
+                  min={0}
+                  max={100}
+                  value={sliderPosition}
+                  onChange={setSliderPosition}
+                  label="Before/After Comparison"
                 />
               </div>
             </div>

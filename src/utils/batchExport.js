@@ -44,8 +44,18 @@ export const exportImageWithEdits = async (imageFile, edits, options = {}) => {
           // Draw original image
           ctx.drawImage(img, 0, 0);
           
+          // Prepare edits with curve data if available
+          const editsWithCurves = { ...edits };
+          if (edits.curves) {
+            editsWithCurves.curveRgb = edits.curves.curveRgb;
+            editsWithCurves.curveR = edits.curves.curveR;
+            editsWithCurves.curveG = edits.curves.curveG;
+            editsWithCurves.curveB = edits.curves.curveB;
+            editsWithCurves.curveLuminance = edits.curves.curveLuminance;
+          }
+          
           // Apply professional filters
-          applyProfessionalFilters(ctx, img, edits);
+          applyProfessionalFilters(ctx, img, editsWithCurves);
           
           // Export as JPEG
           const quality = options.quality || 0.9;

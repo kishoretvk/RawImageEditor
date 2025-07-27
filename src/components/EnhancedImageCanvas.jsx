@@ -3,7 +3,7 @@ import '../styles/loading-error.css';
 import '../styles/responsive-canvas.css';
 import { processRAWFile, isRawFormat, getRawFormatInfo, getRAWWorkflowRecommendation, cleanupRAWResources } from '../utils/rawProcessor';
 import { createSmoothCurve, applyCurveToImageData } from '../utils/curveUtils';
-import { useCurve } from '../context/CurveContext';
+import { useCurve } from '../context/CurveContext.jsx';
 
 // RAW Image Quality Enhancement Function
 const enhanceRAWImageQuality = async (processedImageData) => {
@@ -561,7 +561,9 @@ const EnhancedImageCanvas = ({
   hideControls = false,
   hideFullscreen = false
 }) => {
-  const { curves } = useCurve();
+  // Only use curve context if we have curve edits
+  const hasCurveEdits = edits?.curveRgb || edits?.curveR || edits?.curveG || edits?.curveB || edits?.curveLuminance;
+  const { curves } = hasCurveEdits ? useCurve() : { curves: {} };
   const canvasRef = useRef(null);
   const originalCanvasRef = useRef(null);
   const processedCanvasRef = useRef(null);

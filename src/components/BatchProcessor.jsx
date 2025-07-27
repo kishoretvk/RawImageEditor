@@ -45,10 +45,15 @@ const BatchProcessor = () => {
     setProcessedFiles([]);
     
     try {
-      // Prepare edits to apply
-      const editsToApply = workflow.applyPreset && workflow.selectedPreset 
-        ? workflow.selectedPreset 
-        : {};
+      // Prepare edits to apply, including curve data
+      let editsToApply = {};
+      if (workflow.applyPreset && workflow.selectedPreset) {
+        editsToApply = { ...workflow.selectedPreset };
+        // If preset includes curves, make sure they're properly structured
+        if (workflow.selectedPreset.curves) {
+          editsToApply.curves = workflow.selectedPreset.curves;
+        }
+      }
       
       // Process images with applied edits
       const results = await batchProcessImages(
