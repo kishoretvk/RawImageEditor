@@ -13,6 +13,7 @@ import SharpnessPanel from '../components/editorPanels/SharpnessPanel';
 import EffectsPanel from '../components/editorPanels/EffectsPanel';
 import GeometryPanel from '../components/editorPanels/GeometryPanel';
 import AdvancedPanel from '../components/editorPanels/AdvancedPanel';
+import CurvesPanel from '../components/editorPanels/CurvesPanel';
 import FileUploader from '../components/FileUploader';
 import EditorUploadPlaceholder from '../components/EditorUploadPlaceholder';
 import EnhancedImageCanvas from '../components/EnhancedImageCanvas';
@@ -526,6 +527,9 @@ const EditorPage = () => {
                   </CollapsibleControlPanel>
                   <CollapsibleControlPanel title="Advanced" defaultOpen={false}>
                     <AdvancedPanel advanced={advanced} onChange={setAdvanced} />
+                  </CollapsibleControlPanel>
+                  <CollapsibleControlPanel title="Tone Curves" defaultOpen={false}>
+                    <CurvesPanel />
                   </CollapsibleControlPanel>
                   <CollapsibleControlPanel title="Presets" defaultOpen={false}>
                     <PresetManager 

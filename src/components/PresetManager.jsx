@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import PresetBuilder from './PresetBuilder';
+import { useCurve } from '../context/CurveContext';
 
 const PresetManager = ({ onApplyPreset, currentEdits }) => {
+  const { curves } = useCurve();
   const [presets, setPresets] = useState([]);
   const [showBuilder, setShowBuilder] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,6 +29,13 @@ const PresetManager = ({ onApplyPreset, currentEdits }) => {
     const newPreset = {
       id: Date.now(),
       ...preset,
+      curves: {
+        curveRgb: curves.curveRgb,
+        curveR: curves.curveR,
+        curveG: curves.curveG,
+        curveB: curves.curveB,
+        curveLuminance: curves.curveLuminance
+      },
       createdAt: new Date().toISOString()
     };
     setPresets([...presets, newPreset]);
@@ -38,7 +47,11 @@ const PresetManager = ({ onApplyPreset, currentEdits }) => {
   };
 
   const handleApplyPreset = (preset) => {
-    onApplyPreset(preset.settings);
+    // Apply settings and curves
+    onApplyPreset({
+      ...preset.settings,
+      curves: preset.curves
+    });
   };
 
   const filteredPresets = presets.filter(preset => 

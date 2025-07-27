@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import '../styles/loading-error.css';
 import '../styles/responsive-canvas.css';
 import { processRAWFile, isRawFormat, getRawFormatInfo, getRAWWorkflowRecommendation, cleanupRAWResources } from '../utils/rawProcessor';
+import { createSmoothCurve, applyCurveToImageData } from '../utils/curveUtils';
+import { useCurve } from '../context/CurveContext';
 
 // RAW Image Quality Enhancement Function
 const enhanceRAWImageQuality = async (processedImageData) => {
@@ -497,6 +499,39 @@ const applyProfessionalFilters = (ctx, image, edits = {}) => {
     data[i + 2] = b;
   }
 
+  // Apply advanced curve adjustments if specified
+  const hasCurveAdjustments = edits.curveRgb || edits.curveR || edits.curveG || edits.curveB || edits.curveLuminance;
+  
+  if (hasCurveAdjustments) {
+    // Apply RGB curve
+    if (edits.curveRgb && edits.curveRgb.length > 1) {
+      const rgbCurve = createSmoothCurve(edits.curveRgb);
+      imageData = applyCurveToImageData(imageData, rgbCurve, 'rgb');
+    }
+    
+    // Apply individual channel curves
+    if (edits.curveR && edits.curveR.length > 1) {
+      const rCurve = createSmoothCurve(edits.curveR);
+      imageData = applyCurveToImageData(imageData, rCurve, 'r');
+    }
+    
+    if (edits.curveG && edits.curveG.length > 1) {
+      const gCurve = createSmoothCurve(edits.curveG);
+      imageData = applyCurveToImageData(imageData, gCurve, 'g');
+    }
+    
+    if (edits.curveB && edits.curveB.length > 1) {
+      const bCurve = createSmoothCurve(edits.curveB);
+      imageData = applyCurveToImageData(imageData, bCurve, 'b');
+    }
+    
+    // Apply luminance curve
+    if (edits.curveLuminance && edits.curveLuminance.length > 1) {
+      const lumCurve = createSmoothCurve(edits.curveLuminance);
+      imageData = applyCurveToImageData(imageData, lumCurve, 'luminance');
+    }
+  }
+
   // Apply clarity enhancement if needed
   if (clarity !== 0) {
     imageData = enhanceClarity(imageData, width, height, clarity);
@@ -526,6 +561,7 @@ const EnhancedImageCanvas = ({
   hideControls = false,
   hideFullscreen = false
 }) => {
+  const { curves } = useCurve();
   const canvasRef = useRef(null);
   const originalCanvasRef = useRef(null);
   const processedCanvasRef = useRef(null);
@@ -1060,7 +1096,14 @@ const EnhancedImageCanvas = ({
             const tempImg = new Image();
             tempImg.onload = () => {
               // Apply filters to processed canvas with enhanced quality
-              applyProfessionalFilters(processedCtx, tempImg, edits);
+              applyProfessionalFilters(processedCtx, tempImg, {
+                ...edits,
+                curveRgb: curves.curveRgb,
+                curveR: curves.curveR,
+                curveG: curves.curveG,
+                curveB: curves.curveB,
+                curveLuminance: curves.curveLuminance
+              });
               
           // Show before/after comparison on display canvas with slider
           const width = displayCanvas.width;
