@@ -27,22 +27,34 @@
 }
 
 .cta-button {
-  background-color: #007bff;
+  background: linear-gradient(45deg, #4a9eff, #6a5af9);
   color: white;
-  padding: 10px 20px;
   border: none;
-  border-radius: 5px;
-  font-size: 1rem;
+  padding: 15px 30px;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 50px;
   cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
 }
 
 .cta-button:hover {
-  background-color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(74, 158, 255, 0.4);
+  background: linear-gradient(45deg, #3a8eed, #5a4af8);
 }
 
-/* Features Section */
-.features {
-  padding: 50px 20px;
+.cta-button.secondary {
+  background: transparent;
+  color: white;
+  border: 2px solid white;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.cta-button.secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
 .section-title {

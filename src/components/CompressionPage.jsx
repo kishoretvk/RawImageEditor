@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import EditorLayout from './EditorLayout';
 import FileUploader from './FileUploader';
 import ImageCanvas from './ImageCanvas';
+import UnifiedSlider from './UnifiedSlider';
 import '../styles/global.css';
+import '../styles/unified-slider.css';
 
 const CompressionPage = () => {
   const [originalImage, setOriginalImage] = useState(null);
@@ -70,9 +72,14 @@ const CompressionPage = () => {
             >Custom</button>
           </div>
           <div className="w-full flex flex-col items-center mb-6">
-            <label className="text-white mb-2 text-lg font-semibold">Compression: {customMode ? sliderValue : compression * 20}x</label>
-            <input type="range" min={1} max={100} value={customMode ? sliderValue : compression * 20} onChange={e => { setSliderValue(Number(e.target.value)); setCustomMode(true); }}
-              className="w-72 h-3 bg-purple-200 rounded-lg appearance-none cursor-pointer shadow-lg" />
+            <UnifiedSlider
+              min={1}
+              max={100}
+              value={customMode ? sliderValue : compression * 20}
+              onChange={(value) => { setSliderValue(value); setCustomMode(true); }}
+              label={`Compression: ${customMode ? sliderValue : compression * 20}x`}
+              showValue={false}
+            />
           </div>
           <div className="flex gap-4 mb-8">
             <button onClick={handleCompress} disabled={!originalImage}
@@ -100,17 +107,20 @@ const CompressionPage = () => {
             <div className="absolute inset-0">
               <img src={originalImage} alt="Before" className="absolute inset-0 w-full h-full object-contain" style={{clipPath:`inset(0 ${100-sliderPos}% 0 0)`}} />
               <img src={compressedImage} alt="After" className="absolute inset-0 w-full h-full object-contain" style={{clipPath:`inset(0 0 0 ${sliderPos}%)`}} />
-              {/* Vertical slider */}
-              <input type="range" min={0} max={100} value={sliderPos} onChange={e=>setSliderPos(Number(e.target.value))}
-                className="absolute top-0 left-0 h-full w-3 bg-blue-500/40 rounded-full appearance-none cursor-ew-resize z-10 shadow-lg"
-                style={{left:`calc(${sliderPos}% - 1.5px)`}} />
-              <div className="absolute top-0" style={{left:`calc(${sliderPos}% - 8px)`}}>
-                <div className="w-4 h-full bg-gradient-to-b from-blue-500/60 to-green-500/60 rounded-full opacity-70 pointer-events-none"></div>
-              </div>
-              {/* Lightroom style labels */}
-              <div className="absolute top-4 left-4 bg-black/70 px-3 py-1 rounded-lg text-white text-sm font-semibold shadow">Before<br/>{originalImage && typeof originalImage === 'string' ? `${(window.atob(originalImage.split(',')[1]||'').length/1024/1024).toFixed(2)} MB` : ''}</div>
-              <div className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-lg text-white text-sm font-semibold shadow">After<br/>{compressedImage && typeof compressedImage === 'string' ? `${(window.atob(compressedImage.split(',')[1]||'').length/1024/1024).toFixed(2)} MB` : ''}</div>
             </div>
+            <div className="absolute top-0 left-0 w-full">
+              <UnifiedSlider
+                min={0}
+                max={100}
+                value={sliderPos}
+                onChange={setSliderPos}
+                showLabels={false}
+                className="px-4"
+              />
+            </div>
+            {/* Lightroom style labels */}
+            <div className="absolute top-4 left-4 bg-black/70 px-3 py-1 rounded-lg text-white text-sm font-semibold shadow">Before<br/>{originalImage && typeof originalImage === 'string' ? `${(window.atob(originalImage.split(',')[1]||'').length/1024/1024).toFixed(2)} MB` : ''}</div>
+            <div className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-lg text-white text-sm font-semibold shadow">After<br/>{compressedImage && typeof compressedImage === 'string' ? `${(window.atob(compressedImage.split(',')[1]||'').length/1024/1024).toFixed(2)} MB` : ''}</div>
             <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2">
               <a
                 href={compressedImage}

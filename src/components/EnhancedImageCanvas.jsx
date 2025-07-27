@@ -3,6 +3,83 @@ import '../styles/loading-error.css';
 import '../styles/responsive-canvas.css';
 import { processRAWFile, isRawFormat, getRawFormatInfo, getRAWWorkflowRecommendation, cleanupRAWResources } from '../utils/rawProcessor';
 
+// RAW Image Quality Enhancement Function
+const enhanceRAWImageQuality = async (processedImageData) => {
+  try {
+    console.log('[EnhancedImageCanvas] Enhancing RAW image quality...');
+    
+    // Create temporary canvas for enhancement
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Load the image
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = processedImageData.url;
+    });
+    
+    canvas.width = img.width;
+    canvas.height = img.height;
+    
+    // Draw and enhance
+    ctx.drawImage(img, 0, 0);
+    
+    // Apply quality enhancements
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    
+    // Enhance contrast and sharpness
+    for (let i = 0; i < data.length; i += 4) {
+      // Apply slight contrast boost
+      data[i] = Math.min(255, Math.max(0, (data[i] - 128) * 1.1 + 128));     // R
+      data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * 1.1 + 128)); // G
+      data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * 1.1 + 128)); // B
+      
+      // Slight saturation boost
+      const r = data[i] / 255;
+      const g = data[i + 1] / 255;
+      const b = data[i + 2] / 255;
+      
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const delta = max - min;
+      
+      if (delta > 0) {
+        const saturation = delta / max;
+        const enhancedSat = Math.min(1, saturation * 1.1);
+        const factor = enhancedSat / saturation;
+        
+        const gray = (r + g + b) / 3;
+        data[i] = Math.min(255, (gray + (r - gray) * factor) * 255);
+        data[i + 1] = Math.min(255, (gray + (g - gray) * factor) * 255);
+        data[i + 2] = Math.min(255, (gray + (b - gray) * factor) * 255);
+      }
+    }
+    
+    ctx.putImageData(imageData, 0, 0);
+    
+    // Create enhanced blob
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        URL.revokeObjectURL(processedImageData.url); // Clean up old URL
+        const enhancedUrl = URL.createObjectURL(blob);
+        resolve({
+          ...processedImageData,
+          url: enhancedUrl,
+          quality: 'high',
+          enhanced: true
+        });
+      }, 'image/jpeg', 0.95);
+    });
+    
+  } catch (error) {
+    console.warn('[EnhancedImageCanvas] Quality enhancement failed:', error);
+    return processedImageData; // Return original if enhancement fails
+  }
+};
+
 // Helper function to clamp values
 const clamp = (v, min = 0, max = 255) => Math.max(min, Math.min(max, v));
 
@@ -444,6 +521,7 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
   const originalCanvasRef = useRef(null);
   const processedCanvasRef = useRef(null);
   const containerRef = useRef(null);
+  const loadingRef = useRef(false); // Track loading state to prevent double loads
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -459,11 +537,22 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
     const container = containerRef.current;
     const containerRect = container.getBoundingClientRect();
     
-    // Get available space (account for margins, paddings)
-    const availableWidth = containerRect.width - 40; // 20px margin on each side
-    const availableHeight = Math.min(
-      window.innerHeight * 0.7, // Max 70% of viewport height
-      containerRect.height - 40 // Account for container padding
+    // For fullscreen, use entire viewport
+    if (isFullscreen) {
+      const displayWidth = window.innerWidth * zoomLevel;
+      const displayHeight = window.innerHeight * zoomLevel;
+      setCanvasSize({
+        width: Math.round(displayWidth),
+        height: Math.round(displayHeight)
+      });
+      return;
+    }
+    
+    // For normal view, use most of the available space
+    const availableWidth = containerRect.width - 20; // Minimal padding
+    const availableHeight = Math.max(
+      window.innerHeight * 0.8, // Use 80% of viewport height by default
+      containerRect.height - 20
     );
 
     // Calculate aspect ratio
@@ -473,11 +562,11 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
     let displayWidth, displayHeight;
 
     if (imageAspectRatio > containerAspectRatio) {
-      // Image is wider than container
+      // Image is wider than container - fit to width
       displayWidth = availableWidth;
       displayHeight = availableWidth / imageAspectRatio;
     } else {
-      // Image is taller than container
+      // Image is taller than container - fit to height  
       displayHeight = availableHeight;
       displayWidth = availableHeight * imageAspectRatio;
     }
@@ -486,8 +575,8 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
     displayWidth *= zoomLevel;
     displayHeight *= zoomLevel;
 
-    // Ensure minimum size for usability
-    const minSize = 200;
+    // Ensure reasonable minimum size
+    const minSize = 300;
     if (displayWidth < minSize || displayHeight < minSize) {
       const scale = minSize / Math.min(displayWidth, displayHeight);
       displayWidth *= scale;
@@ -498,7 +587,7 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
       width: Math.round(displayWidth),
       height: Math.round(displayHeight)
     });
-  }, [originalImageSize, zoomLevel]);
+  }, [originalImageSize, zoomLevel, isFullscreen]);
 
   // Window resize handler
   useEffect(() => {
@@ -510,6 +599,13 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
     return () => window.removeEventListener('resize', handleResize);
   }, [calculateCanvasSize]);
 
+  // Calculate canvas size when original image size changes
+  useEffect(() => {
+    if (originalImageSize.width > 0 && originalImageSize.height > 0) {
+      calculateCanvasSize();
+    }
+  }, [originalImageSize, calculateCanvasSize]);
+
   // Touch and pan handling for mobile devices
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
@@ -518,6 +614,48 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
   
   // Slider drag handling
   const [isSliderDragging, setIsSliderDragging] = useState(false);
+
+  // Scroll wheel zoom handler
+  const handleWheel = useCallback((e) => {
+    if (!canvasRef.current) return;
+    
+    e.preventDefault();
+    
+    // Determine zoom direction and amount
+    const delta = e.deltaY > 0 ? -0.15 : 0.15; // Increased zoom speed for better UX
+    const newZoom = Math.max(0.1, Math.min(5, zoomLevel + delta));
+    
+    setZoomLevel(newZoom);
+  }, [zoomLevel]);
+
+  // Mouse panning for desktop
+  const [isMousePanning, setIsMousePanning] = useState(false);
+  const [mouseStart, setMouseStart] = useState({ x: 0, y: 0 });
+
+  const handleMousePanStart = useCallback((e) => {
+    if (zoomLevel > 1 && e.button === 0) { // Left mouse button
+      setIsMousePanning(true);
+      setMouseStart({
+        x: e.clientX - panOffset.x,
+        y: e.clientY - panOffset.y
+      });
+      e.preventDefault();
+    }
+  }, [zoomLevel, panOffset]);
+
+  const handleMousePanMove = useCallback((e) => {
+    if (isMousePanning) {
+      e.preventDefault();
+      setPanOffset({
+        x: e.clientX - mouseStart.x,
+        y: e.clientY - mouseStart.y
+      });
+    }
+  }, [isMousePanning, mouseStart]);
+
+  const handleMousePanEnd = useCallback(() => {
+    setIsMousePanning(false);
+  }, []);
 
   const getTouchDistance = (touches) => {
     const dx = touches[0].clientX - touches[1].clientX;
@@ -532,10 +670,13 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
       const touchX = e.touches[0].clientX - rect.left;
       const sliderX = (rect.width * sliderPosition) / 100;
       
-      // If touch is near slider handle (within 20px), start dragging
-      if (Math.abs(touchX - sliderX) < 20) {
+      // If touch is near slider handle (within 40px), start dragging
+      if (Math.abs(touchX - sliderX) < 40) {
         setIsSliderDragging(true);
         e.preventDefault();
+        // Immediately update slider position
+        const newPosition = Math.max(0, Math.min(100, (touchX / rect.width) * 100));
+        if (onSliderChange) onSliderChange(newPosition);
         return;
       }
     }
@@ -551,7 +692,7 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
       const distance = getTouchDistance(e.touches);
       setLastTouchDistance(distance);
     }
-  }, [zoomLevel, panOffset, showSlider, sliderPosition]);
+  }, [zoomLevel, panOffset, showSlider, sliderPosition, onSliderChange]);
 
   const handleTouchMove = useCallback((e) => {
     if (isSliderDragging && showSlider && e.touches.length === 1) {
@@ -594,15 +735,16 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
 
   // Zoom controls - defined early to avoid hoisting issues
   const handleZoomIn = useCallback(() => {
-    setZoomLevel(prev => Math.min(prev * 1.2, 3));
+    setZoomLevel(prev => Math.min(prev * 1.3, 5)); // Increased max zoom to 5x
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    setZoomLevel(prev => Math.max(prev / 1.2, 0.1));
+    setZoomLevel(prev => Math.max(prev / 1.3, 0.1));
   }, []);
 
   const handleZoomReset = useCallback(() => {
     setZoomLevel(1);
+    setPanOffset({ x: 0, y: 0 }); // Reset pan when resetting zoom
   }, []);
 
   const handleFullscreen = useCallback(() => {
@@ -677,27 +819,42 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
 
   // Load and draw the original image with RAW support
   const loadImage = useCallback(async () => {
-    if (!imageSrc || !canvasRef.current) return;
+    if (!imageSrc || !canvasRef.current || loadingRef.current) return;
 
+    loadingRef.current = true;
     setIsLoading(true);
     setError(null);
 
     try {
-      console.log('[EnhancedImageCanvas] Loading image:', imageSrc.name || 'Unknown');
+      // Handle different imageSrc formats
+      const fileName = imageSrc.filename || imageSrc.name || 'Unknown';
+      console.log('[EnhancedImageCanvas] Loading image:', fileName);
       
       let processedImageData;
       
       // Check if it's a RAW format
-      if (isRawFormat(imageSrc.name)) {
+      if (isRawFormat(fileName)) {
         console.log('[EnhancedImageCanvas] RAW format detected, processing with RAW decoder');
         
         try {
-          // Use professional RAW processor
-          processedImageData = await processRAWFile(imageSrc.file || imageSrc);
+          // Use professional RAW processor with enhanced quality settings
+          processedImageData = await processRAWFile(imageSrc.file || imageSrc, {
+            enhanceQuality: true,
+            targetResolution: 'high',
+            colorSpace: 'sRGB',
+            gamma: 2.2,
+            whiteBalance: 'auto'
+          });
           console.log(`[EnhancedImageCanvas] RAW processed using strategy: ${processedImageData.strategy}`);
           
+          // Apply post-processing quality enhancement for RAW images
+          if (processedImageData.quality !== 'high') {
+            console.log('[EnhancedImageCanvas] Applying quality enhancement to RAW image');
+            processedImageData = await enhanceRAWImageQuality(processedImageData);
+          }
+          
           // Show format information
-          const formatInfo = getRawFormatInfo(imageSrc.name);
+          const formatInfo = getRawFormatInfo(fileName);
           if (formatInfo) {
             console.log(`[EnhancedImageCanvas] RAW format: ${formatInfo.brand} ${formatInfo.description}`);
           }
@@ -707,12 +864,31 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
           throw new Error(`RAW processing failed: ${rawError.message}`);
         }
       } else {
-        // Regular image processing
-        processedImageData = {
-          url: imageSrc.url,
-          type: 'standard',
-          strategy: 'direct'
-        };
+        // Regular image processing - use the existing URL if available
+        if (imageSrc.url || imageSrc.preview) {
+          // Use existing blob URL or preview URL
+          processedImageData = {
+            url: imageSrc.url || imageSrc.preview,
+            type: 'standard',
+            strategy: 'direct'
+          };
+        } else if (imageSrc.file instanceof File) {
+          // Create a fresh blob URL if we have a file
+          const url = URL.createObjectURL(imageSrc.file);
+          processedImageData = {
+            url: url,
+            type: 'standard',
+            strategy: 'direct',
+            file: imageSrc.file
+          };
+        } else {
+          // Direct URL
+          processedImageData = {
+            url: imageSrc,
+            type: 'standard',
+            strategy: 'direct'
+          };
+        }
       }
 
       // Load the processed image
@@ -720,8 +896,30 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
       img.crossOrigin = 'anonymous';
       
       await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = () => reject(new Error('Failed to load processed image'));
+        img.onload = () => {
+          console.log('[EnhancedImageCanvas] Image loaded successfully');
+          resolve();
+        };
+        
+        img.onerror = (e) => {
+          console.error('[EnhancedImageCanvas] Image load error:', e);
+          
+          // Try alternative loading method if initial fails
+          if (imageSrc.file instanceof File) {
+            console.log('[EnhancedImageCanvas] Retrying with new blob URL...');
+            try {
+              const newUrl = URL.createObjectURL(imageSrc.file);
+              img.src = newUrl;
+              // Don't set up another onerror to avoid infinite loops
+            } catch (recreateError) {
+              reject(new Error('Failed to load image: ' + recreateError.message));
+            }
+          } else {
+            reject(new Error('Failed to load image from URL: ' + processedImageData.url));
+          }
+        };
+        
+        // Set the image source
         img.src = processedImageData.url;
       });
 
@@ -739,28 +937,59 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
       // Store original image dimensions for responsive sizing
       setOriginalImageSize({ width, height });
       
-      // Set canvas dimensions to actual image size
+      // Calculate display size now that we have image dimensions
+      setTimeout(() => calculateCanvasSize(), 50);
+      
+      // Set canvas dimensions to actual image size with quality optimization
       [canvas, originalCanvas, processedCanvas].forEach(c => {
         if (c) {
           c.width = width;
           c.height = height;
+          
+          // Ensure high-quality rendering for both RAW and JPEG
+          const ctx = c.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          
+          // Apply better interpolation for RAW images
+          if (processedImageData.type !== 'standard') {
+            ctx.filter = 'contrast(1.02) brightness(1.01)';
+          }
         }
       });
 
       // Draw original image with optimized context
-      const originalCtx = originalCanvas.getContext('2d', { willReadFrequently: true });
+      const originalCtx = originalCanvas.getContext('2d', { 
+        willReadFrequently: true,
+        alpha: false  // Better performance for opaque images
+      });
+      
+      // Enable high-quality scaling
+      originalCtx.imageSmoothingEnabled = true;
+      originalCtx.imageSmoothingQuality = 'high';
+      
+      // Apply enhancement for RAW images to match JPEG quality
+      if (processedImageData.type !== 'standard') {
+        originalCtx.filter = 'contrast(1.02) brightness(1.01) saturate(1.05)';
+      }
+      
       originalCtx.drawImage(processedImg, 0, 0);
       
-      console.log('[EnhancedImageCanvas] Original image drawn');
+      // Reset filter
+      originalCtx.filter = 'none';
+      
+      console.log(`[EnhancedImageCanvas] Original image drawn (${processedImageData.type} format)`);
 
-      // Send processed data to parent
+      // Send processed data to parent with quality information
       if (onProcessed) {
         onProcessed({
           width,
           height,
           size: imageSrc.size,
-          name: imageSrc.name,
+          name: fileName,
           type: imageSrc.type,
+          quality: processedImageData.quality || 'standard',
+          enhanced: processedImageData.enhanced || false,
           rawProcessing: processedImageData.type !== 'standard' ? {
             strategy: processedImageData.strategy,
             formatInfo: processedImageData.formatInfo
@@ -772,13 +1001,14 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
       console.error('[EnhancedImageCanvas] Error loading image:', err);
       
       // Show helpful error message for RAW files
-      if (isRawFormat(imageSrc.name)) {
+      if (isRawFormat(fileName)) {
         const recommendation = getRAWWorkflowRecommendation(imageSrc.file || imageSrc);
         setError(`RAW processing error: ${err.message}. ${recommendation.recommendations[0]}`);
       } else {
         setError(err.message);
       }
     } finally {
+      loadingRef.current = false;
       setIsLoading(false);
     }
   }, [imageSrc, resizeImageIfNeeded, onProcessed]);
@@ -787,8 +1017,12 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
   const applyFiltersDebounced = useCallback(
     (() => {
       let timeoutId;
-      return (edits) => {
+      return (edits, forceImmediate = false) => {
         if (timeoutId) clearTimeout(timeoutId);
+        
+        // For slider changes, apply immediately for better responsiveness
+        const delay = forceImmediate ? 0 : 100;
+        
         timeoutId = setTimeout(() => {
           if (!originalCanvasRef.current || !processedCanvasRef.current || !canvasRef.current) return;
           
@@ -803,6 +1037,12 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
             const processedCtx = processedCanvas.getContext('2d', { willReadFrequently: true });
             const displayCtx = displayCanvas.getContext('2d', { willReadFrequently: true });
             
+            // Ensure high-quality rendering for all contexts
+            [originalCtx, processedCtx, displayCtx].forEach(ctx => {
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+            });
+            
             // Copy original to processed canvas
             processedCtx.clearRect(0, 0, processedCanvas.width, processedCanvas.height);
             processedCtx.drawImage(originalCanvas, 0, 0);
@@ -810,7 +1050,7 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
             // Create temporary image from original canvas
             const tempImg = new Image();
             tempImg.onload = () => {
-              // Apply filters to processed canvas
+              // Apply filters to processed canvas with enhanced quality
               applyProfessionalFilters(processedCtx, tempImg, edits);
               
           // Show before/after comparison on display canvas with slider
@@ -818,39 +1058,121 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
           const height = displayCanvas.height;
           const sliderX = showSlider ? (width * sliderPosition / 100) : width / 2;
           
-          // Clear display canvas
+          // Clear display canvas with quality settings
           displayCtx.clearRect(0, 0, width, height);
+          displayCtx.imageSmoothingEnabled = true;
+          displayCtx.imageSmoothingQuality = 'high';
           
-          // Draw original image
-          displayCtx.drawImage(originalCanvas, 0, 0, width, height);
+          // Draw original image on left side
+          if (showSlider) {
+            displayCtx.save();
+            displayCtx.beginPath();
+            displayCtx.rect(0, 0, sliderX, height);
+            displayCtx.clip();
+            displayCtx.drawImage(originalCanvas, 0, 0, width, height);
+            displayCtx.restore();
+          } else {
+            displayCtx.drawImage(originalCanvas, 0, 0, width, height);
+          }
           
-          // Draw processed image with clipping
+          // Draw processed image on right side
           displayCtx.save();
           displayCtx.beginPath();
-          displayCtx.rect(sliderX, 0, width - sliderX, height);
+          if (showSlider) {
+            displayCtx.rect(sliderX, 0, width - sliderX, height);
+          } else {
+            displayCtx.rect(width/2, 0, width/2, height);
+          }
           displayCtx.clip();
           displayCtx.drawImage(processedCanvas, 0, 0, width, height);
           displayCtx.restore();
           
           // Draw slider line if enabled
           if (showSlider) {
-            displayCtx.strokeStyle = '#4a9eff';
-            displayCtx.lineWidth = 2;
-            displayCtx.setLineDash([5, 5]);
+            // Draw shadow/outline for better visibility
+            displayCtx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+            displayCtx.lineWidth = 5;
+            displayCtx.setLineDash([]);
             displayCtx.beginPath();
             displayCtx.moveTo(sliderX, 0);
             displayCtx.lineTo(sliderX, height);
             displayCtx.stroke();
             
-            // Draw slider handle
+            // Draw main slider line
+            displayCtx.strokeStyle = '#4a9eff';
+            displayCtx.lineWidth = 3;
             displayCtx.setLineDash([]);
+            displayCtx.beginPath();
+            displayCtx.moveTo(sliderX, 0);
+            displayCtx.lineTo(sliderX, height);
+            displayCtx.stroke();
+            
+            // Draw slider handles for better visibility and interaction
+            displayCtx.fillStyle = '#4a9eff';
+            displayCtx.strokeStyle = '#ffffff';
+            displayCtx.lineWidth = 2;
+            displayCtx.setLineDash([]);
+            
+            // Top handle with shadow
+            displayCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            displayCtx.beginPath();
+            displayCtx.arc(sliderX + 1, 16, 10, 0, 2 * Math.PI);
+            displayCtx.fill();
+            
             displayCtx.fillStyle = '#4a9eff';
             displayCtx.beginPath();
-            displayCtx.arc(sliderX, height / 2, 10, 0, Math.PI * 2);
+            displayCtx.arc(sliderX, 15, 10, 0, 2 * Math.PI);
             displayCtx.fill();
-            displayCtx.strokeStyle = '#fff';
-            displayCtx.lineWidth = 2;
             displayCtx.stroke();
+            
+            // Add inner circle
+            displayCtx.fillStyle = '#ffffff';
+            displayCtx.beginPath();
+            displayCtx.arc(sliderX, 15, 4, 0, 2 * Math.PI);
+            displayCtx.fill();
+            
+            // Bottom handle with shadow
+            displayCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            displayCtx.beginPath();
+            displayCtx.arc(sliderX + 1, height - 14, 10, 0, 2 * Math.PI);
+            displayCtx.fill();
+            
+            displayCtx.fillStyle = '#4a9eff';
+            displayCtx.beginPath();
+            displayCtx.arc(sliderX, height - 15, 10, 0, 2 * Math.PI);
+            displayCtx.fill();
+            displayCtx.stroke();
+            
+            // Add inner circle
+            displayCtx.fillStyle = '#ffffff';
+            displayCtx.beginPath();
+            displayCtx.arc(sliderX, height - 15, 4, 0, 2 * Math.PI);
+            displayCtx.fill();
+            
+            // Center handle with shadow
+            displayCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            displayCtx.beginPath();
+            displayCtx.arc(sliderX + 1, height / 2 + 1, 12, 0, 2 * Math.PI);
+            displayCtx.fill();
+            
+            displayCtx.fillStyle = '#4a9eff';
+            displayCtx.beginPath();
+            displayCtx.arc(sliderX, height / 2, 12, 0, 2 * Math.PI);
+            displayCtx.fill();
+            displayCtx.stroke();
+            
+            // Add inner circle
+            displayCtx.fillStyle = '#ffffff';
+            displayCtx.beginPath();
+            displayCtx.arc(sliderX, height / 2, 5, 0, 2 * Math.PI);
+            displayCtx.fill();
+            
+            // Add directional arrows on center handle
+            displayCtx.fillStyle = '#4a9eff';
+            displayCtx.font = '12px Arial';
+            displayCtx.textAlign = 'center';
+            displayCtx.fillText('⟷', sliderX, height / 2 + 4);
+            
           } else {
             // Draw divider line for split view
             displayCtx.strokeStyle = '#4a9eff';
@@ -867,17 +1189,15 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
             };
             tempImg.src = originalCanvas.toDataURL();
             
-          } catch (err) {
+            } catch (err) {
             console.error('[EnhancedImageCanvas] Error applying filters:', err);
             setIsProcessing(false);
           }
-        }, 100);
+        }, delay);
       };
     })(),
-    []
-  );
-
-  // Load image when source changes
+    [showSlider, sliderPosition]
+  );  // Load image when source changes
   useEffect(() => {
     loadImage();
   }, [loadImage]);
@@ -887,44 +1207,84 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
     if (originalCanvasRef.current) {
       applyFiltersDebounced(edits);
     }
-  }, [edits, applyFiltersDebounced]);
+  }, [edits, applyFiltersDebounced, showSlider, sliderPosition]);
+
+  // Apply filters when slider position changes
+  useEffect(() => {
+    if (originalCanvasRef.current && showSlider) {
+      applyFiltersDebounced(edits, true); // Force immediate update for slider
+    }
+  }, [sliderPosition, showSlider, edits, applyFiltersDebounced]);
+
+  // Log edits for debugging
+  useEffect(() => {
+    console.log('[EnhancedImageCanvas] Edits updated:', edits);
+  }, [edits]);
 
   // Cleanup effect to prevent memory leaks
   useEffect(() => {
     return () => {
       // Clean up any created object URLs when component unmounts
-      if (imageSrc && imageSrc.url && imageSrc.url.startsWith('blob:')) {
-        URL.revokeObjectURL(imageSrc.url);
+      if (imageSrc) {
+        // Handle different formats of imageSrc
+        if (typeof imageSrc === 'string' && imageSrc.startsWith('blob:')) {
+          URL.revokeObjectURL(imageSrc);
+        } else if (imageSrc.url && imageSrc.url.startsWith('blob:')) {
+          URL.revokeObjectURL(imageSrc.url);
+        } else if (imageSrc.preview && imageSrc.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(imageSrc.preview);
+        }
       }
     };
   }, [imageSrc]);
 
   // Calculate display size based on canvas size
-  const displayStyle = useMemo(() => ({
-    width: `${canvasSize.width}px`,
-    height: `${canvasSize.height}px`,
-    maxWidth: '100%',
-    maxHeight: '100%',
-    objectFit: 'contain',
-    cursor: showSlider ? 'ew-resize' : (zoomLevel > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default'),
-    transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
-    transition: isPanning ? 'none' : 'transform 0.3s ease'
-  }), [canvasSize, zoomLevel, isPanning, panOffset, showSlider]);
-
-  // Mouse event handlers for slider
-  const handleMouseDown = useCallback((e) => {
-    if (!showSlider) return;
+  const displayStyle = useMemo(() => {
+    let cursor = 'default';
     
-    const rect = canvasRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const sliderX = (rect.width * sliderPosition) / 100;
-    
-    // If mouse is near slider handle (within 20px), start dragging
-    if (Math.abs(mouseX - sliderX) < 20) {
-      setIsSliderDragging(true);
-      e.preventDefault();
+    if (showSlider) {
+      cursor = 'ew-resize';
+    } else if (zoomLevel > 1) {
+      cursor = isMousePanning ? 'grabbing' : 'grab';
     }
-  }, [showSlider, sliderPosition]);
+    
+    return {
+      width: `${canvasSize.width}px`,
+      height: `${canvasSize.height}px`,
+      maxWidth: 'none', // Remove max-width constraint
+      maxHeight: 'none', // Remove max-height constraint
+      objectFit: 'contain',
+      cursor,
+      transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+      transition: (isPanning || isMousePanning) ? 'none' : 'transform 0.3s ease'
+    };
+  }, [canvasSize, zoomLevel, isPanning, isMousePanning, panOffset, showSlider]);
+
+  // Mouse event handlers for slider and panning
+  const handleMouseDown = useCallback((e) => {
+    if (showSlider) {
+      // Check if clicking on slider first (priority over panning)
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const sliderX = (rect.width * sliderPosition) / 100;
+      
+      // Increased hit area for better usability - within 40px of slider line
+      if (Math.abs(mouseX - sliderX) < 40) {
+        setIsSliderDragging(true);
+        e.preventDefault();
+        e.stopPropagation();
+        // Immediately update slider position
+        const newPosition = Math.max(0, Math.min(100, (mouseX / rect.width) * 100));
+        if (onSliderChange) onSliderChange(newPosition);
+        return;
+      }
+    }
+    
+    // If zoomed in and not on slider, start panning
+    if (zoomLevel > 1) {
+      handleMousePanStart(e);
+    }
+  }, [showSlider, sliderPosition, zoomLevel, handleMousePanStart, onSliderChange]);
 
   const handleMouseMove = useCallback((e) => {
     if (isSliderDragging && showSlider) {
@@ -933,12 +1293,32 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
       const mouseX = e.clientX - rect.left;
       const newPosition = Math.max(0, Math.min(100, (mouseX / rect.width) * 100));
       if (onSliderChange) onSliderChange(newPosition);
+      return;
     }
-  }, [isSliderDragging, showSlider, onSliderChange]);
+    
+    // Update cursor when hovering over slider
+    if (showSlider && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const sliderX = (rect.width * sliderPosition) / 100;
+      
+      if (Math.abs(mouseX - sliderX) < 40) {
+        canvasRef.current.style.cursor = 'ew-resize';
+      } else {
+        canvasRef.current.style.cursor = zoomLevel > 1 ? 'grab' : 'default';
+      }
+    } else if (canvasRef.current) {
+      canvasRef.current.style.cursor = zoomLevel > 1 ? 'grab' : 'default';
+    }
+    
+    // Handle mouse panning
+    handleMousePanMove(e);
+  }, [isSliderDragging, showSlider, onSliderChange, handleMousePanMove, sliderPosition, zoomLevel]);
 
   const handleMouseUp = useCallback(() => {
     setIsSliderDragging(false);
-  }, []);
+    handleMousePanEnd();
+  }, [handleMousePanEnd]);
 
   // Add mouse event listeners to document
   useEffect(() => {
@@ -950,6 +1330,18 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [handleMouseMove, handleMouseUp]);
+
+  // Add wheel event listener with passive: false to allow preventDefault
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    
+    return () => {
+      canvas.removeEventListener('wheel', handleWheel);
+    };
+  }, [handleWheel]);
 
   return (
     <div className={`image-canvas-container ${isFullscreen ? 'fullscreen' : ''}`}>
@@ -1028,16 +1420,25 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
             className={`main-canvas ${isLoading || error ? 'hidden' : ''}`}
             style={displayStyle}
             onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           />
           
           {/* Before/After labels */}
-          {!isLoading && !error && canvasSize.width > 0 && (
+          {!isLoading && !error && canvasSize.width > 0 && showSlider && (
             <div className="comparison-labels">
               <div className="label-before">Original</div>
               <div className="label-after">Edited</div>
+            </div>
+          )}
+          
+          {/* Slider instruction tooltip */}
+          {!isLoading && !error && showSlider && canvasSize.width > 0 && (
+            <div className="slider-instruction">
+              <span>↔ Drag to compare before/after</span>
             </div>
           )}
         </div>
@@ -1057,7 +1458,7 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
               <span className="zoom-level">{Math.round(zoomLevel * 100)}%</span>
               <button 
                 onClick={handleZoomIn} 
-                disabled={zoomLevel >= 3}
+                disabled={zoomLevel >= 5}
                 className="zoom-btn"
                 title="Zoom In (Ctrl + +)"
               >
@@ -1070,6 +1471,11 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
               >
                 ⌂
               </button>
+            </div>
+            
+            {/* User instructions */}
+            <div className="zoom-instructions">
+              <span>💡 Scroll to zoom • Drag to pan when zoomed</span>
             </div>
           </div>
         )}
@@ -1085,9 +1491,9 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
                 {(imageSrc.size / (1024 * 1024)).toFixed(2)} MB
               </span>
             )}
-            {isRawFormat(imageSrc?.name) && (
+            {isRawFormat(imageSrc?.filename || imageSrc?.name) && (
               <span className="image-format">
-                RAW ({getRawFormatInfo(imageSrc.name)?.brand})
+                RAW ({getRawFormatInfo(imageSrc?.filename || imageSrc?.name)?.brand})
               </span>
             )}
           </div>
@@ -1095,6 +1501,21 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
       </div>
     </div>
   );
+};
+
+// Export utility functions for use in other modules
+export {
+  applyProfessionalFilters,
+  rgbToHsl,
+  hslToRgb,
+  clamp,
+  applyCurve,
+  adjustWhiteBalance,
+  adjustVibrance,
+  enhanceClarity,
+  addFilmGrain,
+  applyVignetting,
+  applyPreset
 };
 
 export default EnhancedImageCanvas;

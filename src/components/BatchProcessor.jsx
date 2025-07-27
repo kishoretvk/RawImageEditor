@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import PresetManager from './PresetManager';
 import FileUploader from './FileUploader';
+import { batchProcessImages, createZipFromImages } from '../utils/batchExport';
 
 const BatchProcessor = () => {
   const [files, setFiles] = useState([]);
@@ -43,30 +44,53 @@ const BatchProcessor = () => {
     setProgress(0);
     setProcessedFiles([]);
     
-    // Simulate processing (in a real app, this would process each file)
-    for (let i = 0; i < files.length; i++) {
-      // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      // Prepare edits to apply
+      const editsToApply = workflow.applyPreset && workflow.selectedPreset 
+        ? workflow.selectedPreset 
+        : {};
       
-      // Create a processed file entry
-      const processedFile = {
-        id: Date.now() + i,
-        name: files[i].name,
-        size: files[i].size,
-        status: 'completed',
-        downloadUrl: URL.createObjectURL(files[i]) // In real app, this would be the processed file
-      };
+      // Process images with applied edits
+      const results = await batchProcessImages(
+        files, 
+        editsToApply, 
+        { quality: workflow.jpegQuality / 100 }
+      );
       
-      setProcessedFiles(prev => [...prev, processedFile]);
-      setProgress(((i + 1) / files.length) * 100);
+      // Update progress
+      setProgress(100);
+      setProcessedFiles(results);
+    } catch (error) {
+      console.error('Batch processing error:', error);
+      alert('Batch processing failed. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
-    
-    setIsProcessing(false);
   };
 
-  const handleDownloadAll = () => {
-    // In a real app, this would download a ZIP file with all processed images
-    alert('In a real implementation, this would download a ZIP file with all processed images.');
+  const handleDownloadAll = async () => {
+    if (processedFiles.length === 0) return;
+    
+    try {
+      // Create a ZIP file with all processed images
+      // In a real app, this would use a library like JSZip
+      alert('In a real implementation, this would download a ZIP file with all processed images.');
+      
+      // For demo purposes, let's download the first successful image
+      const successfulFiles = processedFiles.filter(file => file.status === 'completed');
+      if (successfulFiles.length > 0) {
+        const firstFile = successfulFiles[0];
+        const a = document.createElement('a');
+        a.href = firstFile.dataUrl;
+        a.download = firstFile.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (error) {
+      console.error('Download all error:', error);
+      alert('Download failed. Please try again.');
+    }
   };
 
   return (
@@ -209,13 +233,19 @@ const BatchProcessor = () => {
               <div key={file.id} className="bg-gray-700 p-3 rounded">
                 <p className="font-medium truncate">{file.name}</p>
                 <p className="text-sm text-gray-400">{(file.size / 1024).toFixed(1)} KB</p>
-                <a 
-                  href={file.downloadUrl} 
-                  download={file.name}
-                  className="text-primary text-sm mt-1 inline-block"
-                >
-                  Download
-                </a>
+                {file.status === 'completed' ? (
+                  <a 
+                    href={file.dataUrl} 
+                    download={file.name}
+                    className="text-primary text-sm mt-1 inline-block"
+                  >
+                    Download
+                  </a>
+                ) : (
+                  <span className="text-red-500 text-sm mt-1 inline-block">
+                    Failed: {file.error}
+                  </span>
+                )}
               </div>
             ))}
           </div>

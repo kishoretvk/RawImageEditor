@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { Upload, FileImage, X } from 'lucide-react'
 
-const FileUploader = ({ onFileUpload, settings }) => {
+const FileUploader = ({ onFileUpload, settings, multiple = false, onFilesSelected }) => {
   const [dragActive, setDragActive] = useState(false)
   const [files, setFiles] = useState([])
   const [collapsed, setCollapsed] = useState(false)
@@ -73,10 +73,16 @@ const FileUploader = ({ onFileUpload, settings }) => {
           url: newFiles[0].preview,
           filename: newFiles[0].name,
           size: newFiles[0].size,
-          type: newFiles[0].file.type
+          type: newFiles[0].file.type,
+          file: newFiles[0].file  // Include the file object for fallback
         };
         console.log('FileUploader: Calling onFileUpload with:', fileData);
         onFileUpload(fileData)
+      }
+      
+      // Send all files to parent for batch processing
+      if (onFilesSelected) {
+        onFilesSelected(newFiles.map(f => f.file));
       }
     } catch (err) {
       console.error('File upload error:', err)
@@ -119,7 +125,7 @@ const FileUploader = ({ onFileUpload, settings }) => {
         <input
           ref={inputRef}
           type="file"
-          multiple
+          multiple={multiple}
           onChange={handleChange}
           accept=".arw,.cr2,.cr3,.nef,.dng,.raw,.jpg,.jpeg,.png"
           className="hidden"

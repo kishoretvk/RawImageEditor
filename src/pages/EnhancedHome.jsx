@@ -300,6 +300,16 @@ const Home = () => {
                   <span>Try Live Demo</span>
                 </div>
               </button>
+              
+              <button
+                className="group bg-white/10 backdrop-blur-sm border border-white/20 text-white font-bold px-8 py-4 rounded-xl hover:bg-white/20 transition-all duration-300 transform hover:scale-105"
+                onClick={() => window.location.href = '/demo'}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <SparklesIcon className="w-5 h-5" />
+                  <span>View Features</span>
+                </div>
+              </button>
             </div>
           </div>
         </div>

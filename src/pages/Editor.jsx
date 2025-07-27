@@ -5,6 +5,7 @@ import SharpnessPanel from '../components/editorPanels/SharpnessPanel';
 import EffectsPanel from '../components/editorPanels/EffectsPanel';
 import GeometryPanel from '../components/editorPanels/GeometryPanel';
 import AdvancedPanel from '../components/editorPanels/AdvancedPanel';
+import SmoothPanelContainer from '../components/SmoothPanelContainer';
 import { EditorContext, EditorProvider } from '../context/EditorContext';
 import ImageCanvas from '../components/ImageCanvas';
 import UndoRedoPanel from '../components/UndoRedoPanel';
@@ -54,25 +55,69 @@ const Editor = ({ imageFile, metadata }) => {
       <h1 className="text-4xl font-bold mb-8">Edit Photo</h1>
       <div className="flex gap-8">
         <div className="bg-white bg-opacity-90 rounded-2xl p-6 shadow-2xl w-[500px]">
-          {/* Tab Navigation for Panels */}
-          <div className="flex gap-2 mb-6">
-            {['basic','color','sharpness','effects','geometry','advanced'].map(panel => (
-              <button
-                key={panel}
-                className={`px-4 py-2 rounded-xl font-bold border-2 shadow transition duration-200 ${activePanel===panel ? 'bg-blue-500 text-black border-blue-700' : 'bg-blue-100 text-black border-blue-300'}`}
-                onClick={() => setActivePanel(panel)}
-              >
-                {panel.charAt(0).toUpperCase()+panel.slice(1)}
-              </button>
-            ))}
-          </div>
-          {/* Panels */}
-          {activePanel==='basic' && <BasicAdjustmentsPanel adjustments={state.basic || { exposure: 1, contrast: 1, highlights: 1, shadows: 1, whites: 1, blacks: 1, gamma: 1 }} onChange={adj => dispatch({type:'SET_BASIC',payload:adj})} />}
-          {activePanel==='color' && <ColorAdjustmentsPanel colorAdjustments={state.color} onChange={adj => dispatch({type:'SET_COLOR',payload:adj})} />}
-          {activePanel==='sharpness' && <SharpnessPanel sharpness={state.sharpness} onChange={adj => dispatch({type:'SET_SHARPNESS',payload:adj})} />}
-          {activePanel==='effects' && <EffectsPanel effects={state.effects} onChange={adj => dispatch({type:'SET_EFFECTS',payload:adj})} />}
-          {activePanel==='geometry' && <GeometryPanel geometry={state.geometry} onChange={adj => dispatch({type:'SET_GEOMETRY',payload:adj})} />}
-          {activePanel==='advanced' && <AdvancedPanel advanced={state.advanced} onChange={adj => dispatch({type:'SET_ADVANCED',payload:adj})} />}
+          {/* Smooth Panel Container */}
+          <SmoothPanelContainer
+            activePanel={activePanel}
+            onPanelChange={setActivePanel}
+            minHeight="300px"
+            panels={{
+              basic: {
+                title: 'Basic',
+                component: (
+                  <BasicAdjustmentsPanel 
+                    adjustments={state.basic || { exposure: 1, contrast: 1, highlights: 1, shadows: 1, whites: 1, blacks: 1, gamma: 1 }} 
+                    onChange={adj => dispatch({type:'SET_BASIC', payload:adj})} 
+                  />
+                )
+              },
+              color: {
+                title: 'Color',
+                component: (
+                  <ColorAdjustmentsPanel 
+                    colorAdjustments={state.color} 
+                    onChange={adj => dispatch({type:'SET_COLOR', payload:adj})} 
+                  />
+                )
+              },
+              sharpness: {
+                title: 'Sharpness',
+                component: (
+                  <SharpnessPanel 
+                    sharpness={state.sharpness} 
+                    onChange={adj => dispatch({type:'SET_SHARPNESS', payload:adj})} 
+                  />
+                )
+              },
+              effects: {
+                title: 'Effects',
+                component: (
+                  <EffectsPanel 
+                    effects={state.effects} 
+                    onChange={adj => dispatch({type:'SET_EFFECTS', payload:adj})} 
+                  />
+                )
+              },
+              geometry: {
+                title: 'Geometry',
+                component: (
+                  <GeometryPanel 
+                    geometry={state.geometry} 
+                    onChange={adj => dispatch({type:'SET_GEOMETRY', payload:adj})} 
+                  />
+                )
+              },
+              advanced: {
+                title: 'Advanced',
+                component: (
+                  <AdvancedPanel 
+                    advanced={state.advanced} 
+                    onChange={adj => dispatch({type:'SET_ADVANCED', payload:adj})} 
+                  />
+                )
+              }
+            }}
+          />
+          
           {/* Format Selector & Download */}
           <div className="flex flex-wrap gap-4 mt-8">
             <select className="bg-blue-500 text-black font-bold px-6 py-3 rounded-xl shadow-lg border-2 border-blue-700 hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-200">

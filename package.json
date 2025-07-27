@@ -1,7 +1,27 @@
 {
-  "name": "rawconverter",
+  "name": "raw-image-editor",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Professional-grade web application for viewing, editing, and processing RAW image files with enterprise-level features",
+  "author": "RAW Image Editor Team",
+  "license": "MIT",
+  "homepage": "https://github.com/kishoretvk/RawImageEditor",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kishoretvk/RawImageEditor.git"
+  },
+  "keywords": [
+    "raw",
+    "image",
+    "editor",
+    "photo",
+    "processing",
+    "camera",
+    "photography",
+    "react",
+    "vite",
+    "webassembly"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",

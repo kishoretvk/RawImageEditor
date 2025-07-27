@@ -5,6 +5,95 @@
   box-sizing: border-box;
 }
 
+/* Page transition animations */
+.landing-page {
+  animation: fadeInUp 0.8s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Section animation on scroll */
+.interactive-preview,
+.features {
+  opacity: 0;
+  transform: translateY(50px);
+  transition: all 0.8s ease-out;
+}
+
+.interactive-preview.animated,
+.features.animated {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Smooth demo transitions */
+.demo-container {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+.before-after-demo {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Enhanced image selector buttons */
+.image-selector-btn {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(0);
+  will-change: transform, box-shadow, background-color;
+}
+
+.image-selector-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4) !important;
+}
+
+.image-selector-btn.active {
+  transform: translateY(-1px);
+}
+
+/* Smooth slider handle animations */
+.slider-handle {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+/* Progress bar animations */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.progress-shimmer {
+  animation: shimmer 2s infinite linear;
+}
+
+/* Smooth image transitions */
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.image-transition {
+  animation: fadeInScale 0.6s ease-out;
+}
+
 .landing-page {
   font-family: 'Arial', sans-serif;
   color: #333;
@@ -97,39 +186,89 @@
 .hero-content {
   text-align: center;
   color: white;
-  max-width: 600px;
-  padding: 2rem;
+  max-width: 700px;
+  padding: 3rem 2rem;
+  margin-top: 140px; /* Increased space for fixed navigation - was 120px */
+  position: relative;
+  z-index: 1;
 }
 
 .hero-title {
-  font-size: 3.5rem;
-  font-weight: bold;
-  margin-bottom: 1rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+  font-size: 3.8rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .hero-subtitle {
-  font-size: 1.3rem;
-  margin-bottom: 2rem;
-  opacity: 0.9;
+  font-size: 1.4rem;
+  margin-bottom: 3rem;
+  opacity: 0.95;
+  line-height: 1.5;
+  font-weight: 300;
+  letter-spacing: 0.5px;
+}
+
+.flex {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.gap-4 {
+  gap: 1.5rem;
+  margin-top: 1rem;
 }
 
 .cta-button {
   background: linear-gradient(45deg, #4CAF50, #45a049);
   color: white;
-  padding: 1rem 2rem;
+  padding: 1.2rem 2.5rem;
   border: none;
   border-radius: 50px;
-  font-size: 1.1rem;
-  font-weight: bold;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+  margin: 0.5rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  min-width: 160px;
 }
 
 .cta-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(76, 175, 80, 0.4);
+  color: white;
+  text-decoration: none;
+}
+
+.cta-button.secondary {
+  background: linear-gradient(45deg, #2196F3, #1976D2);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+}
+
+.cta-button.secondary:hover {
+  box-shadow: 0 10px 30px rgba(33, 150, 243, 0.4);
+}
+
+.cta-button.tertiary {
+  background: linear-gradient(45deg, #FF9800, #F57C00);
+  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.3);
+}
+
+.cta-button.tertiary:hover {
+  box-shadow: 0 10px 30px rgba(255, 152, 0, 0.4);
 }
 
 /* Container */
@@ -141,15 +280,40 @@
 
 /* Interactive Preview Section */
 .interactive-preview {
-  padding: 5rem 0;
-  background: #f8f9fa;
+  padding: 6rem 0;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  position: relative;
+}
+
+.interactive-preview::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #ddd, transparent);
 }
 
 .section-title {
-  font-size: 2.5rem;
+  font-size: 2.8rem;
   text-align: center;
-  margin-bottom: 3rem;
-  color: #333;
+  margin-bottom: 1.5rem;
+  color: #2c3e50;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.section-subtitle {
+  font-size: 1.3rem;
+  text-align: center;
+  margin-bottom: 4rem;
+  color: #5a6c7d;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+  font-weight: 400;
 }
 
 .preview-demo {
@@ -267,6 +431,7 @@
   background: #ddd;
   outline: none;
   -webkit-appearance: none;
+  appearance: none;
 }
 
 .slider::-webkit-slider-thumb {
@@ -354,16 +519,49 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .nav-links {
-    gap: 1rem;
+  .hero-content {
+    margin-top: 100px;
+    padding: 2rem 1rem;
   }
   
   .hero-title {
-    font-size: 2.5rem;
+    font-size: 2.8rem;
+    margin-bottom: 1rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+  }
+  
+  .cta-button {
+    padding: 1rem 1.5rem;
+    font-size: 0.9rem;
+    min-width: 140px;
+    margin: 0.3rem;
+  }
+  
+  .gap-4 {
+    gap: 1rem;
   }
   
   .section-title {
-    font-size: 2rem;
+    font-size: 2.2rem;
+    margin-bottom: 1rem;
+  }
+  
+  .section-subtitle {
+    font-size: 1.1rem;
+    margin-bottom: 3rem;
+    padding: 0 1rem;
+  }
+  
+  .interactive-preview {
+    padding: 4rem 0;
+  }
+  
+  .nav-links {
+    gap: 1rem;
   }
   
   .comparison-container {
