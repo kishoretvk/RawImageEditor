@@ -1,11 +1,11 @@
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPageNew from './components/LandingPageNew';
 import UploadConvert from './pages/UploadConvert';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import DevModePanel from './components/DevModePanel';
 import DemoPage from './pages/DemoPage';
-import React, { useEffect, useState } from 'react';
+import BatchProcessor from './components/BatchProcessor';
 import Footer from './components/Footer';
 import SmartComponentWrapper from './components/SmartComponentWrapper';
 import SeamlessLoader from './components/SeamlessLoader';
@@ -16,21 +16,18 @@ import preloadManager, { preloadAllComponents } from './utils/preloadManager';
 const importEditor = () => import('./pages/EditorPage');
 const importGallery = () => import('./pages/Gallery');
 const importDashboard = () => import('./pages/Dashboard');
-        <Route 
-          path="/editor" 
-          element={
-            <SmartComponentWrapper
-              componentName="EditorPage"
-              importFunction={importEditor}
-              fallback={<SeamlessLoader type="minimal" message="Loading Editor..." />}
 const importCompetition = () => import('./pages/Competition');
 const importAboutTech = () => import('./pages/AboutTech');
 const importCompressionPage = () => import('./pages/CompressionPage');
-            />
-          } 
-        />
+
+const AppRouter = () => {
+  const [showPerformancePanel, setShowPerformancePanel] = useState(false);
+
+  useEffect(() => {
+    // Start preloading components after initial render
+    const timer = setTimeout(() => {
       preloadAllComponents();
-      preloadAllComponents();
+    }, 1000); // Wait 1 second after page load
 
     // Keyboard shortcut for performance panel
     const handleKeydown = (event) => {
@@ -60,7 +57,7 @@ const importCompressionPage = () => import('./pages/CompressionPage');
           path="/editor" 
           element={
             <SmartComponentWrapper
-              componentName="Editor"
+              componentName="EditorPage"
               importFunction={importEditor}
               fallback={<SeamlessLoader type="minimal" message="Loading Editor..." />}
             />

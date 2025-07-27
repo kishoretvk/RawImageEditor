@@ -91,9 +91,14 @@ const EditorPage = () => {
   const [editedImageUrl, setEditedImageUrl] = useState(null);
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isExporting, setIsExporting] = useState(false);
-  // Add state for toggling previews
-  const [showOriginal, setShowOriginal] = useState(true);
-  const [showEdited, setShowEdited] = useState(true);
+  // Add state for image controls
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  // Add state for side panel toggle
+  const [showSidePanel, setShowSidePanel] = useState(false);
+  // Add state for resizable panel
+  const [panelWidth, setPanelWidth] = useState(320);
+  const [isResizing, setIsResizing] = useState(false);
 
   // Update edited image when adjustments change
   useEffect(() => {
@@ -186,6 +191,63 @@ const EditorPage = () => {
     console.log('Reset action triggered');
     handleReset();
   };
+
+  // Image control functions
+  const handlePanLeft = () => setPan(prev => ({ ...prev, x: prev.x - 20 }));
+  const handlePanRight = () => setPan(prev => ({ ...prev, x: prev.x + 20 }));
+  const handlePanUp = () => setPan(prev => ({ ...prev, y: prev.y - 20 }));
+  const handlePanDown = () => setPan(prev => ({ ...prev, y: prev.y + 20 }));
+  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.1, 3));
+  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.1, 0.1));
+  const handleResetView = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  // Panel resize functions
+  const handleMouseDown = (e) => {
+    setIsResizing(true);
+    document.body.classList.add('resizing');
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isResizing) return;
+    
+    const newWidth = window.innerWidth - e.clientX;
+    // Set minimum and maximum panel width
+    const minWidth = 250;
+    const maxWidth = Math.min(600, window.innerWidth * 0.6);
+    
+    if (newWidth >= minWidth && newWidth <= maxWidth) {
+      setPanelWidth(newWidth);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+    document.body.classList.remove('resizing');
+  };
+
+  // Add global event listeners for resize
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isResizing]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      document.body.classList.remove('resizing');
+    };
+  }, []);
 
   // Download handlers
   const downloadRaw = () => {
@@ -315,16 +377,29 @@ const EditorPage = () => {
             />
           )}
           {uploadedImage && (
-            <button 
-              onClick={() => {
-                setUploadedImage(null);
-                setJpegPreview(null);
-              }}
-              className="toolbar-btn upload-btn ml-2"
-              title="Upload New Image"
-            >
-              📁 Upload
-            </button>
+            <>
+              <button 
+                onClick={() => {
+                  setUploadedImage(null);
+                  setJpegPreview(null);
+                }}
+                className="toolbar-btn upload-btn"
+                title="Upload New Image"
+              >
+                📁 Upload
+              </button>
+              <div className="toolbar-divider"></div>
+              <button className="toolbar-btn" title="Edit">✏️ Edit</button>
+              <button className="toolbar-btn" onClick={downloadJpeg} title="Save">💾 Save</button>
+              <div className="toolbar-divider"></div>
+              <button 
+                className={`toolbar-btn ${showSidePanel ? 'active' : ''}`}
+                onClick={() => setShowSidePanel(!showSidePanel)}
+                title="Toggle Edit Panel"
+              >
+                ⚙️ Adjustments
+              </button>
+            </>
           )}
         </div>
         <div className="header-right">
@@ -338,13 +413,14 @@ const EditorPage = () => {
           <>
             {/* Pan & Zoom Controls + Undo/Redo in one line */}
             <div className="toolbar-section flex flex-row items-center gap-2">
-              <button className="toolbar-btn" title="Pan Left">←</button>
-              <button className="toolbar-btn" title="Pan Right">→</button>
-              <button className="toolbar-btn" title="Pan Up">↑</button>
-              <button className="toolbar-btn" title="Pan Down">↓</button>
+              <button className="toolbar-btn" onClick={handlePanLeft} title="Pan Left">←</button>
+              <button className="toolbar-btn" onClick={handlePanRight} title="Pan Right">→</button>
+              <button className="toolbar-btn" onClick={handlePanUp} title="Pan Up">↑</button>
+              <button className="toolbar-btn" onClick={handlePanDown} title="Pan Down">↓</button>
               {/* Zoom Controls */}
-              <button className="toolbar-btn" title="Zoom In">+</button>
-              <button className="toolbar-btn" title="Zoom Out">-</button>
+              <button className="toolbar-btn" onClick={handleZoomIn} title="Zoom In">+</button>
+              <button className="toolbar-btn" onClick={handleZoomOut} title="Zoom Out">-</button>
+              <button className="toolbar-btn" onClick={handleResetView} title="Reset View">⌂</button>
               <div className="toolbar-divider"></div>
               <button className="toolbar-btn" onClick={onUndo} title="Undo">Undo</button>
               <button className="toolbar-btn" onClick={onRedo} title="Redo">Redo</button>
@@ -379,14 +455,6 @@ const EditorPage = () => {
         )}
       </div>
 
-      {/* Second line: Edit and Save buttons */}
-      {uploadedImage && (
-        <div className="editor-toolbar-secondary flex flex-row items-center gap-4 mb-2">
-          <button className="toolbar-btn" title="Edit">✏️ Edit</button>
-          <button className="toolbar-btn" onClick={downloadJpeg} title="Save">💾 Save</button>
-        </div>
-      )}
-
       {/* Main Content Area */}
       <div className="editor-main-content">
         {isImageEmpty ? (
@@ -398,35 +466,10 @@ const EditorPage = () => {
             <div style={{color:'#fff',marginTop:'16px',fontSize:'14px'}}>If you do not see the upload button, click <b>Reset Editor</b> above or reload the page.</div>
           </div>
         ) : (
-          <div className="image-display-area flex flex-row gap-4">
-            {/* Image Previews with toggle buttons */}
-            <div className="image-preview-tile relative flex-1 flex items-center justify-center">
-              {/* Show/Minimize Original Button as overlay */}
-              <button 
-                className="toggle-preview-btn absolute top-2 left-2 z-10 bg-black/70 text-white rounded-full px-3 py-1 text-xs shadow-lg"
-                onClick={() => setShowOriginal(prev => !prev)}
-                title={showOriginal ? 'Minimize Original' : 'Show Original'}
-              >
-                {showOriginal ? 'Minimize Original' : 'Show Original'}
-              </button>
-              {showOriginal && uploadedImage && (
-                <img
-                  src={typeof uploadedImage === 'string' ? uploadedImage : uploadedImage.url}
-                  alt="Original Preview"
-                  className="max-w-full max-h-[400px] rounded shadow"
-                />
-              )}
-            </div>
-            <div className="image-preview-tile relative flex-1 flex items-center justify-center">
-              {/* Show/Minimize Edited Button as overlay */}
-              <button 
-                className="toggle-preview-btn absolute top-2 left-2 z-10 bg-black/70 text-white rounded-full px-3 py-1 text-xs shadow-lg"
-                onClick={() => setShowEdited(prev => !prev)}
-                title={showEdited ? 'Minimize Edited' : 'Show Edited'}
-              >
-                {showEdited ? 'Minimize Edited' : 'Show Edited'}
-              </button>
-              {showEdited && (
+          <div className="main-editor-content">
+            {/* Full-width Image Editor */}
+            <div className="image-preview-container full-width-only">
+              <div className="image-preview-tile edited-preview full-width">
                 <EnhancedImageCanvas 
                   imageSrc={uploadedImage} 
                   edits={{
@@ -437,61 +480,76 @@ const EditorPage = () => {
                     ...geometry,
                     ...advanced
                   }} 
-                  showSlider={true}
+                  showSlider={false}
                   sliderPosition={sliderPosition}
                   onSliderChange={setSliderPosition}
+                  hideControls={true}
+                  hideFullscreen={false}
                 />
-              )}
-            </div>
-            {/* Collapsible Side Panel for Advanced Controls */}
-            <div className="side-controls-panel collapsed">
-              <button className="panel-toggle" onClick={() => {
-                const panel = document.querySelector('.side-controls-panel');
-                panel.classList.toggle('collapsed');
-              }}>
-                ⚙️
-              </button>
-              <div className="panel-content">
-                <CollapsibleControlPanel title="Basic Adjustments" defaultOpen={false}>
-                  <BasicAdjustmentsPanel adjustments={adjustments} onChange={setAdjustments} />
-                </CollapsibleControlPanel>
-                <CollapsibleControlPanel title="Color Adjustments" defaultOpen={false}>
-                  <ColorAdjustmentsPanel colorAdjustments={colorAdjustments} onChange={setColorAdjustments} />
-                </CollapsibleControlPanel>
-                <CollapsibleControlPanel title="Sharpness & Detail" defaultOpen={false}>
-                  <SharpnessPanel sharpness={sharpness} onChange={setSharpness} />
-                </CollapsibleControlPanel>
-                <CollapsibleControlPanel title="Effects & Filters" defaultOpen={false}>
-                  <EffectsPanel effects={effects} onChange={setEffects} />
-                </CollapsibleControlPanel>
-                <CollapsibleControlPanel title="Geometry" defaultOpen={false}>
-                  <GeometryPanel geometry={geometry} onChange={setGeometry} />
-                </CollapsibleControlPanel>
-                <CollapsibleControlPanel title="Advanced" defaultOpen={false}>
-                  <AdvancedPanel advanced={advanced} onChange={setAdvanced} />
-                </CollapsibleControlPanel>
-                <CollapsibleControlPanel title="Presets" defaultOpen={false}>
-                  <PresetManager 
-                    onApplyPreset={(presetSettings) => {
-                      setAdjustments(prev => ({...prev, ...presetSettings}));
-                      setColorAdjustments(prev => ({...prev, ...presetSettings}));
-                      setSharpness(prev => ({...prev, ...presetSettings}));
-                      setEffects(prev => ({...prev, ...presetSettings}));
-                      setGeometry(prev => ({...prev, ...presetSettings}));
-                      setAdvanced(prev => ({...prev, ...presetSettings}));
-                    }}
-                    currentEdits={{
-                      ...adjustments,
-                      ...colorAdjustments,
-                      ...sharpness,
-                      ...effects,
-                      ...geometry,
-                      ...advanced
-                    }}
-                  />
-                </CollapsibleControlPanel>
               </div>
             </div>
+            
+            {/* Overlay Side Panel - Only show when toggled */}
+            {showSidePanel && (
+              <div 
+                className="side-controls-panel overlay resizable"
+                style={{ width: `${panelWidth}px` }}
+              >
+                <div 
+                  className="resize-handle"
+                  onMouseDown={handleMouseDown}
+                  title="Drag to resize panel"
+                />
+                <button 
+                  className="panel-close" 
+                  onClick={() => setShowSidePanel(false)}
+                  title="Close Panel"
+                >
+                  ✕
+                </button>
+                <div className="panel-content">
+                  <h3 className="panel-title">Edit Controls</h3>
+                  <CollapsibleControlPanel title="Basic Adjustments" defaultOpen={true}>
+                    <BasicAdjustmentsPanel adjustments={adjustments} onChange={setAdjustments} />
+                  </CollapsibleControlPanel>
+                  <CollapsibleControlPanel title="Color Adjustments" defaultOpen={false}>
+                    <ColorAdjustmentsPanel colorAdjustments={colorAdjustments} onChange={setColorAdjustments} />
+                  </CollapsibleControlPanel>
+                  <CollapsibleControlPanel title="Sharpness & Detail" defaultOpen={false}>
+                    <SharpnessPanel sharpness={sharpness} onChange={setSharpness} />
+                  </CollapsibleControlPanel>
+                  <CollapsibleControlPanel title="Effects & Filters" defaultOpen={false}>
+                    <EffectsPanel effects={effects} onChange={setEffects} />
+                  </CollapsibleControlPanel>
+                  <CollapsibleControlPanel title="Geometry" defaultOpen={false}>
+                    <GeometryPanel geometry={geometry} onChange={setGeometry} />
+                  </CollapsibleControlPanel>
+                  <CollapsibleControlPanel title="Advanced" defaultOpen={false}>
+                    <AdvancedPanel advanced={advanced} onChange={setAdvanced} />
+                  </CollapsibleControlPanel>
+                  <CollapsibleControlPanel title="Presets" defaultOpen={false}>
+                    <PresetManager 
+                      onApplyPreset={(presetSettings) => {
+                        setAdjustments(prev => ({...prev, ...presetSettings}));
+                        setColorAdjustments(prev => ({...prev, ...presetSettings}));
+                        setSharpness(prev => ({...prev, ...presetSettings}));
+                        setEffects(prev => ({...prev, ...presetSettings}));
+                        setGeometry(prev => ({...prev, ...presetSettings}));
+                        setAdvanced(prev => ({...prev, ...presetSettings}));
+                      }}
+                      currentEdits={{
+                        ...adjustments,
+                        ...colorAdjustments,
+                        ...sharpness,
+                        ...effects,
+                        ...geometry,
+                        ...advanced
+                      }}
+                    />
+                  </CollapsibleControlPanel>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

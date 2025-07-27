@@ -1,4 +1,525 @@
+/* Enhanced image preview layout styles */
+.image-preview-container {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  flex: 1;
+  min-height: 500px;
+  margin-bottom: 16px;
+}
+
+.image-preview-container.single-view .image-preview-tile {
+  width: 100%;
+  flex: 1;
+}
+
+/* Hide duplicate controls in EnhancedImageCanvas since we have them in toolbar */
+.image-preview-container .bottom-controls,
+.enhanced-canvas-container .bottom-controls,
+[data-enhanced-canvas] .bottom-controls,
+.canvas-container .bottom-controls {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.image-preview-container .comparison-labels,
+.enhanced-canvas-container .comparison-labels,
+[data-enhanced-canvas] .comparison-labels,
+.canvas-container .comparison-labels {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.image-preview-container .slider-instruction,
+.enhanced-canvas-container .slider-instruction,
+[data-enhanced-canvas] .slider-instruction,
+.canvas-container .slider-instruction {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Hide any zoom buttons that might be in the canvas */
+.image-preview-container .zoom-btn,
+.enhanced-canvas-container .zoom-btn,
+[data-enhanced-canvas] .zoom-btn,
+.canvas-container .zoom-btn,
+.image-preview-container button[title*="oom"],
+.enhanced-canvas-container button[title*="oom"],
+[data-enhanced-canvas] button[title*="oom"],
+.canvas-container button[title*="oom"] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Fix fullscreen button positioning to not interfere with layout */
+.image-preview-container .fullscreen-controls,
+.enhanced-canvas-container .fullscreen-controls,
+[data-enhanced-canvas] .fullscreen-controls,
+.canvas-container .fullscreen-controls {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  z-index: 10 !important;
+  pointer-events: auto !important;
+}
+
+.image-preview-container .fullscreen-btn,
+.enhanced-canvas-container .fullscreen-btn,
+[data-enhanced-canvas] .fullscreen-btn,
+.canvas-container .fullscreen-btn {
+  background: rgba(0, 0, 0, 0.7) !important;
+  color: white !important;
+  border: none !important;
+  padding: 6px 8px !important;
+  border-radius: 4px !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+}
+
+.image-preview-container .fullscreen-btn:hover,
+.enhanced-canvas-container .fullscreen-btn:hover,
+[data-enhanced-canvas] .fullscreen-btn:hover,
+.canvas-container .fullscreen-btn:hover {
+  background: rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Universal canvas button hiding - catch any button in canvas area */
+.enhanced-canvas-container button,
+[data-enhanced-canvas] button,
+.canvas-container button,
+.image-preview-container canvas + button,
+.image-preview-container canvas ~ button,
+.image-preview-container canvas + div button,
+.image-preview-container canvas ~ div button {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Allow only our specific toolbar buttons */
+.toolbar-btn,
+.panel-close,
+.resize-handle {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+/* Fix image positioning and container layout */
+.enhanced-canvas-container {
+  position: relative !important;
+  overflow: hidden !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 500px !important;
+}
+
+.canvas-display-wrapper {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 500px !important;
+}
+
+.main-canvas {
+  display: block !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* Ensure image preview container takes full space */
+.image-preview-container.full-width-only {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: calc(100vh - 160px) !important; /* Account for header and toolbar */
+  min-height: 500px !important;
+}
+
+.image-preview-container.full-width-only .image-preview-tile {
+  flex: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Keep image info panel but position it better */
+.image-preview-container .image-info-panel,
+.enhanced-canvas-container .image-info-panel {
+  position: absolute !important;
+  bottom: 8px !important;
+  left: 8px !important;
+  background: rgba(0, 0, 0, 0.7) !important;
+  color: white !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  z-index: 10 !important;
+}
+
+.image-preview-tile {
+  position: relative;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.image-preview-tile.full-width {
+  width: 100% !important;
+  flex: none;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  transition: transform 0.2s ease;
+  transform-origin: center center;
+}
+
+.image-preview-tile .preview-image,
+.image-preview-tile > div {
+  transition: transform 0.2s ease;
+  transform-origin: center center;
+}
+
+.toggle-preview-btn {
+  font-size: 11px !important;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+  transition: all 0.2s ease;
+  background: rgba(0, 0, 0, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.toggle-preview-btn:hover {
+  background: rgba(0, 0, 0, 0.9) !important;
+  transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.show-view-btn {
+  font-weight: 500;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.show-view-btn:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Main editor layout improvements */
+.main-editor-content {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+}
+
+/* Full-width image preview layout */
+.image-preview-container.full-width-only {
+  position: relative;
+  display: flex;
+  width: 100%;
+  flex: 1;
+  min-height: 500px;
+  margin-bottom: 16px;
+}
+
+.image-preview-container.full-width-only .image-preview-tile {
+  width: 100%;
+  flex: 1;
+}
+
+/* Overlay side panel */
+.side-controls-panel.overlay {
+  position: fixed;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  width: 320px;
+  max-height: 85vh;
+  background: rgba(45, 45, 45, 0.95);
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 1000;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  overflow-y: auto;
+  transition: width 0.1s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.side-controls-panel.overlay .panel-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.side-controls-panel.overlay .panel-title {
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  padding-right: 30px;
+}
+
+/* Resizable panel styles */
+.side-controls-panel.overlay.resizable {
+  position: fixed;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  min-width: 250px;
+  max-width: 600px;
+  resize: none;
+}
+
+.resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: #4a9eff;
+  cursor: ew-resize;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: 3px 0 0 3px;
+  z-index: 1001;
+}
+
+.resize-handle:hover {
+  opacity: 0.8;
+}
+
+.side-controls-panel.overlay:hover .resize-handle {
+  opacity: 0.6;
+}
+
+.resize-handle:active {
+  opacity: 1;
+  background: #66b3ff;
+}
+
+/* Add a visual indicator when resizing */
+.side-controls-panel.overlay.resizing {
+  user-select: none;
+  pointer-events: none;
+}
+
+.side-controls-panel.overlay.resizing .resize-handle {
+  opacity: 1;
+  background: #66b3ff;
+  width: 8px;
+}
+
+.panel-size-info {
+  color: #aaa;
+  font-size: 11px;
+  margin-bottom: 12px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.side-controls-panel.overlay .panel-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #ff4444;
+  color: white;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1002;
+}
+
+.side-controls-panel.overlay .panel-close:hover {
+  background: #ff6666;
+}
+
+.side-controls-panel.overlay .panel-title {
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  padding-right: 30px;
+}
+
+/* Active toolbar button style */
+.toolbar-btn.active {
+  background: #4a9eff !important;
+  color: white !important;
+}
+
+/* Body cursor change during resize */
+body.resizing {
+  cursor: ew-resize !important;
+  user-select: none;
+}
+
+body.resizing * {
+  cursor: ew-resize !important;
+}
+
+/* Resize tooltip */
+.resize-handle::before {
+  content: '⟷';
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.resize-handle:hover::before {
+  opacity: 1;
+}
+
+/* Collapsible panel styles */
+.collapsible-panel {
+  margin-bottom: 8px;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: #333;
+  flex-shrink: 0;
+}
+
+.collapsible-panel:last-child {
+  margin-bottom: 0;
+}
+
+.collapsible-panel .panel-header {
+  width: 100%;
+  background: #444;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  border-radius: 6px 6px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.collapsible-panel .panel-header:hover {
+  background: #555;
+}
+
+.collapsible-panel .panel-content {
+  padding: 10px;
+  background: #2a2a2a;
+  border-radius: 0 0 6px 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.panel-chevron {
+  transition: transform 0.2s ease;
+  font-size: 10px;
+}
+
+.panel-chevron.open {
+  transform: rotate(180deg);
+}
+
 /* Enhanced Lightroom-inspired dark theme for Editor Page */
+.editor-page {
+  background: #1a1a1a;
+  color: #fff;
+  min-height: 100vh;
+  padding: 12px;
+}
+
+.editor-header {
+  background: #2d2d2d;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #444;
+}
+
+.editor-header .header-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.editor-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: #fff;
+}
+
+.back-link {
+  color: #4a9eff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.back-link:hover {
+  color: #66b3ff;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: #555;
+  margin: 0 4px;
+}
 .editor-layout {
   display: grid;
   grid-template-columns: auto 1fr auto;

@@ -516,7 +516,16 @@ const applyProfessionalFilters = (ctx, image, edits = {}) => {
   ctx.putImageData(imageData, 0, 0);
 };
 
-const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false, sliderPosition = 50, onSliderChange }) => {
+const EnhancedImageCanvas = ({ 
+  imageSrc, 
+  edits, 
+  onProcessed, 
+  showSlider = false, 
+  sliderPosition = 50, 
+  onSliderChange,
+  hideControls = false,
+  hideFullscreen = false
+}) => {
   const canvasRef = useRef(null);
   const originalCanvasRef = useRef(null);
   const processedCanvasRef = useRef(null);
@@ -1364,15 +1373,17 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
         <canvas ref={processedCanvasRef} style={{ display: 'none' }} />
         
         {/* Fullscreen button only */}
-        <div className="fullscreen-controls">
-          <button 
-            onClick={handleFullscreen}
-            className="fullscreen-btn"
-            title={isFullscreen ? "Exit Fullscreen (Esc)" : "Enter Fullscreen (F)"}
-          >
-            {isFullscreen ? "⤓" : "⤢"}
-          </button>
-        </div>
+        {!hideFullscreen && (
+          <div className="fullscreen-controls">
+            <button 
+              onClick={handleFullscreen}
+              className="fullscreen-btn"
+              title={isFullscreen ? "Exit Fullscreen (Esc)" : "Enter Fullscreen (F)"}
+            >
+              {isFullscreen ? "⤓" : "⤢"}
+            </button>
+          </div>
+        )}
         
         {isLoading && (
           <div className="loading-overlay">
@@ -1428,7 +1439,7 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
           />
           
           {/* Before/After labels */}
-          {!isLoading && !error && canvasSize.width > 0 && showSlider && (
+          {!isLoading && !error && canvasSize.width > 0 && showSlider && !hideControls && (
             <div className="comparison-labels">
               <div className="label-before">Original</div>
               <div className="label-after">Edited</div>
@@ -1436,7 +1447,7 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
           )}
           
           {/* Slider instruction tooltip */}
-          {!isLoading && !error && showSlider && canvasSize.width > 0 && (
+          {!isLoading && !error && showSlider && canvasSize.width > 0 && !hideControls && (
             <div className="slider-instruction">
               <span>↔ Drag to compare before/after</span>
             </div>
@@ -1444,7 +1455,7 @@ const EnhancedImageCanvas = ({ imageSrc, edits, onProcessed, showSlider = false,
         </div>
 
         {/* Zoom Controls - Below Image */}
-        {!isLoading && !error && (
+        {!isLoading && !error && !hideControls && (
           <div className="bottom-controls">
             <div className="zoom-controls">
               <button 

@@ -33,7 +33,8 @@ const Editor = ({ imageFile, metadata }) => {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [decodedImage, setDecodedImage] = useState(null);
   const [activePanel, setActivePanel] = useState('basic');
-  const [showOriginal, setShowOriginal] = useState(true);
+  // Hide original view by default, show edited full width
+  const [showOriginal, setShowOriginal] = useState(false);
 
   // Decode RAW file on mount
   React.useEffect(() => {
@@ -120,15 +121,15 @@ const Editor = ({ imageFile, metadata }) => {
           
           {/* Format Selector & Download */}
           <div className="flex flex-wrap gap-4 mt-8">
-            <select className="bg-blue-500 text-black font-bold px-6 py-3 rounded-xl shadow-lg border-2 border-blue-700 hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-200">
+          <select className="bg-blue-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg border-2 border-blue-700 hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-200">
               <option value="jpeg">JPEG</option>
               <option value="png">PNG</option>
               <option value="raw">RAW</option>
             </select>
-            <button className="bg-blue-700 text-black font-bold px-6 py-3 rounded-xl shadow border-2 border-blue-800 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-400 transition duration-200">
+            <button className="bg-blue-700 text-white font-bold px-6 py-3 rounded-xl shadow border-2 border-blue-800 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-400 transition duration-200">
               Download
             </button>
-            <button className="bg-blue-500 text-black font-bold px-6 py-3 rounded-xl shadow border-2 border-blue-700 hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-200">
+            <button className="bg-blue-500 text-white font-bold px-6 py-3 rounded-xl shadow border-2 border-blue-700 hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-200">
               Save
             </button>
           </div>
