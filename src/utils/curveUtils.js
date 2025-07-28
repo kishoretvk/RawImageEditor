@@ -218,3 +218,15 @@ export const applyLUTToImageData = (imageData, lut, channel = 'rgb') => {
   
   return imageData;
 };
+
+/**
+ * Preset curves for common editing operations
+ */
+export const curvePresets = {
+  linear: [[0, 0], [1, 1]],
+  sCurve: [[0, 0], [0.25, 0.1], [0.5, 0.5], [0.75, 0.9], [1, 1]],
+  highlightCompress: [[0, 0], [0.5, 0.6], [0.75, 0.85], [1, 1]],
+  shadowBoost: [[0, 0], [0.25, 0.35], [0.5, 0.6], [1, 1]],
+  contrastBoost: [[0, 0], [0.3, 0.15], [0.7, 0.85], [1, 1]],
+  contrastReduce: [[0, 0], [0.3, 0.25], [0.7, 0.75], [1, 1]]
+};

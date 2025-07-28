@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import './UnifiedSlider.css';
+import '../styles/unified-slider.css';
 
 const ImageSlider = ({ 
   originalImage, 

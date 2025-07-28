@@ -3,7 +3,7 @@ import '../styles/loading-error.css';
 import '../styles/responsive-canvas.css';
 import { processRAWFile, isRawFormat, getRawFormatInfo, getRAWWorkflowRecommendation, cleanupRAWResources } from '../utils/rawProcessor';
 import { createSmoothCurve, applyCurveToImageData } from '../utils/curveUtils';
-import { useCurve } from '../context/CurveContext.jsx';
+import { useCurve } from '../context/CurveContext';
 
 // RAW Image Quality Enhancement Function
 const enhanceRAWImageQuality = async (processedImageData) => {
@@ -563,7 +563,18 @@ const EnhancedImageCanvas = ({
 }) => {
   // Only use curve context if we have curve edits
   const hasCurveEdits = edits?.curveRgb || edits?.curveR || edits?.curveG || edits?.curveB || edits?.curveLuminance;
-  const { curves } = hasCurveEdits ? useCurve() : { curves: {} };
+  
+  // Safely use curve context
+  let curves = {};
+  if (hasCurveEdits) {
+    try {
+      const curveContext = useCurve();
+      curves = curveContext.curves;
+    } catch (error) {
+      console.warn('Curve context not available:', error.message);
+      curves = {};
+    }
+  }
   const canvasRef = useRef(null);
   const originalCanvasRef = useRef(null);
   const processedCanvasRef = useRef(null);

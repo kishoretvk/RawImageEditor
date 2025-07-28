@@ -18,14 +18,18 @@ import {
 } from '../components/EnhancedImageCanvas';
 
 /**
- * Apply edits to an image and export as JPEG
+ * Apply edits to an image and export as JPEG with enhanced quality
  */
 export const exportImageWithEdits = async (imageFile, edits, options = {}) => {
   return new Promise((resolve, reject) => {
     try {
-      // Create canvas and context
+      // Create canvas and context with high quality settings
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      
+      // Enable high-quality rendering
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       
       // Load image
       const img = new Image();
@@ -37,12 +41,22 @@ export const exportImageWithEdits = async (imageFile, edits, options = {}) => {
       
       img.onload = () => {
         try {
-          // Set canvas dimensions
-          canvas.width = img.width;
-          canvas.height = img.height;
+          // Set canvas dimensions with maximum size constraints for web optimization
+          const maxWidth = options.maxWidth || 4000;
+          const maxHeight = options.maxHeight || 4000;
           
-          // Draw original image
-          ctx.drawImage(img, 0, 0);
+          let { width, height } = img;
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.floor(width * ratio);
+            height = Math.floor(height * ratio);
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Draw original image with high quality
+          ctx.drawImage(img, 0, 0, width, height);
           
           // Prepare edits with curve data if available
           const editsWithCurves = { ...edits };
@@ -57,14 +71,23 @@ export const exportImageWithEdits = async (imageFile, edits, options = {}) => {
           // Apply professional filters
           applyProfessionalFilters(ctx, img, editsWithCurves);
           
-          // Export as JPEG
-          const quality = options.quality || 0.9;
+          // Export as JPEG with specified quality or default 0.9
+          const quality = options.quality !== undefined ? options.quality : 0.9;
           const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          
+          // Calculate approximate file size from data URL
+          const base64 = dataUrl.split(',')[1] || '';
+          const size = (base64.length * 0.75);
           
           // Clean up
           URL.revokeObjectURL(imageUrl);
           
-          resolve(dataUrl);
+          resolve({
+            dataUrl,
+            size,
+            width: canvas.width,
+            height: canvas.height
+          });
         } catch (error) {
           URL.revokeObjectURL(imageUrl);
           reject(error);
@@ -87,6 +110,7 @@ export const exportImageWithEdits = async (imageFile, edits, options = {}) => {
 export const batchProcessImages = async (imageFiles, edits, options = {}) => {
   const results = [];
   
+  // Process images sequentially to avoid memory issues
   for (let i = 0; i < imageFiles.length; i++) {
     try {
       const imageFile = imageFiles[i];
@@ -96,11 +120,14 @@ export const batchProcessImages = async (imageFiles, edits, options = {}) => {
         id: Date.now() + i,
         name: imageFile.name.replace(/\.[^/.]+$/, "_edited.jpg"),
         originalName: imageFile.name,
-        size: imageFile.size,
-        dataUrl: editedImage,
+        size: editedImage.size,
+        width: editedImage.width,
+        height: editedImage.height,
+        dataUrl: editedImage.dataUrl,
         status: 'completed'
       });
     } catch (error) {
+      console.error(`Error processing image ${imageFiles[i].name}:`, error);
       results.push({
         id: Date.now() + i,
         name: imageFiles[i].name,
@@ -131,8 +158,44 @@ export const createZipFromImages = async (processedImages) => {
   return successfulImages[0].dataUrl;
 };
 
+/**
+ * Download a file from a data URL
+ */
+export const downloadFile = (dataUrl, filename) => {
+  const link = document.createElement('a');
+  link.href = dataUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+/**
+ * Download multiple files as a ZIP archive
+ * In a real implementation, this would use JSZip library
+ */
+export const downloadAsZip = async (processedImages, zipName = 'processed_images.zip') => {
+  const successfulImages = processedImages.filter(img => img.status === 'completed');
+  
+  if (successfulImages.length === 0) {
+    throw new Error('No successfully processed images to download');
+  }
+  
+  // For demo purposes, download the first image
+  // In a real implementation, this would create a ZIP file
+  const firstImage = successfulImages[0];
+  downloadFile(firstImage.dataUrl, firstImage.name);
+  
+  return {
+    count: successfulImages.length,
+    name: zipName
+  };
+};
+
 export default {
   exportImageWithEdits,
   batchProcessImages,
-  createZipFromImages
+  createZipFromImages,
+  downloadFile,
+  downloadAsZip
 };

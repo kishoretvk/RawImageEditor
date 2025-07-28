@@ -547,6 +547,103 @@ const simulateRAWProcessing = async (file) => {
 };
 
 /**
+ * Convert RAW file to JPEG with specified quality and options
+ */
+export const convertRAWToJPEG = async (file, options = {}) => {
+  const {
+    quality = 0.95,
+    maxWidth = 4000,
+    maxHeight = 4000,
+    enhanceQuality = false,
+    outputFormat = 'jpeg'
+  } = options;
+  
+  try {
+    // First try to process the RAW file to get a preview/thumbnail
+    const rawResult = await processRAWFile(file, { forceRefresh: true });
+    
+    // If we got a thumbnail or processed image, convert it to JPEG with specified quality
+    if (rawResult.url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            // Create canvas with specified max dimensions
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            
+            // Enable high-quality rendering
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
+            // Calculate new dimensions while maintaining aspect ratio
+            let { width, height } = img;
+            if (width > maxWidth || height > maxHeight) {
+              const ratio = Math.min(maxWidth / width, maxHeight / height);
+              width = Math.floor(width * ratio);
+              height = Math.floor(height * ratio);
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Draw image with high quality
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Apply quality enhancement if requested
+            if (enhanceQuality) {
+              // Apply subtle enhancements for better visual quality
+              ctx.filter = 'contrast(1.05) brightness(1.02) saturate(1.05)';
+              ctx.drawImage(canvas, 0, 0);
+              ctx.filter = 'none';
+            }
+            
+            // Convert to specified format with quality
+            const mimeType = outputFormat === 'png' ? 'image/png' : 'image/jpeg';
+            const canvasQuality = outputFormat === 'png' ? undefined : quality;
+            const dataUrl = canvas.toDataURL(mimeType, canvasQuality);
+            
+            // Calculate approximate file size
+            const base64 = dataUrl.split(',')[1] || '';
+            const size = (base64.length * 0.75);
+            
+            // Clean up
+            URL.revokeObjectURL(rawResult.url);
+            
+            resolve({
+              url: dataUrl,
+              type: 'converted',
+              width: canvas.width,
+              height: canvas.height,
+              size,
+              quality: enhanceQuality ? 'high' : 'standard',
+              originalFormat: rawResult.formatInfo,
+              strategy: 'conversion'
+            });
+          } catch (error) {
+            URL.revokeObjectURL(rawResult.url);
+            reject(error);
+          }
+        };
+        
+        img.onerror = () => {
+          URL.revokeObjectURL(rawResult.url);
+          reject(new Error('Failed to load RAW processed image'));
+        };
+        
+        img.src = rawResult.url;
+      });
+    }
+    
+    throw new Error('No processed image data available');
+  } catch (error) {
+    console.error('[RAW Converter] Failed to convert RAW to JPEG:', error);
+    throw error;
+  }
+};
+
+/**
  * Main RAW processing function with multiple fallback strategies
  * Production-ready with caching, monitoring, and enhanced error handling
  */

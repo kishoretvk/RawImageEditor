@@ -1,10 +1,26 @@
 import React, { useState, useContext } from 'react';
-import { useCurve } from '../../context/CurveContext.jsx';
+import { useCurve } from '../../context/CurveContext';
 import CurveEditor from '../CurveEditor';
 import PanelWrapper from '../PanelWrapper';
 
 const CurvesPanel = () => {
-  const { curves, updateCurve } = useCurve();
+  // Handle case where CurveProvider is not available
+  let curveContext;
+  try {
+    curveContext = useCurve();
+  } catch (error) {
+    console.warn('Curve context not available:', error.message);
+    // Return a fallback UI when context is not available
+    return (
+      <PanelWrapper title="Tone Curves" defaultExpanded={true}>
+        <div className="curves-panel">
+          <p className="text-gray-400">Curve controls are not available in this context.</p>
+        </div>
+      </PanelWrapper>
+    );
+  }
+  
+  const { curves, updateCurve } = curveContext;
   const [activeChannel, setActiveChannel] = useState('rgb');
 
   // Get current curve points from context

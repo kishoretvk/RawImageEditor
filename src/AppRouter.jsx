@@ -19,6 +19,8 @@ const importDashboard = () => import('./pages/Dashboard');
 const importCompetition = () => import('./pages/Competition');
 const importAboutTech = () => import('./pages/AboutTech');
 const importCompressionPage = () => import('./pages/CompressionPage');
+const importWorkflowPage = () => import('./pages/WorkflowPage');
+const importRawConvertPage = () => import('./pages/RawConvertPage');
 
 const AppRouter = () => {
   const [showPerformancePanel, setShowPerformancePanel] = useState(false);
@@ -49,7 +51,7 @@ const AppRouter = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<LandingPageNew />} />
+        <Route path="/" element={<DemoPage />} />
         <Route path="/upload" element={<UploadConvert />} />
         
         {/* Smart wrapped routes with seamless loading */}
@@ -115,6 +117,28 @@ const AppRouter = () => {
               componentName="CompressionPage"
               importFunction={importCompressionPage}
               fallback={<SeamlessLoader type="minimal" message="Loading Compression..." />}
+            />
+          } 
+        />
+        
+        <Route 
+          path="/workflow" 
+          element={
+            <SmartComponentWrapper
+              componentName="WorkflowPage"
+              importFunction={importWorkflowPage}
+              fallback={<SeamlessLoader type="minimal" message="Loading Workflow..." />}
+            />
+          } 
+        />
+        
+        <Route 
+          path="/raw-convert" 
+          element={
+            <SmartComponentWrapper
+              componentName="RawConvertPage"
+              importFunction={importRawConvertPage}
+              fallback={<SeamlessLoader type="minimal" message="Loading RAW Converter..." />}
             />
           } 
         />

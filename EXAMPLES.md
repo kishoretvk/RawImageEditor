@@ -1,436 +1,322 @@
-# RAW Image Editor Examples
+# RawConverter Pro Examples
 
-This document provides examples of how to use the RAW Image Editor's components and processing capabilities.
+This document provides practical examples of how to use the enhanced features of RawConverter Pro.
 
-## Basic RAW Processing
+## 1. Professional Image Editing
+
+### Basic Editing Workflow
+1. Navigate to the Editor page (`/editor`)
+2. Upload a RAW or standard image file
+3. Adjust the following parameters:
+   - **Exposure**: Fine-tune the overall brightness
+   - **Contrast**: Increase or decrease the difference between light and dark areas
+   - **Highlights**: Control the brightest parts of the image
+   - **Shadows**: Adjust the darker areas
+   - **Whites/Blacks**: Set the white and black points
+   - **Clarity**: Enhance mid-tone contrast
+   - **Vibrance**: Increase color saturation while protecting skin tones
+   - **Saturation**: Adjust overall color intensity
+4. Use the White Balance controls to correct color temperature
+5. Apply HSL adjustments to fine-tune individual colors
+6. Use the Tone Curve for precise tonal control
+
+### Example Settings for Landscape Photography
+```javascript
+{
+  exposure: 0.3,
+  contrast: 25,
+  highlights: -30,
+  shadows: 40,
+  whites: 10,
+  blacks: -15,
+  clarity: 35,
+  vibrance: 20,
+  saturation: 10,
+  temperature: 5,
+  tint: 2
+}
+```
+
+### Example Settings for Portrait Photography
+```javascript
+{
+  exposure: 0.2,
+  contrast: 15,
+  highlights: -20,
+  shadows: 30,
+  whites: 5,
+  blacks: -10,
+  clarity: 20,
+  vibrance: 15,
+  saturation: 5,
+  temperature: 2,
+  tint: 1
+}
+```
+
+## 2. Preset Management
+
+### Creating a Preset
+1. Edit an image to your desired settings
+2. Open the Preset Manager panel
+3. Click "Create New Preset"
+4. Give your preset a descriptive name
+5. Click "Save Preset"
+
+### Applying a Preset
+1. Open the Preset Manager panel
+2. Select a preset from the list
+3. Click "Apply" to apply the preset to your current image
+
+### Example Preset Library
+```javascript
+const presetLibrary = [
+  {
+    name: "Landscape - Vibrant",
+    settings: {
+      exposure: 0.3,
+      contrast: 25,
+      highlights: -30,
+      shadows: 40,
+      clarity: 35,
+      vibrance: 25,
+      saturation: 15
+    }
+  },
+  {
+    name: "Portrait - Natural",
+    settings: {
+      exposure: 0.2,
+      contrast: 15,
+      highlights: -20,
+      shadows: 30,
+      clarity: 20,
+      vibrance: 15,
+      saturation: 5
+    }
+  },
+  {
+    name: "Black & White - Classic",
+    settings: {
+      exposure: 0.1,
+      contrast: 30,
+      highlights: -25,
+      shadows: 35,
+      clarity: 40,
+      vibrance: -100,
+      saturation: -100
+    }
+  }
+];
+```
+
+## 3. Batch Workflow Processing
+
+### Creating a Workflow
+1. Navigate to the Workflow page (`/workflow`)
+2. Click "Create New Workflow"
+3. Give your workflow a name
+4. Add steps to your workflow:
+   - Convert RAW to JPEG
+   - Apply a preset
+   - Resize images
+5. Save your workflow
+
+### Example Workflow Configuration
+```javascript
+const workflow = {
+  name: "Social Media Optimized",
+  steps: [
+    {
+      type: "convert",
+      format: "jpeg",
+      quality: 0.85
+    },
+    {
+      type: "preset",
+      presetId: "landscape-vibrant"
+    },
+    {
+      type: "resize",
+      maxWidth: 1920,
+      maxHeight: 1080
+    }
+  ]
+};
+```
+
+### Processing a Batch
+1. Upload multiple images to the workflow processor
+2. Select your workflow from the list
+3. Click "Process Images"
+4. Monitor progress in the processing panel
+5. Download the processed images as a ZIP archive
+
+## 4. RAW File Processing
+
+### Supported RAW Formats
+- Canon: .cr2, .cr3, .crw
+- Nikon: .nef, .nrw
+- Sony: .arw, .srf, .sr2
+- Adobe: .dng
+- Olympus: .orf
+- Panasonic: .rw2, .raw
+- Pentax: .pef, .ptx
+- Fujifilm: .raf
+- Samsung: .srw
+- Leica: .rwl
+- Kodak: .dcs
+- Phase One: .iiq
+- Hasselblad: .3fr
+- Mamiya: .mef
+
+### RAW Processing Options
+```javascript
+const rawProcessingOptions = {
+  quality: 0.95,        // JPEG quality (0.0 - 1.0)
+  maxWidth: 4000,       // Maximum width in pixels
+  maxHeight: 4000,      // Maximum height in pixels
+  enhanceQuality: true, // Apply quality enhancement
+  outputFormat: 'jpeg'  // Output format ('jpeg' or 'png')
+};
+```
+
+## 5. Performance Optimization
+
+### Memory Management
+The application uses an LRU (Least Recently Used) cache to manage memory:
 
 ```javascript
-import { processRAWFile, isRawFormat } from './utils/rawProcessor';
+// Cache configuration
+const cacheConfig = {
+  maxSize: 50,          // Maximum number of cached items
+  ttl: 300000           // Time to live in milliseconds (5 minutes)
+};
+```
 
-// Check if file is RAW format
-const handleFileUpload = async (file) => {
-  if (!isRawFormat(file.name)) {
-    console.log('Not a RAW file');
-    return;
-  }
-  
-  try {
-    const result = await processRAWFile(file);
-    console.log('Processing successful:', result);
-    
-    // Display the processed image
-    const img = document.createElement('img');
-    img.src = result.url;
-    document.body.appendChild(img);
-    
-  } catch (error) {
-    console.error('Processing failed:', error.message);
+### WebAssembly Acceleration
+For browsers that support WebAssembly, performance-critical operations are accelerated:
+
+```javascript
+// Check WebAssembly support
+if (hasWebAssemblySupport()) {
+  // Use WebAssembly-accelerated processing
+  processImageWithWebAssembly(imageData);
+} else {
+  // Fallback to JavaScript processing
+  processImageWithJavaScript(imageData);
+}
+```
+
+## 6. Cross-Platform Usage
+
+### Desktop Usage
+1. Open the application in a modern browser (Chrome, Firefox, Safari, Edge)
+2. Use mouse and keyboard for precise editing
+3. Take advantage of larger screen real estate for detailed work
+
+### Mobile Usage
+1. Open the application in a mobile browser
+2. Use touch gestures for navigation:
+   - Pinch to zoom
+   - Swipe to pan
+   - Tap to select tools
+3. Use the simplified mobile interface for quick edits
+
+### Touch-Optimized Controls
+```javascript
+// Touch event handling
+const touchHandlers = {
+  handleTouchStart: (e) => {
+    // Handle touch start
+  },
+  handleTouchMove: (e) => {
+    // Handle touch move with multi-touch support
+  },
+  handleTouchEnd: (e) => {
+    // Handle touch end
   }
 };
 ```
 
-## Batch Processing
+## 7. Privacy and Security
+
+### Client-Side Processing
+All image processing happens in the browser:
 
 ```javascript
-import { processBatchRAWFiles } from './utils/rawProcessor';
-
-const handleBatchUpload = async (files) => {
-  const rawFiles = files.filter(file => isRawFormat(file.name));
-  
-  const result = await processBatchRAWFiles(
-    rawFiles,
-    { quality: 'high' },
-    (progress) => {
-      console.log(`Processing: ${progress.current}/${progress.total} (${progress.percentage.toFixed(1)}%)`);
-    }
-  );
-  
-  console.log(`Successfully processed: ${result.summary.successful}/${result.summary.total} files`);
-  
-  // Handle results
-  result.results.forEach((processedFile, index) => {
-    console.log(`File ${index + 1}: ${processedFile.strategy} - ${processedFile.processingTime.toFixed(2)}ms`);
+// Example of client-side processing
+const processImageLocally = (imageFile) => {
+  // Process image without uploading to server
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    // ... processing logic ...
+    resolve(processedImage);
   });
-  
-  // Handle errors
-  result.errors.forEach((error) => {
-    console.error(`Failed to process ${error.file.name}: ${error.error}`);
-  });
 };
 ```
 
-## Performance Monitoring
+### Data Storage
+User data is stored locally in the browser:
 
 ```javascript
-import { getPerformanceMetrics, getCacheStatistics } from './utils/rawProcessor';
+// Local storage for presets
+localStorage.setItem('presets', JSON.stringify(presets));
+const savedPresets = JSON.parse(localStorage.getItem('presets'));
+```
 
-// Monitor performance
-const monitorPerformance = () => {
-  const metrics = getPerformanceMetrics();
-  const cacheStats = getCacheStatistics();
-  
-  console.log('Performance Metrics:', {
-    processedFiles: metrics.processedFiles,
-    averageProcessingTime: `${metrics.averageProcessingTime.toFixed(2)}ms`,
-    successRate: `${metrics.successRate.toFixed(1)}%`,
-    cacheEfficiency: `${metrics.cacheEfficiency.toFixed(1)}%`
-  });
-  
-  console.log('Cache Statistics:', {
-    size: cacheStats.size,
-    maxSize: cacheStats.maxSize,
-    hitRate: `${cacheStats.hitRate.toFixed(1)}%`
-  });
+## 8. Advanced Features
+
+### Tone Curve Editing
+```javascript
+const toneCurve = {
+  rgb: [
+    [0, 0],
+    [32, 22],
+    [128, 128],
+    [224, 234],
+    [255, 255]
+  ],
+  r: [[0, 0], [255, 255]],
+  g: [[0, 0], [255, 255]],
+  b: [[0, 0], [255, 255]]
 };
 ```
 
-## Error Handling
-
+### HSL Adjustments
 ```javascript
-import { processRAWFile, RAWProcessingError } from './utils/rawProcessor';
-
-const robustProcessing = async (file) => {
-  try {
-    const result = await processRAWFile(file, { 
-      retryAttempts: 3,
-      timeout: 30000 
-    });
-    
-    return result;
-    
-  } catch (error) {
-    if (error instanceof RAWProcessingError) {
-      switch (error.code) {
-        case 'FILE_TOO_LARGE':
-          console.error('File exceeds maximum size limit');
-          break;
-        case 'INVALID_SIGNATURE':
-          console.error('File appears to be corrupted or not a valid RAW file');
-          break;
-        case 'PROCESSING_TIMEOUT':
-          console.error('Processing took too long and was cancelled');
-          break;
-        case 'NO_THUMBNAIL':
-          console.error('No embedded thumbnail found in RAW file');
-          break;
-        default:
-          console.error('Unknown processing error:', error.message);
-      }
-    } else {
-      console.error('Unexpected error:', error);
-    }
-    
-    throw error;
+const hslAdjustments = {
+  hue: {
+    red: 0,
+    orange: 5,
+    yellow: 0,
+    green: 0,
+    aqua: 0,
+    blue: 0,
+    purple: 0,
+    magenta: 0
+  },
+  saturation: {
+    red: 10,
+    orange: 5,
+    yellow: 0,
+    green: -5,
+    aqua: 0,
+    blue: 5,
+    purple: 10,
+    magenta: 5
+  },
+  luminance: {
+    red: 5,
+    orange: 0,
+    yellow: -5,
+    green: 0,
+    aqua: 5,
+    blue: 0,
+    purple: 5,
+    magenta: 0
   }
 };
 ```
 
-## React Component Integration
-
-```jsx
-import React, { useState, useCallback } from 'react';
-import { processRAWFile, cleanupRAWResources } from '../utils/rawProcessor';
-
-const RAWUploader = () => {
-  const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
-
-  const handleFileChange = useCallback(async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    setProcessing(true);
-    setError(null);
-
-    try {
-      const processedResult = await processRAWFile(file);
-      setResult(processedResult);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setProcessing(false);
-    }
-  }, []);
-
-  // Cleanup on unmount
-  React.useEffect(() => {
-    return () => {
-      if (result) {
-        cleanupRAWResources(result);
-      }
-    };
-  }, [result]);
-
-  return (
-    <div>
-      <input 
-        type="file" 
-        accept=".cr2,.cr3,.nef,.arw,.dng,.orf,.rw2,.pef,.raf,.srw"
-        onChange={handleFileChange}
-        disabled={processing}
-      />
-      
-      {processing && <p>Processing RAW file...</p>}
-      {error && <p style={{color: 'red'}}>Error: {error}</p>}
-      {result && (
-        <div>
-          <img src={result.url} alt="Processed RAW" />
-          <p>Strategy: {result.strategy}</p>
-          <p>Processing time: {result.processingTime.toFixed(2)}ms</p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default RAWUploader;
-```
-
-## Health Check
-
-```javascript
-import { healthCheck } from './utils/rawProcessor';
-
-const checkSystemHealth = async () => {
-  const health = await healthCheck();
-  
-  console.log('System Status:', health.status);
-  console.log('Features:', health.features);
-  console.log('Performance:', health.performance);
-  console.log('Configuration:', health.configuration);
-  
-  if (health.status === 'unhealthy') {
-    console.error('System health check failed:', health.error);
-  }
-};
-
-// Run health check periodically
-setInterval(checkSystemHealth, 5 * 60 * 1000); // Every 5 minutes
-```
-
-## Configuration Validation
-
-```javascript
-import { validateConfiguration } from './utils/rawProcessor';
-
-const checkConfiguration = () => {
-  const validation = validateConfiguration();
-  
-  if (!validation.valid) {
-    console.warn('Configuration issues detected:');
-    validation.issues.forEach(issue => {
-      console.warn(`- ${issue}`);
-    });
-  } else {
-    console.log('Configuration is valid');
-  }
-  
-  console.log('Current configuration:', validation.configuration);
-};
-```
-
-## Custom Processing Options
-
-```javascript
-// Advanced processing with custom options
-const advancedProcessing = async (file) => {
-  const options = {
-    quality: 'high',           // 'low', 'medium', 'high'
-    extractThumbnail: true,    // Extract embedded thumbnail
-    simulateProcessing: true,  // Fallback to simulation if needed
-    enableCaching: true,       // Use LRU cache
-    timeout: 45000,           // Custom timeout in ms
-    retryAttempts: 5,         // Number of retry attempts
-    forceRefresh: false       // Bypass cache
-  };
-  
-  return await processRAWFile(file, options);
-};
-```
-
-## Working with Different RAW Formats
-
-```javascript
-import { getRawFormatInfo, getRAWWorkflowRecommendation } from './utils/rawProcessor';
-
-const analyzeRAWFile = (file) => {
-  const formatInfo = getRawFormatInfo(file.name);
-  const recommendation = getRAWWorkflowRecommendation(file);
-  
-  if (formatInfo) {
-    console.log(`Detected: ${formatInfo.brand} ${formatInfo.description}`);
-  }
-  
-  if (recommendation.supported) {
-    console.log('Processing capabilities:', recommendation.capabilities);
-    console.log('Recommendations:', recommendation.recommendations);
-  } else {
-    console.log('Format not supported:', recommendation.message);
-  }
-};
-```
-
-## Using the BeforeAfterDemo Component
-
-```jsx
-import React from 'react';
-import BeforeAfterDemo from './components/BeforeAfterDemo';
-
-const DemoPage = () => {
-  return (
-    <div>
-      <h1>Image Editing Demo</h1>
-      <BeforeAfterDemo />
-    </div>
-  );
-};
-
-export default DemoPage;
-```
-
-## Using the ImageSlider Component
-
-```jsx
-import React, { useState } from 'react';
-import ImageSlider from './components/ImageSlider';
-
-const ImageComparison = ({ originalImage, editedImage }) => {
-  const [sliderPosition, setSliderPosition] = useState(50);
-  
-  return (
-    <div style={{ width: '100%', height: '400px' }}>
-      <ImageSlider
-        originalImage={originalImage}
-        editedImage={editedImage}
-        initialPosition={sliderPosition}
-        onPositionChange={setSliderPosition}
-      />
-    </div>
-  );
-};
-
-export default ImageComparison;
-```
-
-## Using the UnifiedSlider Component
-
-```jsx
-import React, { useState } from 'react';
-import UnifiedSlider from './components/UnifiedSlider';
-
-const EditControls = () => {
-  const [exposure, setExposure] = useState(0);
-  const [contrast, setContrast] = useState(0);
-  
-  return (
-    <div>
-      <div>
-        <label>Exposure: {exposure.toFixed(2)}</label>
-        <UnifiedSlider
-          min={-2}
-          max={2}
-          step={0.01}
-          value={exposure}
-          onChange={setExposure}
-          label="Exposure"
-        />
-      </div>
-      
-      <div>
-        <label>Contrast: {contrast.toFixed(0)}</label>
-        <UnifiedSlider
-          min={-100}
-          max={100}
-          step={1}
-          value={contrast}
-          onChange={setContrast}
-          label="Contrast"
-        />
-      </div>
-    </div>
-  );
-};
-
-export default EditControls;
-```
-
-## Using the BatchWorkflowProcessor Component
-
-```jsx
-import React, { useState, useEffect } from 'react';
-import BatchWorkflowProcessor from './components/BatchWorkflowProcessor';
-
-const WorkflowPage = () => {
-  const [workflows, setWorkflows] = useState([]);
-  const [presets, setPresets] = useState([]);
-
-  // Load workflows and presets from localStorage on component mount
-  useEffect(() => {
-    const savedWorkflows = localStorage.getItem('imageEditorWorkflows');
-    if (savedWorkflows) {
-      try {
-        setWorkflows(JSON.parse(savedWorkflows));
-      } catch (e) {
-        console.error('Failed to parse workflows', e);
-      }
-    }
-    
-    const savedPresets = localStorage.getItem('imageEditorPresets');
-    if (savedPresets) {
-      try {
-        setPresets(JSON.parse(savedPresets));
-      } catch (e) {
-        console.error('Failed to parse presets', e);
-      }
-    }
-  }, []);
-
-  // Save workflows to localStorage whenever they change
-  const handleWorkflowsChange = (updatedWorkflows) => {
-    setWorkflows(updatedWorkflows);
-    localStorage.setItem('imageEditorWorkflows', JSON.stringify(updatedWorkflows));
-  };
-
-  return (
-    <div>
-      <h1>Workflow Management</h1>
-      <BatchWorkflowProcessor 
-        workflows={workflows}
-        presets={presets}
-        onWorkflowsChange={handleWorkflowsChange}
-      />
-    </div>
-  );
-};
-
-export default WorkflowPage;
-```
-
-## Using the PresetManager Component
-
-```jsx
-import React from 'react';
-import PresetManager from './components/PresetManager';
-
-const EditorSidebar = ({ currentEdits, onApplyPreset }) => {
-  return (
-    <div>
-      <h2>Edit Controls</h2>
-      {/* Other edit controls */}
-      
-      <div>
-        <h3>Presets</h3>
-        <PresetManager 
-          onApplyPreset={onApplyPreset}
-          currentEdits={currentEdits}
-        />
-      </div>
-    </div>
-  );
-};
-
-export default EditorSidebar;
-```
-
-For more examples and advanced usage, see the [component implementations](../src/components/) in the source code.
+These examples demonstrate the professional capabilities of RawConverter Pro. The application provides a comprehensive set of tools for RAW image processing, batch workflow management, and cross-platform compatibility while maintaining privacy through client-side processing.

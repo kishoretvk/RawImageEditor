@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { CurveProvider } from './context/CurveContext.jsx';
+import { CurveProvider } from './context/CurveContext';
 import './styles/global.css';
 import LandingPageNew from './components/LandingPageNew';
 import EditorPage from './pages/EditorPage';
@@ -30,7 +30,7 @@ function App() {
     <CurveProvider>
       <div className="App">
         <Routes>
-          <Route path="/" element={<LandingPageNew />} />
+          <Route path="/" element={<DemoPage />} />
           <Route path="/editor" element={<EditorPage />} />
           <Route path="/compression" element={<CompressionPage />} />
           <Route path="/raw-convert" element={<RawConvertPage />} />

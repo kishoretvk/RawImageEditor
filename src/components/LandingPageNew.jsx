@@ -74,12 +74,6 @@ const LandingPage = () => {
 
   return (
     <div className="landing-page">
-      {/* Always-visible Upload Button */}
-      <div className="upload-bar" style={{position: 'fixed', top: 70, left: 0, right: 0, zIndex: 1100, background: 'rgba(20,20,30,0.97)', boxShadow: '0 2px 12px rgba(0,0,0,0.12)'}}>
-        <div style={{maxWidth: 900, margin: '0 auto', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-          <FileUploader onFileUpload={setUploadedImage} multiple={false} />
-        </div>
-      </div>
       {/* Navigation Menu */}
       <nav className="top-navigation">
         <div className="nav-container">
@@ -101,11 +95,19 @@ const LandingPage = () => {
             >
               Compression
             </PreloadLink>
+            <Link to="/workflow" className="nav-link">Workflow</Link>
             <Link to="/gallery" className="nav-link">Gallery</Link>
             <Link to="/about" className="nav-link">About</Link>
           </div>
         </div>
       </nav>
+      
+      {/* Always-visible Upload Button */}
+      <div className="upload-bar" style={{position: 'sticky', top: 0, left: 0, right: 0, zIndex: 1000, background: 'rgba(20,20,30,0.97)', boxShadow: '0 2px 12px rgba(0,0,0,0.12)', padding: '0.5rem 0'}}>
+        <div style={{maxWidth: 900, margin: '0 auto', padding: '0 1rem'}}>
+          <FileUploader onFileUpload={setUploadedImage} multiple={false} />
+        </div>
+      </div>
 
       {/* Hero Section with New York Background */}
       <section className="hero" style={{backgroundImage: `url(${newyorkImg})`}}>
@@ -123,6 +125,55 @@ const LandingPage = () => {
                 See the Difference
               </button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Editing Style Selection */}
+      <section className="editing-styles" style={{padding: '2rem 0', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'}}>
+        <div className="container">
+          <h2 className="section-title" style={{textAlign: 'center', marginBottom: '2rem'}}>Choose Your Editing Style</h2>
+          <div style={{display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap'}}>
+            <button 
+              className="cta-button" 
+              style={{padding: '0.8rem 1.5rem', fontSize: '1rem', minWidth: '180px'}}
+              onClick={() => {
+                // Navigate to editor with wildlife preset
+                window.location.hash = '/editor';
+              }}
+            >
+              Wildlife Photography
+            </button>
+            <button 
+              className="cta-button secondary" 
+              style={{padding: '0.8rem 1.5rem', fontSize: '1rem', minWidth: '180px'}}
+              onClick={() => {
+                // Navigate to editor with landscape preset
+                window.location.hash = '/editor';
+              }}
+            >
+              Landscape Enhancement
+            </button>
+            <button 
+              className="cta-button tertiary" 
+              style={{padding: '0.8rem 1.5rem', fontSize: '1rem', minWidth: '180px'}}
+              onClick={() => {
+                // Navigate to editor with urban night preset
+                window.location.hash = '/editor';
+              }}
+            >
+              Urban Night Scene
+            </button>
+            <button 
+              className="cta-button" 
+              style={{background: 'linear-gradient(45deg, #9c27b0, #7b1fa2)', padding: '0.8rem 1.5rem', fontSize: '1rem', minWidth: '180px'}}
+              onClick={() => {
+                // Navigate to editor with aurora preset
+                window.location.hash = '/editor';
+              }}
+            >
+              Aurora Enhancement
+            </button>
           </div>
         </div>
       </section>
@@ -154,7 +205,7 @@ const LandingPage = () => {
             </div>
             {/* Grouped Toolbar (Demo Only) */}
             {!toolbarMinimized && (
-              <div style={{position: 'absolute', bottom: 18, left: '50%', transform: 'translateX(-50%)', zIndex: 20, display: 'flex', gap: 12, background: 'rgba(255,255,255,0.92)', borderRadius: 18, boxShadow: '0 2px 12px rgba(0,0,0,0.10)', padding: '0.5rem 1.2rem'}}>
+              <div style={{position: 'absolute', bottom: 18, left: '50%', transform: 'translateX(-50%)', zIndex: 10, display: 'flex', gap: 12, background: 'rgba(255,255,255,0.92)', borderRadius: 18, boxShadow: '0 2px 12px rgba(0,0,0,0.10)', padding: '0.5rem 1.2rem'}}>
                 <button className="cta-button" style={{padding: '0.3rem 1.1rem', fontSize: 15, minWidth: 0, borderRadius: 14}}>Pan</button>
                 <button className="cta-button secondary" style={{padding: '0.3rem 1.1rem', fontSize: 15, minWidth: 0, borderRadius: 14}}>Zoom</button>
                 <button className="cta-button tertiary" style={{padding: '0.3rem 1.1rem', fontSize: 15, minWidth: 0, borderRadius: 14}}>←</button>
