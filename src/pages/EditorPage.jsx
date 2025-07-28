@@ -272,9 +272,9 @@ const EditorPage = () => {
     setIsExporting(true);
     
     try {
-      // Create a temporary canvas to apply edits
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      // Create export canvas
+      const exportCanvas = document.createElement('canvas');
+      const exportCtx = exportCanvas.getContext('2d', { willReadFrequently: true });
       
       // Load the original image
       const img = new Image();
@@ -289,20 +289,18 @@ const EditorPage = () => {
         img.onerror = reject;
       });
       
-      // Set canvas dimensions
-      canvas.width = img.width;
-      canvas.height = img.height;
+      // Set canvas dimensions to match original image
+      exportCanvas.width = img.width;
+      exportCanvas.height = img.height;
+      
+      // Enable high-quality rendering
+      exportCtx.imageSmoothingEnabled = true;
+      exportCtx.imageSmoothingQuality = 'high';
       
       // Draw the original image
-      ctx.drawImage(img, 0, 0);
+      exportCtx.drawImage(img, 0, 0);
       
-      // Apply edits directly to the canvas
-      // This is a simplified version - in a real app, you'd use the same
-      // filter functions from EnhancedImageCanvas
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
-      
-      // Apply basic adjustments (simplified for demo)
+      // Apply professional filters using the same function as EnhancedImageCanvas
       const allEdits = {
         ...adjustments,
         ...colorAdjustments,
@@ -312,32 +310,24 @@ const EditorPage = () => {
         ...advanced
       };
       
-      // Simple brightness/contrast adjustment for demo
-      if (allEdits.exposure !== 0 || allEdits.contrast !== 0) {
-        const exposureFactor = Math.pow(2, allEdits.exposure);
-        const contrastFactor = 1 + (allEdits.contrast / 100);
-        
-        for (let i = 0; i < data.length; i += 4) {
-          // Apply exposure
-          data[i] = Math.min(255, data[i] * exposureFactor);     // R
-          data[i + 1] = Math.min(255, data[i + 1] * exposureFactor); // G
-          data[i + 2] = Math.min(255, data[i + 2] * exposureFactor); // B
-          
-          // Apply contrast
-          data[i] = Math.min(255, ((data[i] / 255 - 0.5) * contrastFactor + 0.5) * 255);
-          data[i + 1] = Math.min(255, ((data[i + 1] / 255 - 0.5) * contrastFactor + 0.5) * 255);
-          data[i + 2] = Math.min(255, ((data[i + 2] / 255 - 0.5) * contrastFactor + 0.5) * 255);
-        }
-      }
+      // Import the applyProfessionalFilters function
+      const { applyProfessionalFilters } = await import('../components/EnhancedImageCanvas');
+      applyProfessionalFilters(exportCtx, img, allEdits);
       
-      // Put the modified image data back
-      ctx.putImageData(imageData, 0, 0);
-      
-      // Create download link
-      const downloadUrl = canvas.toDataURL('image/jpeg', 0.9);
+      // Create download link with higher quality
+      const downloadUrl = exportCanvas.toDataURL('image/jpeg', 0.95);
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = 'edited_image.jpg';
+      
+      // Generate filename based on original file
+      let filename = 'edited_image.jpg';
+      if (uploadedImage.filename || uploadedImage.name) {
+        const originalName = uploadedImage.filename || uploadedImage.name;
+        const nameWithoutExt = originalName.split('.').slice(0, -1).join('.');
+        filename = `${nameWithoutExt}_edited.jpg`;
+      }
+      
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
