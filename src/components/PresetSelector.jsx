@@ -1,134 +1,120 @@
 import React, { useState, useEffect } from 'react';
 
-const PresetSelector = ({ 
-  presets = [], 
-  selectedPreset = '', 
-  onPresetSelect, 
-  className = '',
-  placeholder = 'Select a preset',
-  showPreview = true
-}) => {
-  const [filteredPresets, setFilteredPresets] = useState(presets);
+const PresetSelector = ({ onPresetSelect, selectedPreset }) => {
+  const [presets, setPresets] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Filter presets based on search term
+  // Load presets from localStorage on component mount
   useEffect(() => {
-    if (!searchTerm) {
-      setFilteredPresets(presets);
-    } else {
-      const term = searchTerm.toLowerCase();
-      setFilteredPresets(
-        presets.filter(preset => 
-          preset.name.toLowerCase().includes(term) ||
-          (preset.description && preset.description.toLowerCase().includes(term))
-        )
-      );
+    const savedPresets = localStorage.getItem('imageEditorPresets');
+    if (savedPresets) {
+      try {
+        setPresets(JSON.parse(savedPresets));
+      } catch (e) {
+        console.error('Failed to parse presets', e);
+      }
     }
-  }, [searchTerm, presets]);
+  }, []);
 
-  // Handle preset selection
-  const handlePresetSelect = (presetId) => {
-    if (onPresetSelect) {
-      onPresetSelect(presetId);
-    }
-  };
-
-  // Get selected preset details
-  const selectedPresetDetails = presets.find(preset => preset.id === selectedPreset);
+  const filteredPresets = presets.filter(preset => 
+    preset.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className={`preset-selector ${className}`}>
-      {/* Search Input */}
-      <div className="preset-search mb-2">
+    <div className="preset-selector" style={{ 
+      background: 'rgba(255,255,255,0.03)',
+      borderRadius: '8px',
+      padding: '16px'
+    }}>
+      <div style={{ marginBottom: '16px' }}>
         <input
           type="text"
           placeholder="Search presets..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          style={{
+            width: '100%',
+            padding: '10px',
+            borderRadius: '6px',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid #4a5568',
+            color: '#e0e0e0',
+            fontSize: '14px'
+          }}
         />
       </div>
-
-      {/* Preset List */}
-      <div className="preset-list max-h-60 overflow-y-auto border border-gray-600 rounded-md bg-gray-800">
+      
+      <div style={{ 
+        maxHeight: '200px', 
+        overflowY: 'auto',
+        paddingRight: '8px'
+      }}>
         {filteredPresets.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '20px', 
+            color: '#a0a0a0' 
+          }}>
             {searchTerm ? 'No matching presets found' : 'No presets available'}
           </div>
         ) : (
-          <div className="divide-y divide-gray-700">
-            {filteredPresets.map((preset) => (
-              <div
-                key={preset.id}
-                onClick={() => handlePresetSelect(preset.id)}
-                className={`p-3 cursor-pointer hover:bg-gray-700 transition-colors ${
-                  selectedPreset === preset.id ? 'bg-gray-700 border-l-4 border-blue-500' : ''
-                }`}
-              >
-                <div className="flex items-center">
-                  {showPreview && preset.preview && (
-                    <div className="flex-shrink-0 mr-3">
-                      <img 
-                        src={preset.preview} 
-                        alt={preset.name}
-                        className="w-10 h-10 object-cover rounded"
-                      />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-white font-medium truncate">
-                        {preset.name}
-                      </h4>
-                      {selectedPreset === preset.id && (
-                        <span className="text-blue-400 ml-2">✓</span>
-                      )}
-                    </div>
-                    {preset.description && (
-                      <p className="text-gray-400 text-sm truncate">
-                        {preset.description}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {preset.tags && preset.tags.map((tag, index) => (
-                        <span 
-                          key={index}
-                          className="px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+          filteredPresets.map(preset => (
+            <div 
+              key={preset.id}
+              onClick={() => onPresetSelect(preset)}
+              style={{
+                padding: '12px',
+                background: selectedPreset?.id === preset.id 
+                  ? 'rgba(74, 158, 255, 0.2)' 
+                  : 'rgba(255,255,255,0.05)',
+                borderRadius: '6px',
+                marginBottom: '8px',
+                cursor: 'pointer',
+                border: selectedPreset?.id === preset.id 
+                  ? '1px solid #4a9eff' 
+                  : '1px solid transparent',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = selectedPreset?.id === preset.id 
+                  ? 'rgba(74, 158, 255, 0.3)' 
+                  : 'rgba(255,255,255,0.08)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = selectedPreset?.id === preset.id 
+                  ? 'rgba(74, 158, 255, 0.2)' 
+                  : 'rgba(255,255,255,0.05)';
+              }}
+            >
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center' 
+              }}>
+                <span style={{ 
+                  fontWeight: '600', 
+                  color: '#e0e0e0' 
+                }}>
+                  {preset.name}
+                </span>
+                <span style={{ 
+                  fontSize: '12px', 
+                  color: '#a0a0a0' 
+                }}>
+                  {new Date(preset.createdAt).toLocaleDateString()}
+                </span>
               </div>
-            ))}
-          </div>
+              <div style={{ 
+                marginTop: '6px', 
+                fontSize: '12px', 
+                color: '#a0a0a0' 
+              }}>
+                {Object.keys(preset.settings || {}).length} adjustments
+              </div>
+            </div>
+          ))
         )}
       </div>
-
-      {/* Selected Preset Preview */}
-      {selectedPresetDetails && showPreview && (
-        <div className="selected-preset-preview mt-3 p-3 bg-gray-700 rounded-md">
-          <div className="flex items-center">
-            {selectedPresetDetails.preview && (
-              <div className="flex-shrink-0 mr-3">
-                <img 
-                  src={selectedPresetDetails.preview} 
-                  alt={selectedPresetDetails.name}
-                  className="w-12 h-12 object-cover rounded"
-                />
-              </div>
-            )}
-            <div>
-              <h4 className="text-white font-medium">{selectedPresetDetails.name}</h4>
-              <p className="text-gray-400 text-sm">
-                Selected preset
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

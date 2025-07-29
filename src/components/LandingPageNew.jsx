@@ -217,7 +217,9 @@ const LandingPage = () => {
             {/* Demo Preview: Show uploaded image if present, else demo */}
             <div style={{marginTop: 40, marginBottom: 40}}>
               {uploadedImage ? (
-                <img src={uploadedImage.url} alt={uploadedImage.filename} style={{width: '100%', maxHeight: 480, objectFit: 'contain', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.13)'}} />
+                <div style={{position: 'relative', borderRadius: 18, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.13)'}}>
+                  <BeforeAfterDemo ref={beforeAfterRef} />
+                </div>
               ) : (
                 <BeforeAfterDemo ref={beforeAfterRef} showOriginal={showOriginal} />
               )}

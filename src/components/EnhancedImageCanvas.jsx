@@ -129,29 +129,45 @@ const hslToRgb = (h, s, l) => {
   return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 };
 
-// Professional tone curve function
-const applyCurve = (value, highlights, lights, darks, shadows) => {
+// Professional tone curve function with custom curve support
+const applyCurve = (value, highlights, lights, darks, shadows, customCurve = null) => {
   const normalized = value / 255;
   let adjusted = normalized;
   
-  // Apply highlights (affects upper tones)
-  if (normalized > 0.7) {
-    adjusted += (highlights / 100) * (normalized - 0.7) * 0.3;
-  }
-  
-  // Apply lights (affects mid-upper tones)
-  if (normalized > 0.3 && normalized <= 0.7) {
-    adjusted += (lights / 100) * (normalized - 0.3) * 0.4;
-  }
-  
-  // Apply darks (affects mid-lower tones)
-  if (normalized >= 0.1 && normalized <= 0.5) {
-    adjusted += (darks / 100) * (normalized - 0.1) * 0.4;
-  }
-  
-  // Apply shadows (affects lower tones)
-  if (normalized < 0.3) {
-    adjusted += (shadows / 100) * (0.3 - normalized) * 0.3;
+  // If custom curve is provided, use it instead of parametric adjustments
+  if (customCurve && customCurve.points && customCurve.points.length > 0) {
+    // Simple linear interpolation between curve points
+    const points = customCurve.points;
+    for (let i = 0; i < points.length - 1; i++) {
+      const [x1, y1] = points[i];
+      const [x2, y2] = points[i + 1];
+      
+      if (normalized >= x1 && normalized <= x2) {
+        const ratio = (normalized - x1) / (x2 - x1);
+        adjusted = y1 + (y2 - y1) * ratio;
+        break;
+      }
+    }
+  } else {
+    // Apply highlights (affects upper tones)
+    if (normalized > 0.7) {
+      adjusted += (highlights / 100) * (normalized - 0.7) * 0.3;
+    }
+    
+    // Apply lights (affects mid-upper tones)
+    if (normalized > 0.3 && normalized <= 0.7) {
+      adjusted += (lights / 100) * (normalized - 0.3) * 0.4;
+    }
+    
+    // Apply darks (affects mid-lower tones)
+    if (normalized >= 0.1 && normalized <= 0.5) {
+      adjusted += (darks / 100) * (normalized - 0.1) * 0.4;
+    }
+    
+    // Apply shadows (affects lower tones)
+    if (normalized < 0.3) {
+      adjusted += (shadows / 100) * (0.3 - normalized) * 0.3;
+    }
   }
   
   return clamp(adjusted * 255);
@@ -551,6 +567,14 @@ const applyProfessionalFilters = (ctx, image, edits = {}) => {
   ctx.putImageData(imageData, 0, 0);
 };
 
+// Cache for processed images to improve performance
+const imageCache = new Map();
+const cacheKey = (src, edits) => {
+  // Create a unique key based on image source and edits
+  const editString = JSON.stringify(edits, Object.keys(edits).sort());
+  return `${typeof src === 'string' ? src : src?.url || src?.name}-${editString}`;
+};
+
 const EnhancedImageCanvas = ({ 
   imageSrc, 
   edits, 
@@ -561,19 +585,21 @@ const EnhancedImageCanvas = ({
   hideControls = false,
   hideFullscreen = false
 }) => {
-  // Only use curve context if we have curve edits
-  const hasCurveEdits = edits?.curveRgb || edits?.curveR || edits?.curveG || edits?.curveB || edits?.curveLuminance;
-  
-  // Safely use curve context
+  // Curve context - safely consume it
   let curves = {};
-  if (hasCurveEdits) {
-    try {
-      const curveContext = useCurve();
-      curves = curveContext.curves;
-    } catch (error) {
-      console.warn('Curve context not available:', error.message);
-      curves = {};
-    }
+  try {
+    // Only use the hook if we're in a component that has access to the context
+    curves = useCurve().curves || {};
+  } catch (error) {
+    // If context is not available, use empty curves
+    console.warn('Curve context not available, using default curves:', error.message);
+    curves = {
+      curveRgb: [[0, 0], [1, 1]],
+      curveR: [[0, 0], [1, 1]],
+      curveG: [[0, 0], [1, 1]],
+      curveB: [[0, 0], [1, 1]],
+      curveLuminance: [[0, 0], [1, 1]],
+    };
   }
   const canvasRef = useRef(null);
   const originalCanvasRef = useRef(null);

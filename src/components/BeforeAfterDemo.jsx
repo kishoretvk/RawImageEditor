@@ -394,11 +394,12 @@ const BeforeAfterDemo = forwardRef((props, ref) => {
         <EnhancedImageCanvas 
           imageSrc={currentImage}
           edits={currentImage.edits}
-          showSlider={true}
+          showSlider={false} // We're handling the slider in this component
           sliderPosition={sliderPosition}
           onSliderChange={setSliderPosition}
           onProcessed={(data) => console.log('Processed:', data)}
           style={{ width: '100%', height: '100%' }}
+          hideControls={true} // Hide controls since this is a demo
         />
         </div>
         

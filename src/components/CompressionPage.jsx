@@ -17,6 +17,8 @@ const CompressionPage = () => {
   const [rawProcessed, setRawProcessed] = useState(false);
   const [originalFileSize, setOriginalFileSize] = useState(0);
   const [compressedFileSize, setCompressedFileSize] = useState(0);
+  const [compressionQuality, setCompressionQuality] = useState(80); // Default quality 80%
+  const [compressionLevel, setCompressionLevel] = useState(1); // New 1-50x compression level
 
   // Helper function to calculate file size from data URL
   const calculateFileSize = (dataUrl) => {
@@ -114,9 +116,8 @@ const CompressionPage = () => {
         // Custom mode: slider value maps to quality (1-100 -> 0.01-0.95)
         quality = Math.max(0.01, Math.min(0.95, sliderValue / 100));
       } else {
-        // Preset mode: 1x = 0.95, 2x = 0.85, 3x = 0.75, 4x = 0.65, 5x = 0.55
-        const qualityMap = { 1: 0.95, 2: 0.85, 3: 0.75, 4: 0.65, 5: 0.55 };
-        quality = qualityMap[compression] || 0.85;
+        // Map compression level (1-50x) to quality (0.95-0.01)
+        quality = Math.max(0.01, 0.95 - (compressionLevel - 1) * (0.94 / 49));
       }
       
       // Compress to JPEG with calculated quality
@@ -131,7 +132,7 @@ const CompressionPage = () => {
       console.error('Error loading image for compression');
       setIsProcessing(false);
     };
-  }, [originalImage, compression, customMode, sliderValue]);
+  }, [originalImage, customMode, sliderValue, compressionLevel]);
 
   // Slider for before/after preview
   const [sliderPos, setSliderPos] = useState(50);
@@ -140,17 +141,17 @@ const CompressionPage = () => {
     <EditorLayout
       currentImage={compressedImage || originalImage}
       controls={(
-        <div className="space-y-6">
+        <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-120px)] pr-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
           <h2 className="text-xl font-bold text-white mb-4">Compression Controls</h2>
           
           {/* Compression Presets */}
-          <div className="flex flex-wrap gap-3 mb-4">
-            {[1,2,3,4,5].map(x => (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {[1,2,3,4,5,10,20,30,40,50].map(x => (
               <button 
                 key={x} 
-                onClick={() => { setCompression(x); setCustomMode(false); }}
-                className={`px-4 py-2 rounded-lg font-semibold text-white transition-all duration-300 ${
-                  compression===x && !customMode 
+                onClick={() => { setCompressionLevel(x); setCustomMode(false); }}
+                className={`px-3 py-2 rounded-lg font-semibold text-white text-sm transition-all duration-300 ${
+                  compressionLevel===x && !customMode 
                     ? 'bg-gradient-to-r from-blue-600 to-purple-700 scale-105 shadow-lg' 
                     : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
                 }`}
@@ -160,7 +161,7 @@ const CompressionPage = () => {
             ))}
             <button 
               onClick={() => setCustomMode(true)}
-              className={`px-4 py-2 rounded-lg font-semibold text-white transition-all duration-300 ${
+              className={`px-3 py-2 rounded-lg font-semibold text-white text-sm transition-all duration-300 ${
                 customMode 
                   ? 'bg-gradient-to-r from-pink-600 to-purple-700 scale-105 shadow-lg' 
                   : 'bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700'
@@ -168,6 +169,30 @@ const CompressionPage = () => {
             >
               Custom
             </button>
+          </div>
+          
+          {/* Compression Level Slider (1x to 50x) */}
+          <div className="w-full flex flex-col items-center mb-4">
+            <UnifiedSlider
+              min={1}
+              max={50}
+              value={compressionLevel}
+              onChange={setCompressionLevel}
+              label={`Compression Level: ${compressionLevel}x`}
+              showValue={true}
+            />
+          </div>
+          
+          {/* Compression Quality Slider */}
+          <div className="w-full flex flex-col items-center mb-4">
+            <UnifiedSlider
+              min={1}
+              max={100}
+              value={Math.round(100 - (compressionLevel - 1) * (99 / 49))} // Map 1-50x to 100-1%
+              onChange={(value) => setCompressionLevel(Math.max(1, Math.min(50, Math.round(1 + (100 - value) * (49 / 99)))))}
+              label={`Quality: ${Math.round(100 - (compressionLevel - 1) * (99 / 49))}%`}
+              showValue={true}
+            />
           </div>
           
           {/* Custom Slider */}
@@ -178,7 +203,7 @@ const CompressionPage = () => {
                 max={100}
                 value={sliderValue}
                 onChange={setSliderValue}
-                label={`Compression Quality: ${sliderValue}%`}
+                label={`Custom Mode: ${sliderValue}%`}
                 showValue={true}
               />
             </div>
@@ -199,7 +224,7 @@ const CompressionPage = () => {
                     <span className="text-gray-400">Compressed Size:</span>
                     <div className="font-semibold text-green-400">
                       {compressedFileSize.toFixed(2)} MB
-                      <span className="text-xs text-gray-400 ml-2">
+                      <span className="text-xs text-gray-400 ml-2 block">
                         ({Math.round((1 - compressedFileSize / originalFileSize) * 100)}% reduction)
                       </span>
                     </div>
@@ -238,11 +263,11 @@ const CompressionPage = () => {
           <div className="bg-gray-800/30 rounded-lg p-4 mt-4">
             <h3 className="font-semibold text-white mb-2">Compression Guide</h3>
             <ul className="text-sm text-gray-300 space-y-1">
-              <li>• 1x: High quality (0.95) - Minimal compression</li>
-              <li>• 2x: Good quality (0.85) - Balanced compression</li>
-              <li>• 3x: Medium quality (0.75) - Noticeable compression</li>
-              <li>• 4x: Low quality (0.65) - Heavy compression</li>
-              <li>• 5x: Very low quality (0.55) - Maximum compression</li>
+              <li>• 1x: High quality (95%) - Minimal compression</li>
+              <li>• 5x: Good quality (85%) - Balanced compression</li>
+              <li>• 10x: Medium quality (75%) - Noticeable compression</li>
+              <li>• 20x: Low quality (55%) - Heavy compression</li>
+              <li>• 50x: Very low quality (5%) - Maximum compression</li>
               <li className="mt-2">• RAW files are automatically converted to JPEG</li>
               <li>• Images are resized to max 4000px on longest side for web optimization</li>
             </ul>

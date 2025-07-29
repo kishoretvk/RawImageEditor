@@ -3,9 +3,7 @@ import { convertRawToJpeg } from '../utils/imageProcessing';
 import { isRawFile } from '../utils/rawFileDetector';
 import Histogram from '../components/Histogram';
 import { Link } from 'react-router-dom';
-import '../styles/pages.css';
-import '../styles/modern-enhancements.css';
-import '../styles/lightroom-theme.css';
+import '../styles/modern-editor.css';
 import ConversionSettings from '../components/ConversionSettings';
 import BasicAdjustmentsPanel from '../components/editorPanels/BasicAdjustmentsPanel';
 import ColorAdjustmentsPanel from '../components/editorPanels/ColorAdjustmentsPanel';
@@ -528,7 +526,7 @@ const EditorPage = () => {
                     <AdvancedPanel advanced={advanced} onChange={setAdvanced} />
                   </CollapsibleControlPanel>
                   <CollapsibleControlPanel title="Tone Curves" defaultOpen={false}>
-                    <CurvesPanel />
+                    <CurvesPanel isActive={true} />
                   </CollapsibleControlPanel>
                   <CollapsibleControlPanel title="Presets" defaultOpen={false}>
                     <PresetManager 

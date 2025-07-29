@@ -51,7 +51,7 @@ const AppRouter = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<DemoPage />} />
+        <Route path="/" element={<LandingPageNew />} />
         <Route path="/upload" element={<UploadConvert />} />
         
         {/* Smart wrapped routes with seamless loading */}

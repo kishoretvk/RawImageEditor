@@ -1,103 +1,142 @@
-import React, { useState, useContext } from 'react';
-import { useCurve } from '../../context/CurveContext';
+import React from 'react';
 import CurveEditor from '../CurveEditor';
-import PanelWrapper from '../PanelWrapper';
+import { useCurve } from '../../context/CurveContext';
 
-const CurvesPanel = () => {
-  // Handle case where CurveProvider is not available
-  let curveContext;
-  try {
-    curveContext = useCurve();
-  } catch (error) {
-    console.warn('Curve context not available:', error.message);
-    // Return a fallback UI when context is not available
-    return (
-      <PanelWrapper title="Tone Curves" defaultExpanded={true}>
-        <div className="curves-panel">
-          <p className="text-gray-400">Curve controls are not available in this context.</p>
-        </div>
-      </PanelWrapper>
-    );
-  }
+const CurvesPanel = ({ isActive, onPanelChange }) => {
+  const { curves, updateCurve } = useCurve();
   
-  const { curves, updateCurve } = curveContext;
-  const [activeChannel, setActiveChannel] = useState('rgb');
-
-  // Get current curve points from context
-  const getCurrentPoints = (channel) => {
-    return curves[`curve${channel.charAt(0).toUpperCase() + channel.slice(1)}`] || [[0, 0], [1, 1]];
-  };
-
-  // Handle curve changes
-  const handleCurveChange = (points, channel) => {
-    const curveKey = `curve${channel.charAt(0).toUpperCase() + channel.slice(1)}`;
-    updateCurve(curveKey, points);
-  };
-
-  // Channel options
-  const channels = [
-    { id: 'rgb', name: 'RGB' },
-    { id: 'r', name: 'Red' },
-    { id: 'g', name: 'Green' },
-    { id: 'b', name: 'Blue' },
-    { id: 'luminance', name: 'Luminance' }
-  ];
-
+  if (!isActive) return null;
+  
   return (
-    <PanelWrapper title="Tone Curves" defaultExpanded={true}>
-      <div className="curves-panel">
-        {/* Channel Selector */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Channel</label>
-          <div className="grid grid-cols-5 gap-1">
-            {channels.map((channel) => (
-              <button
-                key={channel.id}
-                className={`py-2 px-1 text-xs rounded ${
-                  activeChannel === channel.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-                onClick={() => setActiveChannel(channel.id)}
-              >
-                {channel.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Curve Editor */}
-        <div className="mb-4">
-          <CurveEditor
-            points={getCurrentPoints(activeChannel)}
-            onChange={(points) => handleCurveChange(points, activeChannel)}
-            channel={activeChannel}
-            width={280}
-            height={280}
-          />
-        </div>
-
-        {/* Curve Controls */}
-        <div className="flex gap-2">
+    <div className="curves-panel" style={{ 
+      padding: '20px',
+      background: '#1a1a1a',
+      borderRadius: '8px',
+      color: '#e0e0e0'
+    }}>
+      <h2 style={{ 
+        fontSize: '20px', 
+        fontWeight: '600', 
+        marginBottom: '20px',
+        color: '#4a9eff'
+      }}>
+        Tone Curves
+      </h2>
+      
+      <p style={{ 
+        fontSize: '14px', 
+        color: '#a0a0a0', 
+        marginBottom: '20px' 
+      }}>
+        Adjust the tonal range of your image by modifying curve points. 
+        Drag points to create custom curves or double-click to remove points.
+      </p>
+      
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+        gap: '20px' 
+      }}>
+        <CurveEditor channel="rgb" />
+        <CurveEditor channel="r" />
+        <CurveEditor channel="g" />
+        <CurveEditor channel="b" />
+        <CurveEditor channel="luminance" />
+      </div>
+      
+      <div style={{ 
+        marginTop: '20px', 
+        padding: '15px', 
+        background: 'rgba(255,255,255,0.05)',
+        borderRadius: '6px'
+      }}>
+        <h3 style={{ 
+          fontSize: '16px', 
+          fontWeight: '600', 
+          marginBottom: '10px' 
+        }}>
+          Curve Presets
+        </h3>
+        <div style={{ 
+          display: 'flex', 
+          gap: '10px', 
+          flexWrap: 'wrap' 
+        }}>
           <button
-            className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded text-sm"
-            onClick={() => handleCurveChange([[0, 0], [1, 1]], activeChannel)}
-          >
-            Reset Channel
-          </button>
-          <button
-            className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded text-sm"
             onClick={() => {
-              channels.forEach(channel => {
-                handleCurveChange([[0, 0], [1, 1]], channel.id);
-              });
+              // Reset all curves to linear
+              updateCurve('rgb', [[0, 0], [1, 1]]);
+              updateCurve('r', [[0, 0], [1, 1]]);
+              updateCurve('g', [[0, 0], [1, 1]]);
+              updateCurve('b', [[0, 0], [1, 1]]);
+              updateCurve('luminance', [[0, 0], [1, 1]]);
+            }}
+            style={{
+              padding: '8px 16px',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid #4a5568',
+              color: '#e0e0e0',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px'
             }}
           >
             Reset All
           </button>
+          <button
+            onClick={() => {
+              // S-curve for contrast
+              updateCurve('rgb', [[0, 0], [0.25, 0.1], [0.75, 0.9], [1, 1]]);
+            }}
+            style={{
+              padding: '8px 16px',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid #4a5568',
+              color: '#e0e0e0',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            S-Curve (Contrast)
+          </button>
+          <button
+            onClick={() => {
+              // Inverse S-curve for softness
+              updateCurve('rgb', [[0, 0], [0.25, 0.3], [0.75, 0.7], [1, 1]]);
+            }}
+            style={{
+              padding: '8px 16px',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid #4a5568',
+              color: '#e0e0e0',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            Inverse S (Soft)
+          </button>
+          <button
+            onClick={() => {
+              // Shadows boost
+              updateCurve('rgb', [[0, 0.2], [0.5, 0.5], [1, 1]]);
+            }}
+            style={{
+              padding: '8px 16px',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid #4a5568',
+              color: '#e0e0e0',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            Shadows Boost
+          </button>
         </div>
       </div>
-    </PanelWrapper>
+    </div>
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import WorkflowManager from '../components/WorkflowManager';
 import BatchWorkflowProcessor from '../components/BatchWorkflowProcessor';
 import '../styles/pages.css';
 
@@ -7,6 +8,8 @@ const WorkflowPage = () => {
   const [workflows, setWorkflows] = useState([]);
   const [presets, setPresets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedWorkflow, setSelectedWorkflow] = useState(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Load workflows and presets from localStorage on component mount
   useEffect(() => {
@@ -60,17 +63,24 @@ const WorkflowPage = () => {
     localStorage.setItem('imageEditorPresets', JSON.stringify(updatedPresets));
   };
 
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
   if (isLoading) {
     return (
       <div className="page">
         <nav className="top-navigation">
           <div className="nav-container">
             <div className="logo">RawConverter</div>
-            <div className="nav-links">
-              <Link to="/" className="nav-link">Home</Link>
-              <Link to="/editor" className="nav-link">Editor</Link>
-              <Link to="/compression" className="nav-link">Compression</Link>
-              <Link to="/raw-convert" className="nav-link">RAW Convert</Link>
+            <button className="menu-toggle" onClick={toggleMenu}>
+              ☰
+            </button>
+            <div className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
+              <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>Home</Link>
+              <Link to="/editor" className="nav-link" onClick={() => setIsMenuOpen(false)}>Editor</Link>
+              <Link to="/compression" className="nav-link" onClick={() => setIsMenuOpen(false)}>Compression</Link>
+              <Link to="/raw-convert" className="nav-link" onClick={() => setIsMenuOpen(false)}>RAW Convert</Link>
             </div>
           </div>
         </nav>
@@ -91,11 +101,14 @@ const WorkflowPage = () => {
       <nav className="top-navigation">
         <div className="nav-container">
           <div className="logo">RawConverter</div>
-          <div className="nav-links">
-            <Link to="/" className="nav-link">Home</Link>
-            <Link to="/editor" className="nav-link">Editor</Link>
-            <Link to="/compression" className="nav-link">Compression</Link>
-            <Link to="/raw-convert" className="nav-link">RAW Convert</Link>
+          <button className="menu-toggle" onClick={toggleMenu}>
+            ☰
+          </button>
+          <div className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
+            <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>Home</Link>
+            <Link to="/editor" className="nav-link" onClick={() => setIsMenuOpen(false)}>Editor</Link>
+            <Link to="/compression" className="nav-link" onClick={() => setIsMenuOpen(false)}>Compression</Link>
+            <Link to="/raw-convert" className="nav-link" onClick={() => setIsMenuOpen(false)}>RAW Convert</Link>
           </div>
         </div>
       </nav>
@@ -127,12 +140,24 @@ const WorkflowPage = () => {
             </div>
           </div>
           
+          {/* Workflow Manager */}
+          <div className="mb-8">
+            <WorkflowManager 
+              onWorkflowSelect={setSelectedWorkflow}
+            />
+          </div>
+          
           {/* Workflow Processor */}
-          <BatchWorkflowProcessor 
-            workflows={workflows}
-            presets={presets}
-            onWorkflowsChange={handleWorkflowsChange}
-          />
+          {selectedWorkflow && (
+            <div className="mb-8">
+              <BatchWorkflowProcessor 
+                workflows={workflows}
+                presets={presets}
+                onWorkflowsChange={handleWorkflowsChange}
+                selectedWorkflow={selectedWorkflow}
+              />
+            </div>
+          )}
           
           {/* Info Section */}
           <div className="mt-12 bg-gray-800 rounded-lg p-6">
