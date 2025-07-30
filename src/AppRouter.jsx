@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import ProfessionalLandingPage from './components/ProfessionalLandingPage';
 import LandingPageNew from './components/LandingPageNew';
 import UploadConvert from './pages/UploadConvert';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -51,7 +52,8 @@ const AppRouter = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<LandingPageNew />} />
+        <Route path="/" element={<ProfessionalLandingPage />} />
+        <Route path="/classic" element={<LandingPageNew />} />
         <Route path="/upload" element={<UploadConvert />} />
         
         {/* Smart wrapped routes with seamless loading */}

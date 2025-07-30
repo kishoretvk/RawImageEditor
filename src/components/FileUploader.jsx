@@ -1,179 +1,115 @@
-import { useState, useRef } from 'react'
-import { Upload, FileImage, X } from 'lucide-react'
+import React, { useRef, useState } from 'react';
+import { ArrowUpTrayIcon, PhotoIcon } from '@heroicons/react/24/outline';
 
-const FileUploader = ({ onFileUpload, settings, multiple = false, onFilesSelected }) => {
-  const [dragActive, setDragActive] = useState(false)
-  const [files, setFiles] = useState([])
-  const [collapsed, setCollapsed] = useState(false)
-  const [error, setError] = useState(null)
-  const inputRef = useRef(null)
+const FileUploader = ({ onFileUpload, multiple = true, className = '' }) => {
+  const fileInputRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({});
 
-  const handleDrag = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true)
-    } else if (e.type === "dragleave") {
-      setDragActive(false)
+  const handleFileSelect = (files) => {
+    if (!files || files.length === 0) return;
+
+    const validFiles = Array.from(files).filter(file => {
+      const validExtensions = ['.raw', '.cr2', '.cr3', '.nef', '.arw', '.dng', '.raf', '.orf', '.rw2'];
+      const extension = '.' + file.name.toLowerCase().split('.').pop();
+      return validExtensions.includes(extension);
+    });
+
+    if (validFiles.length === 0) {
+      alert('Please select valid RAW files (.raw, .cr2, .cr3, .nef, .arw, .dng, .raf, .orf, .rw2)');
+      return;
     }
-  }
+
+    // Simulate upload progress
+    const newProgress = {};
+    validFiles.forEach((file, index) => {
+      newProgress[file.name] = 0;
+      
+      // Simulate progress
+      const interval = setInterval(() => {
+        setUploadProgress(prev => {
+          const current = prev[file.name] || 0;
+          if (current >= 100) {
+            clearInterval(interval);
+            return { ...prev, [file.name]: 100 };
+          }
+          return { ...prev, [file.name]: current + 10 };
+        });
+      }, 200);
+    });
+
+    setUploadProgress(newProgress);
+    
+    // Call the parent callback
+    if (onFileUpload) {
+      onFileUpload(validFiles);
+    }
+  };
 
   const handleDrop = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFiles(e.dataTransfer.files)
-    }
-  }
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileSelect(e.dataTransfer.files);
+  };
 
-  const handleChange = (e) => {
-    e.preventDefault()
-    if (e.target && e.target.files && e.target.files[0]) {
-      handleFiles(e.target.files)
-    }
-  }
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
 
-  const handleFiles = (fileList) => {
-    try {
-      setError(null)
-      const validFiles = Array.from(fileList).filter(file => {
-        const ext = file.name.toLowerCase()
-        return ext.includes('.arw') || ext.includes('.cr2') || ext.includes('.cr3') || 
-               ext.includes('.nef') || ext.includes('.dng') || ext.includes('.raw') ||
-               ext.includes('.jpg') || ext.includes('.jpeg') || ext.includes('.png')
-      })
-      
-      if (validFiles.length === 0) {
-        setError('Please select a valid image file (.arw, .cr2, .cr3, .nef, .dng, .raw, .jpg, .jpeg, .png)')
-        return
-      }
-      
-      const newFiles = validFiles.map(file => {
-        console.log('FileUploader: Processing file:', file.name, file.type, file.size);
-        const blobUrl = URL.createObjectURL(file);
-        console.log('FileUploader: Created blob URL:', blobUrl);
-        
-        return {
-          id: Date.now() + Math.random(),
-          file,
-          name: file.name,
-          size: file.size,
-          preview: blobUrl,
-          status: 'ready'
-        };
-      });
-      
-      setFiles(prev => [...prev, ...newFiles])
-      
-      // Send the first file's data to parent for image display
-      if (newFiles.length > 0 && onFileUpload) {
-        const fileData = {
-          url: newFiles[0].preview,
-          filename: newFiles[0].name,
-          size: newFiles[0].size,
-          type: newFiles[0].file.type,
-          file: newFiles[0].file  // Include the file object for fallback
-        };
-        console.log('FileUploader: Calling onFileUpload with:', fileData);
-        onFileUpload(fileData)
-      }
-      
-      // Send all files to parent for batch processing
-      if (onFilesSelected) {
-        onFilesSelected(newFiles.map(f => f.file));
-      }
-    } catch (err) {
-      console.error('File upload error:', err)
-      setError('Error processing file upload. Please try again.')
-    }
-  }
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
 
-  const removeFile = (id) => {
-    try {
-      setFiles(prev => {
-        const filtered = prev.filter(file => file.id !== id)
-        // Clean up blob URL to prevent memory leaks
-        const fileToRemove = prev.find(file => file.id === id)
-        if (fileToRemove && fileToRemove.preview) {
-          URL.revokeObjectURL(fileToRemove.preview)
-        }
-        return filtered
-      })
-      setError(null)
-    } catch (err) {
-      console.error('Error removing file:', err)
-      setError('Error removing file.')
-    }
-  }
-
-  const onButtonClick = () => {
-    if (inputRef.current) {
-      inputRef.current.click()
-    }
-  }
+  const handleFileInputChange = (e) => {
+    handleFileSelect(e.target.files);
+  };
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
-      <div className={`flex items-center justify-center gap-4 bg-white/5 backdrop-blur-xl border-2 border-white/10 rounded-2xl shadow-xl px-6 py-4 transition-all duration-300 ${collapsed ? 'h-12 overflow-hidden' : 'h-auto'} ${dragActive ? 'border-blue-400 bg-blue-50/10' : ''}`}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
+    <div className={`file-uploader ${className}`}>
+      <div
+        className={`upload-zone ${isDragging ? 'dragging' : ''}`}
         onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onClick={() => fileInputRef.current?.click()}
       >
+        <div className="upload-content">
+          <ArrowUpTrayIcon className="upload-icon" />
+          <h3>Upload RAW Files</h3>
+          <p>Drag and drop your RAW files here, or click to browse</p>
+          <p className="file-types">Supports: CR2, CR3, NEF, ARW, DNG, RAF, ORF, RW2</p>
+        </div>
+        
         <input
-          ref={inputRef}
+          ref={fileInputRef}
           type="file"
           multiple={multiple}
-          onChange={handleChange}
-          accept=".arw,.cr2,.cr3,.nef,.dng,.raw,.jpg,.jpeg,.png"
-          className="hidden"
+          accept=".raw,.cr2,.cr3,.nef,.arw,.dng,.raf,.orf,.rw2"
+          onChange={handleFileInputChange}
+          style={{ display: 'none' }}
         />
-        
-        {error && (
-          <div className="w-full bg-red-500/20 border border-red-500 text-red-200 px-3 py-2 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
-        
-        {!collapsed && (
-          <>
-            <button
-              onClick={onButtonClick}
-              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105 group"
-            >
-              <Upload className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-              {files.length === 0 ? 'Upload File' : 'Upload More'}
-            </button>
-            
-            {files.length > 0 && (
-              <div className="flex items-center gap-2 bg-white/10 rounded-lg px-4 py-2">
-                <FileImage className="h-5 w-5 text-purple-400 mr-2" />
-                <span className="text-white font-semibold text-base truncate max-w-[180px]">{files[0].name}</span>
-                <span className="text-white/60 text-xs ml-2">{(files[0].size / (1024 * 1024)).toFixed(2)} MB</span>
-                <button
-                  onClick={() => removeFile(files[0].id)}
-                  className="ml-2 p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors"
-                  title="Remove file"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-          </>
-        )}
-        
-        <button
-          onClick={() => setCollapsed(c => !c)}
-          className="ml-2 p-1 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-          title={collapsed ? 'Expand' : 'Minimize'}
-        >
-          {collapsed ? <span className="text-lg">▸</span> : <span className="text-lg">▾</span>}
-        </button>
       </div>
-    </div>
-  )
-}
 
-export default FileUploader
+      {Object.keys(uploadProgress).length > 0 && (
+        <div className="upload-progress">
+          {Object.entries(uploadProgress).map(([filename, progress]) => (
+            <div key={filename} className="progress-item">
+              <span className="filename">{filename}</span>
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill" 
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <span className="progress-text">{progress}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default FileUploader;
