@@ -358,25 +358,14 @@ const EditorPage = () => {
         <div className="header-left flex items-center gap-4">
           <Link to="/" className="back-link">← Back to Home</Link>
           <h1 className="editor-title">Edit Photo</h1>
-          {/* Always show uploader when no image is uploaded */}
-          {!uploadedImage && (
-            <FileUploader 
-              onFileUpload={handleFileUpload}
-              className="header-uploader"
-            />
-          )}
+          {/* Upload button in the header */}
+          <FileUploader 
+            onFileUpload={handleFileUpload}
+            compact={true}
+            multiple={false}
+          />
           {uploadedImage && (
             <>
-              <button 
-                onClick={() => {
-                  setUploadedImage(null);
-                  setJpegPreview(null);
-                }}
-                className="toolbar-btn upload-btn"
-                title="Upload New Image"
-              >
-                📁 Upload
-              </button>
               <div className="toolbar-divider"></div>
               <button className="toolbar-btn" title="Edit">✏️ Edit</button>
               <button className="toolbar-btn" onClick={downloadJpeg} title="Save">💾 Save</button>
@@ -448,11 +437,7 @@ const EditorPage = () => {
       <div className="editor-main-content">
         {isImageEmpty ? (
           <div className="editor-upload-container flex flex-col items-center justify-center min-h-[400px]">
-            <FileUploader 
-              onFileUpload={handleFileUpload}
-              className="header-uploader"
-            />
-            <div style={{color:'#fff',marginTop:'16px',fontSize:'14px'}}>If you do not see the upload button, click <b>Reset Editor</b> above or reload the page.</div>
+            <EditorUploadPlaceholder />
           </div>
         ) : (
           <div className="main-editor-content">
@@ -528,7 +513,7 @@ const EditorPage = () => {
                   <CollapsibleControlPanel title="Tone Curves" defaultOpen={false}>
                     <CurvesPanel isActive={true} />
                   </CollapsibleControlPanel>
-                  <CollapsibleControlPanel title="Presets" defaultOpen={false}>
+                  <CollapsibleControlPanel title="Presets" defaultOpen={true}>
                     <PresetManager 
                       onApplyPreset={(presetSettings) => {
                         setAdjustments(prev => ({...prev, ...presetSettings}));

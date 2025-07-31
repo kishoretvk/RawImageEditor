@@ -20,10 +20,9 @@ self.addEventListener('install', event => {
     caches.open(STATIC_CACHE)
       .then(cache => {
         console.log('[SW] Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
-      })
-      .catch(error => {
-        console.warn('[SW] Failed to cache static assets:', error);
+        return cache.addAll(STATIC_ASSETS).catch(error => {
+          console.warn('[SW] Failed to cache some assets:', error);
+        });
       })
   );
   self.skipWaiting();
@@ -51,65 +50,36 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Handle different types of requests
-  if (request.method === 'GET') {
-    // Static assets - cache first
-    if (STATIC_ASSETS.some(asset => url.pathname.includes(asset))) {
-      event.respondWith(
-        caches.match(request)
-          .then(response => response || fetch(request))
-      );
-      return;
-    }
-
-    // Dynamic content - network first with cache fallback
-    if (url.pathname.includes('/api/') || url.pathname.includes('.json')) {
-      event.respondWith(
-        fetch(request)
-          .then(response => {
-            const responseClone = response.clone();
-            caches.open(DYNAMIC_CACHE)
-              .then(cache => cache.put(request, responseClone));
-            return response;
-          })
-          .catch(() => caches.match(request))
-      );
-      return;
-    }
-
-    // Images and assets - cache with stale-while-revalidate
-    if (request.destination === 'image' || url.pathname.includes('/assets/')) {
-      event.respondWith(
-        caches.open(DYNAMIC_CACHE)
-          .then(cache => {
-            return cache.match(request)
-              .then(response => {
-                const fetchPromise = fetch(request)
-                  .then(networkResponse => {
-                    cache.put(request, networkResponse.clone());
-                    return networkResponse;
-                  });
-                
-                return response || fetchPromise;
-              });
-          })
-      );
-      return;
-    }
-
-    // Default - network first with cache fallback
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          // Cache successful responses
-          if (response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(DYNAMIC_CACHE)
-              .then(cache => cache.put(request, responseClone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
+  // Skip non-GET requests
+  if (request.method !== 'GET') {
+    return;
   }
+
+  // Skip cross-origin requests
+  if (!url.origin.includes(location.origin)) {
+    return;
+  }
+
+  // Handle different types of requests
+  event.respondWith(
+    fetch(request)
+      .then(response => {
+        // Cache successful responses
+        if (response.status === 200) {
+          const responseClone = response.clone();
+          caches.open(DYNAMIC_CACHE)
+            .then(cache => cache.put(request, responseClone));
+        }
+        return response;
+      })
+      .catch(() => {
+        // Return cached version if available
+        return caches.match(request).then(response => {
+          return response || new Response('Offline', {
+            status: 503,
+            statusText: 'Service Unavailable'
+          });
+        });
+      })
+  );
 });

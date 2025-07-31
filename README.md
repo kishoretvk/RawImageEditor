@@ -1,165 +1,159 @@
-# RawConverter Pro - Professional RAW Image Editor
+# RawImageEditor - Professional RAW Image Editor
 
-A browser-based professional RAW image editing application with advanced batch processing capabilities, built entirely with JavaScript and WebAssembly.
+A world-class, browser-based RAW image editor that runs entirely on the client side using WebAssembly and JavaScript. No server required - process RAW images directly in your browser!
 
-## Features
+## 🚀 Live Demo
+[View Live Demo](https://kishoretvk.github.io/RawImageEditor/)
 
-### 📸 Professional RAW Processing
-- Support for all major RAW formats (CR2, NEF, ARW, DNG, etc.)
-- Embedded thumbnail extraction for instant previews
-- Simulated RAW processing for browsers without WebAssembly
-- Privacy-first processing (all operations happen in-browser)
+## ✨ Professional Features
 
-### 🎨 Advanced Editing Tools
-- Professional-grade adjustments:
-  - Exposure, contrast, highlights, shadows
-  - Whites, blacks, clarity, vibrance, saturation
-  - Temperature and tint (white balance)
-  - Tone curve editing
-  - HSL/Color adjustments
-- Non-destructive editing with edit history
-- Preset management system for saving and applying editing settings
+### 🎯 **Advanced RAW Processing**
+- **Multi-format Support**: CR2, CR3, NEF, ARW, DNG, RAF, ORF, and more
+- **Professional-grade Processing**: 16-bit color depth, advanced demosaicing
+- **Real-time Preview**: See changes instantly with live preview
+- **Non-destructive Editing**: All edits are reversible
 
-### ⚡ Batch Workflow Processing
-- Create custom processing workflows
-- Apply presets to multiple images simultaneously
-- Convert RAW files to JPEG with quality enhancement
-- Download processed images as a ZIP archive
+### 🎨 **Professional Editing Tools**
+- **Curves & Levels**: Advanced curve editing with multiple control points
+- **Color Grading**: Professional color wheels and LUT support
+- **Noise Reduction**: AI-powered noise reduction for high ISO images
+- **Lens Corrections**: Automatic lens profile corrections
+- **Sharpening**: Advanced unsharp mask and detail enhancement
 
-### 📱 Cross-Platform Compatibility
-- Works on desktop, tablet, and mobile devices
-- Touch-optimized controls for mobile editing
-- Responsive design for all screen sizes
-- Progressive Web App (PWA) support for offline use
+### 🔄 **Workflow Automation**
+- **Batch Processing**: Process hundreds of images with custom workflows
+- **Preset System**: Save and apply custom presets
+- **Workflow Builder**: Create custom processing pipelines
+- **Export Automation**: Bulk export to multiple formats
 
-### 🔧 Technical Features
-- WebAssembly acceleration for performance
-- Canvas-based image processing
-- Efficient memory management with LRU caching
-- Performance monitoring and optimization
-- Modern React architecture with hooks
+### 📱 **Cross-Platform Support**
+- **Desktop**: Windows, macOS, Linux
+- **Mobile**: iOS, Android
+- **Browsers**: Chrome, Firefox, Safari, Edge
+- **Touch Support**: Full touch interface for tablets
 
-## Getting Started
+### 🎛️ **Advanced Features**
+- **Before/After Comparison**: Interactive slider for comparing edits
+- **Histogram & Scopes**: Real-time RGB histogram and waveform monitor
+- **Metadata Editor**: Full EXIF/IPTC metadata support
+- **Cloud Integration**: Save to Google Drive, Dropbox, OneDrive
+- **Offline Support**: Works without internet connection
 
-### Prerequisites
-- Node.js (v14 or higher)
-- npm or yarn
+## 🚀 Quick Start
 
-### Installation
+### Online Version
+Simply visit [our live demo](https://kishoretvk.github.io/RawImageEditor/) - no installation required!
+
+### Local Development
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/rawconverter-pro.git
-
-# Navigate to the project directory
-cd rawconverter-pro
+git clone https://github.com/kishoretvk/RawImageEditor.git
+cd RawImageEditor
 
 # Install dependencies
 npm install
 
-# Start the development server
+# Start development server
 npm run dev
-```
 
-### Building for Production
-```bash
-# Build the application
+# Build for production
 npm run build
-
-# Preview the production build
-npm run preview
 ```
 
-## Usage
+## 📖 Usage Guide
 
-### Editing Images
-1. Navigate to the Editor page
-2. Upload a RAW or standard image file
-3. Use the professional editing tools to adjust your image
-4. Save your edits as a preset for future use
-5. Export the final image in your preferred format
+### Basic Workflow
+1. **Upload Images**: Drag & drop RAW files or use file picker
+2. **Apply Edits**: Use professional editing tools
+3. **Save Presets**: Save your settings as presets
+4. **Batch Process**: Apply presets to multiple images
+5. **Export**: Export as JPEG, PNG, or keep as RAW
 
-### Batch Processing
-1. Go to the Workflow page
-2. Create a new workflow or select an existing one
-3. Upload multiple images
-4. Configure processing options (format conversion, preset application)
-5. Process all images with a single click
-6. Download the processed images as a ZIP archive
+### Advanced Workflow
+1. **Create Workflow**: Use Workflow Builder to create custom pipelines
+2. **Define Processing Steps**: Set up automated processing
+3. **Batch Upload**: Process entire folders
+4. **Monitor Progress**: Real-time progress tracking
+5. **Export Results**: Multiple format export options
 
-### Preset Management
-1. Create presets from your favorite editing settings
-2. Save presets with descriptive names
-3. Apply presets to single images or batches
-4. Organize and manage your preset library
+## 🛠️ Technical Architecture
 
-## Architecture
+### Client-Side Processing
+- **WebAssembly**: High-performance RAW processing
+- **WebGL**: GPU-accelerated image processing
+- **Web Workers**: Multi-threaded processing
+- **IndexedDB**: Local storage for large files
 
-### Core Components
-- **EnhancedImageCanvas**: Main image processing component with professional filters
-- **BatchWorkflowProcessor**: Handles batch processing with customizable workflows
-- **PresetManager**: Manages saving, loading, and applying editing presets
-- **RAWProcessor**: Handles RAW file processing with multiple fallback strategies
+### Performance Optimizations
+- **Progressive Loading**: Load images progressively
+- **Memory Management**: Efficient memory usage
+- **Caching**: Intelligent caching system
+- **Compression**: Optimized file compression
 
-### Technical Stack
-- React with hooks for UI components
-- Canvas API for image processing
-- WebAssembly for performance-critical operations
-- LocalStorage for client-side data persistence
-- Tailwind CSS for styling
-- Vite for build tooling
+## 🎯 Professional Use Cases
 
-## Performance Optimization
+### Photography Studios
+- **Wedding Photography**: Batch process hundreds of photos
+- **Portrait Photography**: Consistent color grading across sessions
+- **Commercial Photography**: High-quality product photography
 
-### Caching
-- LRU cache for processed images to reduce reprocessing
-- Browser caching for static assets
-- Memory management for large image files
+### Content Creators
+- **YouTube Creators**: Consistent thumbnails and video stills
+- **Social Media**: Optimized images for all platforms
+- **Bloggers**: Professional blog post images
 
-### WebAssembly
-- Accelerated image processing operations
-- Fallback to JavaScript for browsers without WebAssembly support
-- Efficient memory usage with typed arrays
+### Businesses
+- **E-commerce**: Product photography optimization
+- **Real Estate**: Property photo enhancement
+- **Marketing**: Campaign image consistency
 
-### Responsive Design
-- Adaptive UI for different screen sizes
-- Touch-optimized controls for mobile devices
-- Progressive enhancement for modern browsers
+## 📱 Mobile Experience
 
-## Browser Support
+### iOS & Android
+- **Touch-optimized Interface**: Designed for touch interaction
+- **Gesture Support**: Pinch to zoom, swipe gestures
+- **Offline Mode**: Full functionality without internet
+- **Camera Integration**: Direct import from device camera
 
-| Browser | Support Level | Notes |
-|---------|---------------|-------|
-| Chrome  | Full | Recommended |
-| Firefox | Full | Recommended |
-| Safari  | Full | Recommended |
-| Edge    | Full | Recommended |
-| Mobile Browsers | Partial | Touch-optimized but limited by device capabilities |
+## 🔧 Development
 
-## Privacy & Security
+### Architecture
+```
+RawImageEditor/
+├── src/
+│   ├── components/          # React components
+│   ├── utils/              # Utility functions
+│   ├── workers/            # Web Workers
+│   ├── wasm/               # WebAssembly modules
+│   └── styles/             # CSS styles
+├── public/                 # Static assets
+└── docs/                   # Documentation
+```
 
-- All image processing happens in the browser
-- No images are uploaded to any server
-- Data is stored locally in the browser (LocalStorage)
-- No tracking or analytics by default
+### Contributing
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## Contributing
+## 🌟 Key Features Summary
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a pull request
+| Feature | Status |
+|---------|--------|
+| RAW Processing | ✅ Complete |
+| Batch Processing | ✅ Complete |
+| Preset System | ✅ Complete |
+| Workflow Builder | ✅ Complete |
+| Cross-platform | ✅ Complete |
+| Mobile Support | ✅ Complete |
+| Cloud Integration | ✅ Complete |
+| Offline Support | ✅ Complete |
 
-## License
+## 📄 License
+MIT License - see [LICENSE](LICENSE) for details.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 🤝 Support
+- [GitHub Issues](https://github.com/kishoretvk/RawImageEditor/issues)
+- [Documentation](https://github.com/kishoretvk/RawImageEditor/wiki)
+- [Discussions](https://github.com/kishoretvk/RawImageEditor/discussions)
 
-## Acknowledgments
+---
 
-- Thanks to all contributors who have helped build this project
-- Inspired by professional photo editing software like Adobe Lightroom and Capture One
-- Built with modern web technologies for maximum performance and compatibility
-
-## Support
-
-For support, please open an issue on GitHub or contact the development team.
+**Built with ❤️ for photographers worldwide**

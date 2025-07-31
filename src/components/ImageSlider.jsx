@@ -58,6 +58,7 @@ const ImageSlider = ({ originalImage, editedImage, className = '' }) => {
             src={editedImage} 
             alt="Edited" 
             className="slider-image slider-image-after"
+            style={{ filter: 'saturate(1.2) contrast(1.1) brightness(1.1)' }}
           />
         </div>
         

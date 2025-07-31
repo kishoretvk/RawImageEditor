@@ -1,16 +1,28 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import './styles/global.css'
-import './styles/modern-enhancements.css'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter as Router } from 'react-router-dom'
 import AppRouter from './AppRouter.jsx'
-import { initDemo } from './demo.js'
+import './index.css'
 
-// Initialize demo when DOM is loaded
-initDemo();
+// Disable service worker registration during development
+const isDevelopment = import.meta.env.DEV;
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <AppRouter />
-  </StrictMode>,
+if (!isDevelopment && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(registration => {
+        console.log('SW registered: ', registration);
+      })
+      .catch(registrationError => {
+        console.log('SW registration failed: ', registrationError);
+      });
+  });
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <Router basename="/RawImageEditor">
+      <AppRouter />
+    </Router>
+  </React.StrictMode>,
 )
