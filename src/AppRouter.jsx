@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import ProfessionalLandingPage from './components/ProfessionalLandingPage';
 import EditorPage from './pages/EditorPage';
 import WorkflowPage from './pages/WorkflowPage';
@@ -12,20 +12,18 @@ import EnhancedHome from './pages/EnhancedHome';
 
 const AppRouter = () => {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<ProfessionalLandingPage />} />
-        <Route path="/home" element={<EnhancedHome />} />
-        <Route path="/editor" element={<EditorPage />} />
-        <Route path="/workflow" element={<WorkflowPage />} />
-        <Route path="/compression" element={<CompressionPage />} />
-        <Route path="/gallery" element={<Gallery />} />
-        <Route path="/about" element={<AboutTech />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        <Route path="/demo" element={<DemoPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+    <Routes>
+      <Route path="/" element={<ProfessionalLandingPage />} />
+      <Route path="/home" element={<EnhancedHome />} />
+      <Route path="/editor" element={<EditorPage />} />
+      <Route path="/workflow" element={<WorkflowPage />} />
+      <Route path="/compression" element={<CompressionPage />} />
+      <Route path="/gallery" element={<Gallery />} />
+      <Route path="/about" element={<AboutTech />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/demo" element={<DemoPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 };
 

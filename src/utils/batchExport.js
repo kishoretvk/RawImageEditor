@@ -11,11 +11,14 @@ import {
   applyCurve,
   adjustWhiteBalance,
   adjustVibrance,
-  enhanceClarity,
-  addFilmGrain,
+  enhanceClarity
+} from '../utils/rawProcessor';
+
+import {
   applyVignetting,
-  applyPreset
-} from '../components/EnhancedImageCanvas';
+  applyFilmGrain
+} from '../utils/advancedFilters';
+
 
 /**
  * Apply edits to an image and export as JPEG with enhanced quality

@@ -4,7 +4,7 @@ import WorkflowManager from './WorkflowManager';
 import ImageSlider from './ImageSlider';
 import { batchProcessImages } from '../utils/batchExport';
 import { isRawFormat, processRAWFile, convertRAWToJPEG } from '../utils/rawProcessor';
-import { applyProfessionalFilters } from './EnhancedImageCanvas';
+import { applyProfessionalFilters } from './EnhancedImageCanvas_professional';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import '../styles/batch-workflow.css';

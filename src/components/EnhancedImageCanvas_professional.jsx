@@ -245,7 +245,7 @@ const applyPreset = (r, g, b, preset) => {
 /**
  * Apply professional image filters to canvas context
  */
-const applyProfessionalFilters = (ctx, image, edits = {}) => {
+export const applyProfessionalFilters = (ctx, image, edits = {}) => {
   const {
     // Basic adjustments
     exposure = 0, highlights = 0, shadows = 0, whites = 0, blacks = 0, contrast = 0,
