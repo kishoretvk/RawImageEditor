@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import EnhancedImageCanvas from './EnhancedImageCanvas';
 import ImageSlider from './ImageSlider';
 import BeforeAfterDemo from './BeforeAfterDemo';
-// import './ProfessionalLandingPage.css';
+import '../styles/ProfessionalLandingPage.css'; 
 
 const ProfessionalLandingPage = () => {
   const [demoImage, setDemoImage] = useState(null);
