@@ -15,6 +15,8 @@ import CurvesPanel from '../components/editorPanels/CurvesPanel';
 import FileUploader from '../components/FileUploader';
 import EditorUploadPlaceholder from '../components/EditorUploadPlaceholder';
 import EnhancedImageCanvas from '../components/EnhancedImageCanvas';
+import PresetSelector from '../components/PresetSelector';
+import PresetBuilder from '../components/PresetBuilder';
 import PresetManager from '../components/PresetManager';
 import UnifiedSlider from '../components/UnifiedSlider';
 import '../styles/unified-slider.css';
@@ -345,14 +347,20 @@ const EditorPage = () => {
                 </CollapsibleControlPanel>
                 
                 <CollapsibleControlPanel title="Presets" defaultOpen={true}>
-                  <PresetManager 
-                    onApplyPreset={(presetSettings) => {
-                      setAdjustments(prev => ({...prev, ...presetSettings}));
-                      setColorAdjustments(prev => ({...prev, ...presetSettings}));
-                      setSharpness(prev => ({...prev, ...presetSettings}));
-                      setEffects(prev => ({...prev, ...presetSettings}));
-                      setGeometry(prev => ({...prev, ...presetSettings}));
-                      setAdvanced(prev => ({...prev, ...presetSettings}));
+                  <PresetSelector 
+                    onPresetSelect={(preset) => {
+                      const { settings } = preset;
+                      setAdjustments(prev => ({...prev, ...settings}));
+                      setColorAdjustments(prev => ({...prev, ...settings}));
+                      setSharpness(prev => ({...prev, ...settings}));
+                      setEffects(prev => ({...prev, ...settings}));
+                      setGeometry(prev => ({...prev, ...settings}));
+                      setAdvanced(prev => ({...prev, ...settings}));
+                    }}
+                  />
+                  <PresetBuilder 
+                    onSave={(preset) => {
+                      PresetManager.savePreset(preset);
                     }}
                     currentEdits={allEdits}
                   />

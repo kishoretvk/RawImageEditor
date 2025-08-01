@@ -1,19 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import PresetManager from './PresetManager';
 
 const PresetSelector = ({ onPresetSelect, selectedPreset }) => {
   const [presets, setPresets] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Load presets from localStorage on component mount
+  // Load presets from PresetManager on component mount
   useEffect(() => {
-    const savedPresets = localStorage.getItem('imageEditorPresets');
-    if (savedPresets) {
-      try {
-        setPresets(JSON.parse(savedPresets));
-      } catch (e) {
-        console.error('Failed to parse presets', e);
-      }
-    }
+    setPresets(PresetManager.getPresets());
   }, []);
 
   const filteredPresets = presets.filter(preset => 
@@ -60,28 +54,28 @@ const PresetSelector = ({ onPresetSelect, selectedPreset }) => {
         ) : (
           filteredPresets.map(preset => (
             <div 
-              key={preset.id}
+              key={preset.name}
               onClick={() => onPresetSelect(preset)}
               style={{
                 padding: '12px',
-                background: selectedPreset?.id === preset.id 
+                background: selectedPreset?.name === preset.name 
                   ? 'rgba(74, 158, 255, 0.2)' 
                   : 'rgba(255,255,255,0.05)',
                 borderRadius: '6px',
                 marginBottom: '8px',
                 cursor: 'pointer',
-                border: selectedPreset?.id === preset.id 
+                border: selectedPreset?.name === preset.name 
                   ? '1px solid #4a9eff' 
                   : '1px solid transparent',
                 transition: 'all 0.2s ease'
               }}
               onMouseOver={(e) => {
-                e.target.style.background = selectedPreset?.id === preset.id 
+                e.target.style.background = selectedPreset?.name === preset.name 
                   ? 'rgba(74, 158, 255, 0.3)' 
                   : 'rgba(255,255,255,0.08)';
               }}
               onMouseOut={(e) => {
-                e.target.style.background = selectedPreset?.id === preset.id 
+                e.target.style.background = selectedPreset?.name === preset.name 
                   ? 'rgba(74, 158, 255, 0.2)' 
                   : 'rgba(255,255,255,0.05)';
               }}
@@ -101,7 +95,7 @@ const PresetSelector = ({ onPresetSelect, selectedPreset }) => {
                   fontSize: '12px', 
                   color: '#a0a0a0' 
                 }}>
-                  {new Date(preset.createdAt).toLocaleDateString()}
+                  
                 </span>
               </div>
               <div style={{ 

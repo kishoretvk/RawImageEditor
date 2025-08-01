@@ -1,157 +1,144 @@
-import React, { useState, useRef, useEffect } from 'react';
-import EnhancedImageCanvas from './EnhancedImageCanvas';
+import React, { useState, useEffect } from 'react';
 import './BeforeAfterDemo.css';
 
-const BeforeAfterDemo = ({ images, currentIndex, onIndexChange }) => {
-  const [sliderPosition, setSliderPosition] = useState(50);
-  const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef(null);
+const BeforeAfterDemo = () => {
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [images, setImages] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const currentImage = images[currentIndex];
-
-  const handleInteractionMove = (clientX) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-    setSliderPosition(percentage);
-  };
-
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    handleInteractionMove(e.clientX);
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    handleInteractionMove(e.clientX);
-  };
-
-  const handleTouchStart = (e) => {
-    setIsDragging(true);
-    handleInteractionMove(e.touches[0].clientX);
-  };
-
-  const handleTouchMove = (e) => {
-    if (!isDragging) return;
-    handleInteractionMove(e.touches[0].clientX);
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'ArrowLeft') {
-      setSliderPosition(prev => Math.max(0, prev - 2));
-    } else if (e.key === 'ArrowRight') {
-      setSliderPosition(prev => Math.min(100, prev + 2));
+  const demoImages = [
+    {
+      id: 1,
+      title: "RAW Processing",
+      description: "Professional RAW image processing with enhanced details and colors",
+      before: 'demo-images/raw-before.jpg',
+      after: 'demo-images/raw-after.jpg'
+    },
+    {
+      id: 2,
+      title: "Color Grading",
+      description: "Advanced color grading with LUTs and professional color correction",
+      before: 'demo-images/color-before.jpg',
+      after: 'demo-images/color-after.jpg'
+    },
+    {
+      id: 3,
+      title: "Noise Reduction",
+      description: "AI-powered noise reduction while preserving fine details",
+      before: 'demo-images/noise-before.jpg',
+      after: 'demo-images/noise-after.jpg'
+    },
+    {
+      id: 4,
+      title: "Dynamic Range",
+      description: "HDR processing with enhanced dynamic range and shadow recovery",
+      before: 'demo-images/hdr-before.jpg',
+      after: 'demo-images/hdr-after.jpg'
     }
-  };
+  ];
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleTouchMove);
-      document.addEventListener('touchend', handleMouseUp);
-    }
+    loadDemoImages();
+  }, []);
 
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleMouseUp);
-    };
-  }, [isDragging, handleMouseMove, handleMouseUp, handleTouchMove]);
-
-  const nextDemo = () => {
-    onIndexChange((currentIndex + 1) % images.length);
-    setSliderPosition(50);
+  const loadDemoImages = async () => {
+    setIsLoading(true);
+    
+    // Simulate loading with fallback to placeholders
+    const loadedImages = demoImages.map(img => ({
+      ...img,
+      before: img.before,
+      after: img.after
+    }));
+    
+    setImages(loadedImages);
+    setIsLoading(false);
   };
 
-  const prevDemo = () => {
-    onIndexChange((currentIndex - 1 + images.length) % images.length);
-    setSliderPosition(50);
+  const handleImageSelect = (index) => {
+    setSelectedImage(index);
   };
+
+  if (isLoading) {
+    return (
+      <div className="before-after-demo loading">
+        <div className="loading-spinner"></div>
+        <p>Loading demo images...</p>
+      </div>
+    );
+  }
+
+  const currentImage = images[selectedImage] || demoImages[selectedImage];
 
   return (
     <div className="before-after-demo">
-      <div className="demo-header">
-        <h3>{currentImage.title}</h3>
-        <p>{currentImage.description}</p>
-      </div>
-
-      <div 
-        className="comparison-container"
-        ref={containerRef}
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        onKeyDown={handleKeyPress}
-        tabIndex={0}
-      >
-        <div className="image-wrapper">
-          <EnhancedImageCanvas
-            imageSrc={currentImage.original}
-            edits={{}}
-            hideControls={true}
-          />
-          <div className="image-label before">Before</div>
-        </div>
+      <div className="demo-gallery">
+        <h3>Professional Processing Examples</h3>
         
-        <div 
-          className="image-wrapper after"
-          style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
-        >
-          <EnhancedImageCanvas
-            imageSrc={currentImage.processed}
-            edits={currentImage.edits}
-            hideControls={true}
-          />
-          <div className="image-label after">After</div>
+        <div className="image-selector">
+          {images.map((image, index) => (
+            <button
+              key={image.id}
+              className={`selector-button ${selectedImage === index ? 'active' : ''}`}
+              onClick={() => handleImageSelect(index)}
+            >
+              {image.title}
+            </button>
+          ))}
         </div>
 
-        <div 
-          className="slider-line"
-          style={{ left: `${sliderPosition}%` }}
-        >
-          <div className="slider-handle">
-            <div className="slider-arrows">
-              <span>&#9664;</span>
-              <span>&#9654;</span>
+        <div className="demo-image-grid">
+          <div className="image-comparison">
+            <div className="image-container">
+              <img 
+                src={currentImage.before} 
+                alt={`${currentImage.title} - Before`}
+                onError={(e) => {
+                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMjIyIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE2Ij5CZWZvcmU8L3RleHQ+Cjwvc3ZnPgo=';
+                }}
+              />
+              <div className="image-label">Before</div>
             </div>
+            
+            <div className="image-container">
+              <img 
+                src={currentImage.after} 
+                alt={`${currentImage.title} - After`}
+                onError={(e) => {
+                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5IiBmb250LXNpemU9IjE2Ij5BZnRlcjwvdGV4dD4KPC9zdmc+Cg==';
+                }}
+              />
+              <div className="image-label">After</div>
+            </div>
+          </div>
+
+          <div className="demo-info">
+            <h4>{currentImage.title}</h4>
+            <p>{currentImage.description}</p>
           </div>
         </div>
       </div>
 
-      <div className="demo-navigation-controls">
-        <button 
-          className="nav-btn" 
-          onClick={prevDemo}
-          disabled={images.length <= 1}
-        >
-          &larr; Previous
-        </button>
-        
-        <div className="demo-indicators">
-          {images.map((_, index) => (
-            <button
-              key={index}
-              className={`indicator ${index === currentIndex ? 'active' : ''}`}
-              onClick={() => onIndexChange(index)}
-              aria-label={`Go to demo ${index + 1}`}
-            />
-          ))}
+      <div className="demo-features">
+        <h4>Processing Features Demonstrated</h4>
+        <div className="features-list">
+          <div className="feature-item">
+            <span className="feature-icon">🎨</span>
+            <span>Professional color grading</span>
+          </div>
+          <div className="feature-item">
+            <span className="feature-icon">📊</span>
+            <span>Advanced histogram adjustment</span>
+          </div>
+          <div className="feature-item">
+            <span className="feature-icon">🔍</span>
+            <span>Detail enhancement</span>
+          </div>
+          <div className="feature-item">
+            <span className="feature-icon">⚡</span>
+            <span>Real-time processing</span>
+          </div>
         </div>
-        
-        <button 
-          className="nav-btn" 
-          onClick={nextDemo}
-          disabled={images.length <= 1}
-        >
-          Next &rarr;
-        </button>
       </div>
     </div>
   );

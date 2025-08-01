@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import EnhancedImageCanvas from './EnhancedImageCanvas';
 import FileUploader from './FileUploader';
 import WorkflowBuilder from './WorkflowBuilder';
+import PresetSelector from './PresetSelector';
+import PresetBuilder from './PresetBuilder';
 import PresetManager from './PresetManager';
 import '../styles/EnhancedProfessionalLanding.css';
 
@@ -497,7 +499,8 @@ const EnhancedProfessionalLanding = () => {
         <div className="modal-overlay" onClick={() => setShowPresets(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h3>Preset Manager</h3>
-            <PresetManager />
+            <PresetSelector onPresetSelect={() => {}} />
+            <PresetBuilder onSave={(preset) => PresetManager.savePreset(preset)} currentEdits={{}} />
             <button className="btn-close" onClick={() => setShowPresets(false)}>×</button>
           </div>
         </div>

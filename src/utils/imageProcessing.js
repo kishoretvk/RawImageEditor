@@ -1,14 +1,17 @@
-// Placeholder for RAW to JPEG conversion logic
-export async function convertRawToJpeg(file, settings) {
-  // TODO: Integrate with backend or WASM for actual conversion
-  // Simulate conversion delay
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        ...file,
-        status: 'completed',
-        preview: file.preview, // In real app, this would be the JPEG preview
-      });
-    }, 2000);
+export function convertRawToJpeg(file) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('../workers/imageProcessing.worker.js', import.meta.url));
+
+    worker.onmessage = (event) => {
+      resolve(event.data);
+      worker.terminate();
+    };
+
+    worker.onerror = (error) => {
+      reject(error);
+      worker.terminate();
+    };
+
+    worker.postMessage({ file });
   });
 }

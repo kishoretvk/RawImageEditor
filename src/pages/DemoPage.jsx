@@ -1,111 +1,59 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import ImageSlider from '../components/ImageSlider';
 import BeforeAfterDemo from '../components/BeforeAfterDemo';
 import './DemoPage.css';
 
-import natureImg from '../assets/images/nature-horizontal.jpg';
-import cheetahImg from '../assets/images/cheetah-horizontal.jpg';
-import northernlightsImg from '../assets/images/northernlights.jpg';
-
 const DemoPage = () => {
-  const [currentDemoIndex, setCurrentDemoIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Demo images with before/after comparisons
-  const demoImages = [
-    {
-      title: "RAW to JPEG Conversion",
-      description: "Professional RAW processing with enhanced colors and details",
-      original: natureImg,
-      processed: natureImg,
-      edits: {
-        exposure: 0.3,
-        contrast: 1.2,
-        saturation: 1.1,
-        highlights: -0.2,
-        shadows: 0.3,
-        temperature: 5500,
-        tint: 10
-      }
-    },
-    {
-      title: "Portrait Enhancement",
-      description: "Professional portrait retouching with skin tone correction",
-      original: cheetahImg,
-      processed: cheetahImg,
-      edits: {
-        exposure: 0.2,
-        contrast: 1.1,
-        saturation: 0.9,
-        highlights: -0.1,
-        shadows: 0.2,
-        temperature: 5200,
-        tint: 5,
-        clarity: 0.1,
-        vibrance: 0.15
-      }
-    },
-    {
-      title: "Landscape Processing",
-      description: "Enhanced landscape with improved dynamic range",
-      original: northernlightsImg,
-      processed: northernlightsImg,
-      edits: {
-        exposure: 0.4,
-        contrast: 1.3,
-        saturation: 1.2,
-        highlights: -0.3,
-        shadows: 0.4,
-        temperature: 5800,
-        tint: -5,
-        clarity: 0.2,
-        vibrance: 0.25
-      }
-    }
-  ];
-
-  useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleDemoChange = (index) => {
-    setCurrentDemoIndex(index);
-  };
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('slider');
 
   return (
     <div className="demo-page">
-      <div className="demo-header-section">
-        <h1>Live RAW Processing Demo</h1>
-        <p>Experience professional RAW image processing in real-time</p>
+      <div className="demo-header">
+        <h1>Professional RAW Processing Demo</h1>
+        <p>Experience the power of professional RAW image processing with our interactive demos</p>
       </div>
 
-      {isLoading ? (
-        <div className="demo-loading">
-          <div className="loading-spinner"></div>
-          <p>Loading demo images...</p>
-        </div>
-      ) : (
-        <>
-          <BeforeAfterDemo
-            images={demoImages}
-            currentIndex={currentDemoIndex}
-            onIndexChange={handleDemoChange}
-          />
+      <div className="demo-tabs">
+        <button 
+          className={`tab-button ${activeTab === 'slider' ? 'active' : ''}`}
+          onClick={() => setActiveTab('slider')}
+        >
+          Interactive Slider
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'gallery' ? 'active' : ''}`}
+          onClick={() => setActiveTab('gallery')}
+        >
+          Before/After Gallery
+        </button>
+      </div>
 
-          <div className="demo-cta">
-            <h2>Ready to Process Your RAW Images?</h2>
-            <p>Start editing your RAW files with professional-grade tools</p>
-            <div className="cta-buttons">
-              <button className="btn-primary">Start Editing</button>
-              <button className="btn-secondary">Learn More</button>
-            </div>
+      <div className="demo-content">
+        {activeTab === 'slider' ? (
+          <div className="slider-demo">
+            <ImageSlider />
           </div>
-        </>
-      )}
+        ) : (
+          <div className="gallery-demo">
+            <BeforeAfterDemo />
+          </div>
+        )}
+      </div>
+
+      <div className="demo-cta">
+        <h3>Ready to Process Your RAW Images?</h3>
+        <p>Start editing your RAW files with professional-grade tools</p>
+        <div className="cta-buttons">
+          <button className="cta-primary" onClick={() => navigate('/editor')}>
+            Start Editing
+          </button>
+          <button className="cta-secondary" onClick={() => navigate('/workflow')}>
+            Create Workflow
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

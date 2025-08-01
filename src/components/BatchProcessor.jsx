@@ -1,4 +1,6 @@
 import React, { useState, useRef } from 'react';
+import PresetSelector from './PresetSelector';
+import PresetBuilder from './PresetBuilder';
 import PresetManager from './PresetManager';
 import FileUploader from './FileUploader';
 import { batchProcessImages, createZipFromImages } from '../utils/batchExport';
@@ -179,9 +181,9 @@ const BatchProcessor = () => {
             
             {workflow.applyPreset && (
               <div className="ml-6" style={{ marginLeft: '24px', marginBottom: '16px' }}>
-                <PresetManager 
-                  onApplyPreset={handleApplyPreset}
-                  currentEdits={workflow.selectedPreset || {}}
+                <PresetSelector 
+                  onPresetSelect={handleApplyPreset}
+                  selectedPreset={workflow.selectedPreset}
                 />
               </div>
             )}

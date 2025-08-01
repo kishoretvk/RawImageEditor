@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import EnhancedProfessionalLanding from '../components/EnhancedProfessionalLanding';
 import BatchWorkflowProcessor from '../components/BatchWorkflowProcessor';
 import WorkflowBuilder from '../components/WorkflowBuilder';
+import PresetSelector from '../components/PresetSelector';
+import PresetBuilder from '../components/PresetBuilder';
 import PresetManager from '../components/PresetManager';
 import ImageSlider from '../components/ImageSlider';
 import BeforeAfterDemo from '../components/BeforeAfterDemo';
@@ -78,10 +80,16 @@ const ProfessionalDemo = () => {
         return (
           <div className="demo-section">
             <h2>Preset Management</h2>
-            <PresetManager 
+            <PresetSelector 
               onPresetSelect={(preset) => {
                 console.log('Preset selected:', preset);
               }}
+            />
+            <PresetBuilder 
+              onSave={(preset) => {
+                PresetManager.savePreset(preset);
+              }}
+              currentEdits={{}}
             />
           </div>
         );
