@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronRightIcon, CameraIcon, AdjustmentsHorizontalIcon, SparklesIcon } from '@heroicons/react/24/outline';
 
 // Import images
-import cheetah from '../assets/images/cheetah-hotirontal.jpg';
-import elephant from '../assets/images/elephant-hotirontal.jpg';
+import cheetah from '../assets/images/cheetah-horizontal.jpg';
+import elephant from '../assets/images/elephant-horizontal.jpg';
 import lava from '../assets/images/lava.jpg';
 import nature from '../assets/images/nature-horizontal.jpg';
 import newyork from '../assets/images/newyork-night.jpg';
 import northernlights from '../assets/images/northernlights.jpg';
-import tree from '../assets/images/tree-horozontal.jpg';
+import tree from '../assets/images/tree-horizontal.jpg';
 
 // Filter functions for real-time preview
 const applyFilter = (canvas, ctx, imageData, filterType, intensity) => {

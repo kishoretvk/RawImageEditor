@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import BeforeAfterDemo from '../components/BeforeAfterDemo';
-import EnhancedLandingPage from '../components/EnhancedLandingPage';
 import './DemoPage.css';
+
+import natureImg from '../assets/images/nature-horizontal.jpg';
+import cheetahImg from '../assets/images/cheetah-horizontal.jpg';
+import northernlightsImg from '../assets/images/northernlights.jpg';
 
 const DemoPage = () => {
   const [currentDemoIndex, setCurrentDemoIndex] = useState(0);
@@ -12,8 +15,8 @@ const DemoPage = () => {
     {
       title: "RAW to JPEG Conversion",
       description: "Professional RAW processing with enhanced colors and details",
-      original: "/src/assets/images/nature-horizontal.jpg",
-      processed: "/src/assets/images/nature-horizontal.jpg",
+      original: natureImg,
+      processed: natureImg,
       edits: {
         exposure: 0.3,
         contrast: 1.2,
@@ -27,8 +30,8 @@ const DemoPage = () => {
     {
       title: "Portrait Enhancement",
       description: "Professional portrait retouching with skin tone correction",
-      original: "/src/assets/images/cheetah-hotirontal.jpg",
-      processed: "/src/assets/images/cheetah-hotirontal.jpg",
+      original: cheetahImg,
+      processed: cheetahImg,
       edits: {
         exposure: 0.2,
         contrast: 1.1,
@@ -44,8 +47,8 @@ const DemoPage = () => {
     {
       title: "Landscape Processing",
       description: "Enhanced landscape with improved dynamic range",
-      original: "/src/assets/images/northernlights.jpg",
-      processed: "/src/assets/images/northernlights.jpg",
+      original: northernlightsImg,
+      processed: northernlightsImg,
       edits: {
         exposure: 0.4,
         contrast: 1.3,
@@ -92,30 +95,6 @@ const DemoPage = () => {
             currentIndex={currentDemoIndex}
             onIndexChange={handleDemoChange}
           />
-
-          <div className="demo-info">
-            <div className="info-grid">
-              <div className="info-card">
-                <h3>🎯 Professional Quality</h3>
-                <p>Experience the same quality as desktop applications, right in your browser</p>
-              </div>
-              
-              <div className="info-card">
-                <h3>⚡ Real-time Processing</h3>
-                <p>See changes instantly with our optimized WebAssembly processing engine</p>
-              </div>
-              
-              <div className="info-card">
-                <h3>📱 Cross-platform</h3>
-                <p>Works on any device with a modern web browser - no downloads required</p>
-              </div>
-              
-              <div className="info-card">
-                <h3>🔒 Privacy First</h3>
-                <p>All processing happens locally on your device - your images never leave your browser</p>
-              </div>
-            </div>
-          </div>
 
           <div className="demo-cta">
             <h2>Ready to Process Your RAW Images?</h2>

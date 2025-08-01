@@ -1,0 +1,21 @@
+.curve-editor {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #f8f9fa;
+  border-radius: 8px;
+  cursor: crosshair;
+}
+
+.curve-editor svg {
+  width: 100%;
+  height: 100%;
+}
+
+.curve-point {
+  cursor: move;
+  transition: r 0.2s ease;
+}
+
+.curve-point:hover {
+  r: 7;
+}

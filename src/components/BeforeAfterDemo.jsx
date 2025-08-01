@@ -1,72 +1,70 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import EnhancedImageCanvas from './EnhancedImageCanvas';
 import './BeforeAfterDemo.css';
 
-const BeforeAfterDemo = ({ images, currentIndex, onIndexChange, showSlider = true }) => {
+const BeforeAfterDemo = ({ images, currentIndex, onIndexChange }) => {
   const [sliderPosition, setSliderPosition] = useState(50);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef(null);
-  const intervalRef = useRef(null);
 
   const currentImage = images[currentIndex];
 
-  useEffect(() => {
-    if (isPlaying) {
-      intervalRef.current = setInterval(() => {
-        setSliderPosition(prev => {
-          if (prev >= 100) return 0;
-          return prev + 1;
-        });
-      }, 50);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isPlaying]);
-
-  const handleMouseMove = (e) => {
-    if (!isDragging || !containerRef.current) return;
-    
+  const handleInteractionMove = (clientX) => {
+    if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+    const x = clientX - rect.left;
     const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
     setSliderPosition(percentage);
   };
 
   const handleMouseDown = (e) => {
     setIsDragging(true);
-    handleMouseMove(e);
+    handleInteractionMove(e.clientX);
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
   };
 
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    handleInteractionMove(e.clientX);
+  };
+
+  const handleTouchStart = (e) => {
+    setIsDragging(true);
+    handleInteractionMove(e.touches[0].clientX);
+  };
+
   const handleTouchMove = (e) => {
-    if (!containerRef.current) return;
-    
-    const touch = e.touches[0];
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-    setSliderPosition(percentage);
+    if (!isDragging) return;
+    handleInteractionMove(e.touches[0].clientX);
   };
 
   const handleKeyPress = (e) => {
     if (e.key === 'ArrowLeft') {
-      setSliderPosition(prev => Math.max(0, prev - 5));
+      setSliderPosition(prev => Math.max(0, prev - 2));
     } else if (e.key === 'ArrowRight') {
-      setSliderPosition(prev => Math.min(100, prev + 5));
+      setSliderPosition(prev => Math.min(100, prev + 2));
     }
   };
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove);
+      document.addEventListener('touchend', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleMouseUp);
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp, handleTouchMove]);
 
   const nextDemo = () => {
     onIndexChange((currentIndex + 1) % images.length);
@@ -85,131 +83,75 @@ const BeforeAfterDemo = ({ images, currentIndex, onIndexChange, showSlider = tru
         <p>{currentImage.description}</p>
       </div>
 
-      <div className="demo-controls">
-        <div className="demo-navigation">
-          <button 
-            className="nav-btn" 
-            onClick={prevDemo}
-            disabled={images.length <= 1}
-          >
-            ← Previous
-          </button>
-          
-          <div className="demo-indicators">
-            {images.map((_, index) => (
-              <button
-                key={index}
-                className={`indicator ${index === currentIndex ? 'active' : ''}`}
-                onClick={() => onIndexChange(index)}
-              />
-            ))}
-          </div>
-          
-          <button 
-            className="nav-btn" 
-            onClick={nextDemo}
-            disabled={images.length <= 1}
-          >
-            Next →
-          </button>
-        </div>
-
-        <div className="slider-controls">
-          <button 
-            className={`play-btn ${isPlaying ? 'playing' : ''}`}
-            onClick={() => setIsPlaying(!isPlaying)}
-          >
-            {isPlaying ? '⏸' : '▶'}
-          </button>
-          
-          <div className="slider-info">
-            <span>Before</span>
-            <span className="slider-value">{Math.round(sliderPosition)}%</span>
-            <span>After</span>
-          </div>
-        </div>
-      </div>
-
       <div 
-        className="demo-container"
+        className="comparison-container"
         ref={containerRef}
-        onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchMove={handleTouchMove}
-        onTouchStart={handleMouseDown}
-        onTouchEnd={handleMouseUp}
+        onTouchStart={handleTouchStart}
         onKeyDown={handleKeyPress}
         tabIndex={0}
       >
-        <div className="image-comparison">
-          <div className="image-container">
-            <EnhancedImageCanvas
-              imageSrc={currentImage.original}
-              edits={{}}
-              showSlider={false}
-              hideControls={true}
-            />
-            <div className="image-label before">Original</div>
-          </div>
-          
-          <div className="image-container after">
-            <EnhancedImageCanvas
-              imageSrc={currentImage.processed}
-              edits={currentImage.edits}
-              showSlider={false}
-              hideControls={true}
-            />
-            <div className="image-label after">Processed</div>
-          </div>
-          
-          <div 
-            className="slider-overlay"
-            style={{ left: `${sliderPosition}%` }}
-          >
-            <div className="slider-line"></div>
-            <div className="slider-handle">
-              <div className="slider-arrows">
-                <span>◀</span>
-                <span>▶</span>
-              </div>
+        <div className="image-wrapper">
+          <EnhancedImageCanvas
+            imageSrc={currentImage.original}
+            edits={{}}
+            hideControls={true}
+          />
+          <div className="image-label before">Before</div>
+        </div>
+        
+        <div 
+          className="image-wrapper after"
+          style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
+        >
+          <EnhancedImageCanvas
+            imageSrc={currentImage.processed}
+            edits={currentImage.edits}
+            hideControls={true}
+          />
+          <div className="image-label after">After</div>
+        </div>
+
+        <div 
+          className="slider-line"
+          style={{ left: `${sliderPosition}%` }}
+        >
+          <div className="slider-handle">
+            <div className="slider-arrows">
+              <span>&#9664;</span>
+              <span>&#9654;</span>
             </div>
-          </div>
-          
-          <div 
-            className="after-overlay"
-            style={{ width: `${sliderPosition}%` }}
-          >
-            <EnhancedImageCanvas
-              imageSrc={currentImage.processed}
-              edits={currentImage.edits}
-              showSlider={false}
-              hideControls={true}
-            />
           </div>
         </div>
       </div>
 
-      <div className="demo-features">
-        <div className="feature-grid">
-          <div className="feature-item">
-            <span className="feature-icon">🖱️</span>
-            <span>Drag to compare</span>
-          </div>
-          <div className="feature-item">
-            <span className="feature-icon">⌨️</span>
-            <span>Use arrow keys</span>
-          </div>
-          <div className="feature-item">
-            <span className="feature-icon">📱</span>
-            <span>Touch support</span>
-          </div>
-          <div className="feature-item">
-            <span className="feature-icon">⚡</span>
-            <span>Real-time preview</span>
-          </div>
+      <div className="demo-navigation-controls">
+        <button 
+          className="nav-btn" 
+          onClick={prevDemo}
+          disabled={images.length <= 1}
+        >
+          &larr; Previous
+        </button>
+        
+        <div className="demo-indicators">
+          {images.map((_, index) => (
+            <button
+              key={index}
+              className={`indicator ${index === currentIndex ? 'active' : ''}`}
+              onClick={() => onIndexChange(index)}
+              aria-label={`Go to demo ${index + 1}`}
+            />
+          ))}
         </div>
+        
+        <button 
+          className="nav-btn" 
+          onClick={nextDemo}
+          disabled={images.length <= 1}
+        >
+          Next &rarr;
+        </button>
       </div>
     </div>
   );

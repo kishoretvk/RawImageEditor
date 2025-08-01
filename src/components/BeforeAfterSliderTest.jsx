@@ -8,7 +8,7 @@ const BeforeAfterSliderTest = () => {
   
   // Test images - replace with actual test images
   const testImage = {
-    url: '/src/assets/images/cheetah-hotirontal.jpg',
+    url: '/src/assets/images/cheetah-horizontal.jpg',
     filename: 'test-image.jpg'
   };
 

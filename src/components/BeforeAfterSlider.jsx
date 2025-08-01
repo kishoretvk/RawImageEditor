@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import cheetahImg from '../assets/images/cheetah-hotirontal.jpg';
+import cheetahImg from '../assets/images/cheetah-horizontal.jpg';
 
 const BeforeAfterSlider = ({ before = cheetahImg, after }) => {
   const containerRef = useRef(null);

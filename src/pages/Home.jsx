@@ -1,7 +1,7 @@
 import React from 'react';
 
-import cheetah from '../assets/images/cheetah-hotirontal.jpg';
-import elephant from '../assets/images/elephant-hotirontal.jpg';
+import cheetah from '../assets/images/cheetah-horizontal.jpg';
+import elephant from '../assets/images/elephant-horizontal.jpg';
 import lava from '../assets/images/lava.jpg';
 import nature from '../assets/images/nature-horizontal.jpg';
 import newyork from '../assets/images/newyork-night.jpg';
