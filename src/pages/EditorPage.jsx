@@ -101,6 +101,7 @@ const EditorPage = () => {
   const [panelWidth, setPanelWidth] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
   const [showBeforeAfter, setShowBeforeAfter] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Update edited image when adjustments change
   useEffect(() => {
