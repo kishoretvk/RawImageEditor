@@ -115,15 +115,19 @@ const EditorPage = () => {
   // Handle file upload and RAW-to-JPEG preview for histogram
   const handleFileUpload = async (file) => {
     setUploadedImage(file);
+    setIsLoading(true);
     if (file && file.filename && isRawFile(file.filename)) {
       try {
         const jpegResult = await convertRawToJpeg(file);
         setJpegPreview(jpegResult.preview);
       } catch (e) {
         setJpegPreview(null);
+      } finally {
+        setIsLoading(false);
       }
     } else {
       setJpegPreview(file.url || file.preview);
+      setIsLoading(false);
     }
   };
 
