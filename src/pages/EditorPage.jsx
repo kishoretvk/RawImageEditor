@@ -53,6 +53,7 @@ const EditorPage = () => {
   });
   const [uploadedImage, setUploadedImage] = useState(null);
   const [jpegPreview, setJpegPreview] = useState(null);
+  const objectUrlRef = useRef(null);
   const [adjustments, setAdjustments] = useState({
     exposure: 0,
     contrast: 0,
@@ -114,19 +115,76 @@ const EditorPage = () => {
 
   // Handle file upload and RAW-to-JPEG preview for histogram
   const handleFileUpload = async (file) => {
-    setUploadedImage(file);
-    setIsLoading(true);
-    if (file && file.filename && isRawFile(file.filename)) {
+    try {
+      setUploadedImage(file);
+      setIsLoading(true);
+
+      // Normalize file info
+      const fileName = file?.name || file?.filename || '';
+      const knownUrl = file?.url || file?.preview || null;
+
+      // Create a fast local preview URL for immediate feedback
+      // Revoke previous object URL if any
+      if (objectUrlRef.current) {
+        try { URL.revokeObjectURL(objectUrlRef.current); } catch {}
+        objectUrlRef.current = null;
+      }
+
+      let instantUrl = knownUrl;
+      if (!instantUrl && file instanceof Blob) {
+        instantUrl = URL.createObjectURL(file);
+        objectUrlRef.current = instantUrl;
+      }
+
+      // Always show something instantly if we can
+      if (instantUrl) {
+        setEditedImageUrl(instantUrl);
+      }
+
+      const isRaw = isRawFile(fileName);
+
+      if (!isRaw) {
+        // For JPEG/PNG: use instant URL for histogram too
+        if (instantUrl) setJpegPreview(instantUrl);
+        setIsLoading(false);
+        return;
+      }
+
+      // RAW path: keep instant URL visible, then ask worker for better preview
       try {
-        const jpegResult = await convertRawToJpeg(file);
-        setJpegPreview(jpegResult.preview);
+        console.debug('[EditorPage] sending to worker convertRawToJpeg');
+
+        // Watchdog timeout so UI never hangs if worker channel breaks
+        const timeoutMs = 2000;
+        const timeoutPromise = new Promise((resolve) => {
+          setTimeout(() => resolve({ preview: instantUrl, status: 'timeout' }), timeoutMs);
+        });
+
+        // Race worker vs timeout
+        const workerPromise = convertRawToJpeg({
+          name: fileName,
+          preview: instantUrl
+        });
+
+        const jpegResult = await Promise.race([workerPromise, timeoutPromise]);
+
+        console.debug('[EditorPage] worker/timeout returned', jpegResult);
+
+        if (jpegResult?.preview) {
+          setJpegPreview(jpegResult.preview);
+        } else if (instantUrl) {
+          // Fallback: still show instantUrl if worker gave nothing
+          setJpegPreview(instantUrl);
+        }
       } catch (e) {
-        setJpegPreview(null);
+        console.error('[EditorPage] worker convert error', e);
+        // Fallback
+        if (instantUrl) setJpegPreview(instantUrl);
       } finally {
         setIsLoading(false);
       }
-    } else {
-      setJpegPreview(file.url || file.preview);
+    } catch (err) {
+      console.error('[EditorPage] handleFileUpload fatal', err);
       setIsLoading(false);
     }
   };
@@ -277,6 +335,12 @@ const EditorPage = () => {
                   sliderPosition={sliderPosition}
                   onSliderChange={setSliderPosition}
                 />
+                {isLoading && (
+                  <div className="canvas-loading-overlay">
+                    <div className="spinner" />
+                    <span>Processing…</span>
+                  </div>
+                )}
                 <div className="canvas-controls">
                   <button 
                     className={`control-button ${showBeforeAfter ? 'active' : ''}`}
@@ -302,7 +366,11 @@ const EditorPage = () => {
           {uploadedImage && (
             <div className="histogram-container">
               <Histogram 
-                imageUrl={jpegPreview || (typeof uploadedImage === 'string' ? uploadedImage : uploadedImage.url)} 
+                imageUrl={
+                  jpegPreview ||
+                  editedImageUrl ||
+                  (typeof uploadedImage === 'string' ? uploadedImage : (uploadedImage?.url || uploadedImage?.preview || null))
+                } 
               />
             </div>
           )}

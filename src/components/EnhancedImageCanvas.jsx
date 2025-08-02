@@ -25,7 +25,12 @@ const EnhancedImageCanvas = ({
     
     try {
       const img = new Image();
-      img.crossOrigin = 'anonymous';
+
+      // Only set CORS for network images; blob: and data: should not use anonymous
+      const isNetwork = typeof imageSrc === 'string' && /^https?:\/\//i.test(imageSrc);
+      if (isNetwork) {
+        img.crossOrigin = 'anonymous';
+      }
       
       await new Promise((resolve, reject) => {
         img.onload = resolve;
