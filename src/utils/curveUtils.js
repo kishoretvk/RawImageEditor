@@ -286,3 +286,59 @@ export const curvePresets = {
   contrastBoost: [[0, 0], [0.3, 0.15], [0.7, 0.85], [1, 1]],
   contrastReduce: [[0, 0], [0.3, 0.25], [0.7, 0.75], [1, 1]]
 };
+
+/**
+ * Compose master (RGB) and channel curves to three per-channel LUTs.
+ * Strategy: sequential application: outC(x) = curveC(curveRGB(x))
+ * Returns Uint8Array LUTs (256 by default) suitable for CPU path or to upload to GPU.
+ */
+export const composeCurves = (
+  {
+    rgbPoints,
+    rPoints,
+    gPoints,
+    bPoints
+  },
+  { size = 256, space = 'linear' } = {}
+) => {
+  const rgbFn = createSmoothCurve(
+    (rgbPoints && rgbPoints.length ? rgbPoints : createDefaultCurve()).map(p => Array.isArray(p) ? p : [p.x / 256 || p.x, p.y / 256 || p.y])
+  );
+  const rFnRaw = createSmoothCurve(
+    (rPoints && rPoints.length ? rPoints : createDefaultCurve()).map(p => Array.isArray(p) ? p : [p.x / 256 || p.x, p.y / 256 || p.y])
+  );
+  const gFnRaw = createSmoothCurve(
+    (gPoints && gPoints.length ? gPoints : createDefaultCurve()).map(p => Array.isArray(p) ? p : [p.x / 256 || p.x, p.y / 256 || p.y])
+  );
+  const bFnRaw = createSmoothCurve(
+    (bPoints && bPoints.length ? bPoints : createDefaultCurve()).map(p => Array.isArray(p) ? p : [p.x / 256 || p.x, p.y / 256 || p.y])
+  );
+
+  // Compose: c(rgb(x))
+  const comp = (cFn) => (x) => cFn(rgbFn(x));
+  const rFn = comp(rFnRaw);
+  const gFn = comp(gFnRaw);
+  const bFn = comp(bFnRaw);
+
+  const lutR = createCurveLUT(rFn, size, { space });
+  const lutG = createCurveLUT(gFn, size, { space });
+  const lutB = createCurveLUT(bFn, size, { space });
+
+  return { lutR, lutG, lutB };
+};
+
+/**
+ * Convenience wrapper: build LUTs from unified curves object:
+ * curves = { mode, rgb:{points}, r:{points}, g:{points}, b:{points} }
+ */
+export const buildLUTsFromCurves = (curves, { size = 256, space = 'linear' } = {}) => {
+  if (!curves) {
+    const id = createDefaultCurve();
+    return composeCurves({ rgbPoints: id, rPoints: id, gPoints: id, bPoints: id }, { size, space });
+  }
+  const rgbPoints = curves.rgb?.points || createDefaultCurve();
+  const rPoints = curves.r?.points || createDefaultCurve();
+  const gPoints = curves.g?.points || createDefaultCurve();
+  const bPoints = curves.b?.points || createDefaultCurve();
+  return composeCurves({ rgbPoints, rPoints, gPoints, bPoints }, { size, space });
+};

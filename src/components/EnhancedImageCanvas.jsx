@@ -6,7 +6,8 @@ const EnhancedImageCanvas = ({
   edits = {}, 
   showSlider = false, 
   sliderPosition = 50,
-  onSliderChange 
+  onSliderChange,
+  curveLUTs = null
 }) => {
   const canvasRef = useRef(null);
   const originalCanvasRef = useRef(null);
@@ -31,10 +32,13 @@ const EnhancedImageCanvas = ({
       if (isNetwork) {
         img.crossOrigin = 'anonymous';
       }
-      
+
       await new Promise((resolve, reject) => {
         img.onload = resolve;
-        img.onerror = reject;
+        img.onerror = (e) => {
+          console.error('[EnhancedImageCanvas] img onerror for src:', imageSrc, e);
+          reject(e);
+        };
         img.src = imageSrc;
       });
 
@@ -55,19 +59,34 @@ const EnhancedImageCanvas = ({
 
       // Apply edits
       processedCtx.drawImage(img, 0, 0);
-      await applyImageEdits(processedCanvas, edits);
+      await applyImageEdits(processedCanvas, edits, curveLUTs);
 
       // Update display canvas
       updateDisplayCanvas();
       
     } catch (error) {
-      console.error('Error loading image:', error);
+      console.error('[EnhancedImageCanvas] Error loading image:', error, 'src:', imageSrc);
+      // Draw a visible placeholder so user never sees an infinite spinner
+      const processedCanvas = processedCanvasRef.current;
+      if (processedCanvas) {
+        const ctx = processedCanvas.getContext('2d');
+        const w = processedCanvas.width || 800;
+        const h = processedCanvas.height || 600;
+        processedCanvas.width = w;
+        processedCanvas.height = h;
+        ctx.fillStyle = '#2a2a2a';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#666';
+        ctx.font = '16px sans-serif';
+        ctx.fillText('Preview unavailable', 20, 32);
+        updateDisplayCanvas();
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const applyImageEdits = async (canvas, edits) => {
+  const applyImageEdits = async (canvas, edits, curveLUTs) => {
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
@@ -140,6 +159,17 @@ const EnhancedImageCanvas = ({
         if (r < 128) r = Math.max(0, r + shadows * r);
         if (g < 128) g = Math.max(0, g + shadows * g);
         if (b < 128) b = Math.max(0, b + shadows * b);
+      }
+
+      // Apply per-channel tone curve LUTs if provided
+      if (curveLUTs && curveLUTs.lutR && curveLUTs.lutG && curveLUTs.lutB) {
+        const { lutR, lutG, lutB } = curveLUTs;
+        const idxR = Math.min(lutR.length - 1, Math.max(0, r | 0));
+        const idxG = Math.min(lutG.length - 1, Math.max(0, g | 0));
+        const idxB = Math.min(lutB.length - 1, Math.max(0, b | 0));
+        r = lutR[idxR];
+        g = lutG[idxG];
+        b = lutB[idxB];
       }
 
       data[i] = r;

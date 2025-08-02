@@ -1,67 +1,75 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const UnifiedSlider = ({ 
-  min = 0, 
-  max = 100, 
-  value = 50, 
-  onChange, 
-  label = "", 
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const toNumber = (v, fallback = 0) => {
+  const n = typeof v === 'number' ? v : parseFloat(v);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+const UnifiedSlider = ({
+  min = 0,
+  max = 100,
+  value = 50,
+  onChange,
+  label = '',
   showLabels = true,
   showValue = true,
-  className = ""
+  className = '',
+  step = 0.01,
+  showRange = true,
+  minLabel,
+  maxLabel,
+  showTicks = false,
+  tickCount = 0
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const sliderRef = useRef(null);
 
-  // Handle mouse events for slider
+  const emitChange = (next) => {
+    if (!onChange) return;
+    const numeric = toNumber(next, value);
+    // snap to step
+    const snapped = step > 0 ? Math.round(numeric / step) * step : numeric;
+    onChange(clamp(snapped, min, max));
+  };
+
+  // pointer handlers
+  const updateFromClientX = (clientX) => {
+    if (!sliderRef.current) return;
+    const rect = sliderRef.current.getBoundingClientRect();
+    const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+    const pos = min + ratio * (max - min);
+    emitChange(pos);
+  };
+
   const handleMouseDown = (e) => {
     setIsDragging(true);
-    updateValue(e);
+    updateFromClientX(e.clientX);
   };
-
   const handleMouseMove = (e) => {
-    if (isDragging) {
-      updateValue(e);
-    }
+    if (!isDragging) return;
+    updateFromClientX(e.clientX);
   };
+  const handleMouseUp = () => setIsDragging(false);
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const updateValue = (e) => {
-    if (sliderRef.current) {
-      const rect = sliderRef.current.getBoundingClientRect();
-      const position = ((e.clientX - rect.left) / rect.width) * (max - min) + min;
-      const clampedValue = Math.max(min, Math.min(max, position));
-      if (onChange) onChange(clampedValue);
-    }
-  };
-
-  // Handle touch events for mobile
   const handleTouchStart = (e) => {
     setIsDragging(true);
-    updateValue(e.touches[0]);
+    const t = e.touches[0];
+    updateFromClientX(t.clientX);
   };
-
   const handleTouchMove = (e) => {
-    if (isDragging) {
-      e.preventDefault();
-      updateValue(e.touches[0]);
-    }
+    if (!isDragging) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    updateFromClientX(t.clientX);
   };
+  const handleTouchEnd = () => setIsDragging(false);
 
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-  };
-
-  // Add event listeners for dragging
   useEffect(() => {
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd);
-    
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
@@ -70,33 +78,61 @@ const UnifiedSlider = ({
     };
   }, [isDragging]);
 
-  // Calculate slider position as a percentage
-  const sliderPosition = ((value - min) / (max - min)) * 100;
+  const numericValue = clamp(toNumber(value, min), min, max);
+  const sliderPosition = ((numericValue - min) / (max - min)) * 100;
 
   return (
     <div className={`unified-slider ${className}`}>
       {label && <label className="slider-label">{label}</label>}
       <div className="slider-container">
-        {showLabels && <span className="slider-min-value">{min}</span>}
-        <div 
+        {showRange && (
+          <div className="slider-range">
+            <span className="slider-min-value">{minLabel ?? min}</span>
+            <span className="slider-max-value">{maxLabel ?? max}</span>
+          </div>
+        )}
+
+        <div
           ref={sliderRef}
           className="slider-track"
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
+          role="slider"
+          aria-valuemin={min}
+          aria-valuemax={max}
+          aria-valuenow={Number.isFinite(numericValue) ? Math.round(numericValue * 100) / 100 : 0}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (!onChange) return;
+            if (e.key === 'ArrowLeft') emitChange(numericValue - step);
+            if (e.key === 'ArrowRight') emitChange(numericValue + step);
+            if (e.key === 'Home') emitChange(min);
+            if (e.key === 'End') emitChange(max);
+            if (e.key === 'PageUp') emitChange(numericValue + step * 10);
+            if (e.key === 'PageDown') emitChange(numericValue - step * 10);
+          }}
+          onDoubleClick={() => {
+            // default reset midpoint; parent can override by controlling value
+            emitChange((min + max) / 2);
+          }}
+          style={{ '--slider-fill': `${sliderPosition}%` }}
         >
-          <div 
-            className="slider-fill"
-            style={{ width: `${sliderPosition}%` }}
-          ></div>
-          <div 
-            className="slider-handle"
-            style={{ left: `${sliderPosition}%` }}
-          ></div>
+          <div className="slider-fill" style={{ width: `${sliderPosition}%` }} />
+          {showTicks && tickCount > 1 && (
+            <div className="slider-ticks">
+              {Array.from({ length: tickCount }).map((_, i) => (
+                <span key={i} className="slider-tick" style={{ left: `${(i / (tickCount - 1)) * 100}%` }} />
+              ))}
+            </div>
+          )}
+          <div className="slider-handle" style={{ left: `${sliderPosition}%` }} />
         </div>
+
         {showLabels && (
           <div className="slider-value-container">
-            {showValue && <span className="slider-value">{value.toFixed(1)}</span>}
-            <span className="slider-max-value">{max}</span>
+            {showValue && (
+              <span className="slider-value">{Number.isFinite(numericValue) ? numericValue.toFixed(2) : '0.00'}</span>
+            )}
           </div>
         )}
       </div>

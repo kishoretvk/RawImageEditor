@@ -1,10 +1,11 @@
 import React, { useRef, useState, useEffect } from 'react';
 import './CurveEditor.css';
 
-const CurveEditor = ({ points, onChange }) => {
+const CurveEditor = ({ points = [], onChange }) => {
   const svgRef = useRef(null);
   const [draggingPoint, setDraggingPoint] = useState(null);
-  const size = 256; // Size of the editor
+  const [selectedIndex, setSelectedIndex] = useState(null);
+  const size = 256; // editor space (0..256)
 
   const getSVGPoint = (e) => {
     const svg = svgRef.current;
@@ -16,8 +17,27 @@ const CurveEditor = ({ points, onChange }) => {
     return pt.matrixTransform(CTM);
   };
 
+  const safePoints = Array.isArray(points) && points.length >= 2
+    ? points
+    : [{ x: 0, y: 0 }, { x: 256, y: 256 }];
+
+  // Ensure sorted by x and clamped, and finite numbers
+  const sortedPoints = safePoints
+    .map(p => ({
+      x: Number.isFinite(p?.x) ? Math.max(0, Math.min(256, p.x)) : 0,
+      y: Number.isFinite(p?.y) ? Math.max(0, Math.min(256, p.y)) : 0
+    }))
+    .sort((a, b) => a.x - b.x)
+    .map((p, i, arr) => {
+      if (i > 0 && p.x <= arr[i - 1].x) {
+        return { x: Math.min(256, arr[i - 1].x + 0.001), y: p.y };
+      }
+      return p;
+    });
+
   const handleMouseDown = (e, index) => {
     setDraggingPoint(index);
+    setSelectedIndex(index);
   };
 
   const handleMouseMove = (e) => {
@@ -28,17 +48,19 @@ const CurveEditor = ({ points, onChange }) => {
     let newX = Math.max(0, Math.min(size, svgPoint.x));
     let newY = Math.max(0, Math.min(size, svgPoint.y));
 
-    const newPoints = [...points];
+    const base = [...sortedPoints];
     // Prevent points from crossing over each other
     if (draggingPoint > 0) {
-      newX = Math.max(newPoints[draggingPoint - 1].x, newX);
+      newX = Math.max(base[draggingPoint - 1].x + 0.001, newX);
     }
-    if (draggingPoint < newPoints.length - 1) {
-      newX = Math.min(newPoints[draggingPoint + 1].x, newX);
+    if (draggingPoint < base.length - 1) {
+      newX = Math.min(base[draggingPoint + 1].x - 0.001, newX);
     }
-    
-    newPoints[draggingPoint] = { x: newX, y: size - newY };
-    onChange(newPoints);
+
+    base[draggingPoint] = { x: newX, y: size - newY };
+    if (typeof onChange === 'function') {
+      onChange(base);
+    }
   };
 
   const handleMouseUp = () => {
@@ -57,17 +79,42 @@ const CurveEditor = ({ points, onChange }) => {
   const addPoint = (e) => {
     const svgPoint = getSVGPoint(e);
     if (!svgPoint) return;
-    const newPoint = { x: svgPoint.x, y: size - svgPoint.y };
-    
-    const newPoints = [...points, newPoint].sort((a, b) => a.x - b.x);
-    onChange(newPoints);
+    const newPoint = {
+      x: Math.max(0, Math.min(size, svgPoint.x)),
+      y: Math.max(0, Math.min(size, size - svgPoint.y))
+    };
+    const base = [...sortedPoints, newPoint].sort((a, b) => a.x - b.x)
+      .map((p, i, arr) => {
+        if (i > 0 && p.x <= arr[i - 1].x) {
+          return { x: Math.min(256, arr[i - 1].x + 0.001), y: p.y };
+        }
+        return p;
+      });
+    if (typeof onChange === 'function') {
+      onChange(base);
+    }
   };
 
-  // Create the SVG path data for the curve
-  const pathData = points.map((p, i) => {
-    if (i === 0) return `M ${p.x} ${size - p.y}`;
-    return `L ${p.x} ${size - p.y}`;
-  }).join(' ');
+  const removeSelectedPoint = () => {
+    if (selectedIndex === null) return;
+    // Do not allow deleting endpoints to keep curve anchored
+    if (selectedIndex === 0 || selectedIndex === sortedPoints.length - 1) return;
+    const base = sortedPoints.filter((_, i) => i !== selectedIndex);
+    setSelectedIndex(null);
+    if (typeof onChange === 'function') {
+      onChange(base);
+    }
+  };
+
+  // Create safe SVG path data for the curve
+  const pathData = (sortedPoints.length >= 2 ? sortedPoints : [{x:0,y:0},{x:256,y:256}])
+    .map((p, i) => {
+      const x = Number.isFinite(p.x) ? p.x : 0;
+      const y = Number.isFinite(p.y) ? p.y : 0;
+      const sy = size - y;
+      return (i === 0) ? `M ${x} ${sy}` : `L ${x} ${sy}`;
+    })
+    .join(' ');
 
   return (
     <div className="curve-editor">
@@ -82,19 +129,34 @@ const CurveEditor = ({ points, onChange }) => {
         
         <path d={pathData} stroke="#1e3c72" strokeWidth="2" fill="none" />
         
-        {points.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={size - p.y}
-            r="5"
-            fill="#1e3c72"
-            stroke="white"
-            strokeWidth="2"
-            onMouseDown={(e) => handleMouseDown(e, i)}
-            className="curve-point"
-          />
-        ))}
+        {sortedPoints.map((p, i) => {
+          const x = Number.isFinite(p.x) ? p.x : 0;
+          const y = Number.isFinite(p.y) ? p.y : 0;
+          const cy = size - y;
+          return (
+            <circle
+              key={i}
+              cx={x}
+              cy={cy}
+              r="5"
+              fill={i === selectedIndex ? "#2563eb" : "#1e3c72"}
+              stroke="white"
+              strokeWidth="2"
+              onMouseDown={(e) => handleMouseDown(e, i)}
+              className="curve-point"
+              style={{ cursor: 'pointer' }}
+              onClick={() => setSelectedIndex(i)}
+              onDoubleClick={(evt) => {
+                evt.stopPropagation();
+                if (i !== 0 && i !== sortedPoints.length - 1) {
+                  // delete on double click (not endpoints)
+                  const base = sortedPoints.filter((_, idx) => idx !== i);
+                  if (typeof onChange === 'function') onChange(base);
+                }
+              }}
+            />
+          );
+        })}
       </svg>
     </div>
   );

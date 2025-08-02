@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { convertRawToJpeg } from '../utils/imageProcessing';
 import { isRawFile } from '../utils/rawFileDetector';
 import Histogram from '../components/Histogram';
@@ -12,6 +12,7 @@ import EffectsPanel from '../components/editorPanels/EffectsPanel';
 import GeometryPanel from '../components/editorPanels/GeometryPanel';
 import AdvancedPanel from '../components/editorPanels/AdvancedPanel';
 import CurvesPanel from '../components/editorPanels/CurvesPanel';
+import { buildLUTsFromCurves } from '../utils/curveUtils';
 import FileUploader from '../components/FileUploader';
 import EditorUploadPlaceholder from '../components/EditorUploadPlaceholder';
 import EnhancedImageCanvas from '../components/EnhancedImageCanvas';
@@ -90,6 +91,19 @@ const EditorPage = () => {
     curves: 1,
     channelMixer: 1,
   });
+
+  // Unified tone curves state (master RGB + per-channel), normalized [0..1] point pairs
+  const ID = [[0, 0], [1, 1]];
+  const [curves, setCurves] = useState({
+    mode: 'rgb',
+    rgb: { points: ID },
+    r: { points: ID },
+    g: { points: ID },
+    b: { points: ID }
+  });
+
+  // Compose master+channel curves into per-channel LUTs for rendering
+  const { lutR, lutG, lutB } = useMemo(() => buildLUTsFromCurves(curves, { size: 256, space: 'linear' }), [curves]);
   const [editedImageUrl, setEditedImageUrl] = useState(null);
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isExporting, setIsExporting] = useState(false);
@@ -105,23 +119,32 @@ const EditorPage = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Update edited image when adjustments change
+  // Important: Do NOT overwrite editedImageUrl with uploadedImage.url here,
+  // because uploadedImage may be a native File with no .url, and we already
+  // set an object URL in handleFileUpload. Keep editedImageUrl stable.
   useEffect(() => {
-    if (uploadedImage) {
-      // Handle both old format (string) and new format (object)
-      const imageUrl = typeof uploadedImage === 'string' ? uploadedImage : uploadedImage.url;
-      setEditedImageUrl(imageUrl);
-    }
-  }, [uploadedImage, adjustments, colorAdjustments, sharpness, effects, geometry, advanced]);
+    // No-op: edits re-render EnhancedImageCanvas via props; editedImageUrl stays as set in handleFileUpload.
+  }, [adjustments, colorAdjustments, sharpness, effects, geometry, advanced]);
 
   // Handle file upload and RAW-to-JPEG preview for histogram
-  const handleFileUpload = async (file) => {
+  const handleFileUpload = async (incoming) => {
     try {
+      // Normalize input: accept single File or array from FileUploader
+      const file = Array.isArray(incoming) ? incoming[0] : incoming;
+      if (!file) return;
       setUploadedImage(file);
       setIsLoading(true);
 
       // Normalize file info
       const fileName = file?.name || file?.filename || '';
       const knownUrl = file?.url || file?.preview || null;
+      console.debug('[EditorPage] onFileUpload:', {
+        name: file?.name || file?.filename,
+        type: file?.type,
+        size: file?.size,
+        hasUrl: !!file?.url,
+        hasPreview: !!file?.preview
+      });
 
       // Create a fast local preview URL for immediate feedback
       // Revoke previous object URL if any
@@ -136,19 +159,24 @@ const EditorPage = () => {
         objectUrlRef.current = instantUrl;
       }
 
-      // Always show something instantly if we can
-      if (instantUrl) {
-        setEditedImageUrl(instantUrl);
-      }
-
-      const isRaw = isRawFile(fileName);
+      const isRaw = isRawFile(fileName) || (file?.type && /application\/octet-stream|image\/x-(?:canon|nikon|sony|fujifilm|olympus|panasonic)-raw|image\/(?:dng|arw|nef|cr2|cr3|raf|orf|rw2)/i.test(file.type));
 
       if (!isRaw) {
-        // For JPEG/PNG: use instant URL for histogram too
-        if (instantUrl) setJpegPreview(instantUrl);
+        // JPEG/PNG path: use instant URL for both canvas and histogram
+        if (instantUrl) {
+          setEditedImageUrl(instantUrl);
+          setJpegPreview(instantUrl);
+        }
+        console.debug('[EditorPage] JPEG/PNG preview set:', instantUrl);
         setIsLoading(false);
         return;
       }
+
+      // RAW path:
+      // Do NOT pass RAW blob to <img>. Show placeholder first, then replace with worker JPEG.
+      const rawPlaceholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgdmlld0JveD0iMCAwIDgwMCA2MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjgwMCIgaGVpZ2h0PSI2MDAiIGZpbGw9IiMyYTJhMmEiLz48dGV4dCB4PSI0MDAiIHk9IjMwMCIgZmlsbD0iIzc2NyIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkdlbmVyYXRpbmcgUkFXIHByZXZpZXcuLi48L3RleHQ+PC9zdmc+';
+      setEditedImageUrl(rawPlaceholder);
+      if (instantUrl) setJpegPreview(instantUrl); // temporary histogram source
 
       // RAW path: keep instant URL visible, then ask worker for better preview
       try {
@@ -161,20 +189,26 @@ const EditorPage = () => {
         });
 
         // Race worker vs timeout
+        // Pass the actual File/Blob to the worker so it can decode RAW
         const workerPromise = convertRawToJpeg({
-          name: fileName,
-          preview: instantUrl
+          file,
+          name: fileName
         });
 
         const jpegResult = await Promise.race([workerPromise, timeoutPromise]);
 
         console.debug('[EditorPage] worker/timeout returned', jpegResult);
 
-        if (jpegResult?.preview) {
-          setJpegPreview(jpegResult.preview);
-        } else if (instantUrl) {
-          // Fallback: still show instantUrl if worker gave nothing
-          setJpegPreview(instantUrl);
+        const displayUrl = jpegResult?.preview || null;
+
+        if (displayUrl) {
+          setJpegPreview(displayUrl);
+          setEditedImageUrl(displayUrl); // use displayable JPEG/PNG in canvas
+          console.debug('[EditorPage] RAW preview set from worker');
+        } else {
+          // Fallback: keep placeholder for canvas, histogram uses instantUrl if any
+          if (instantUrl) setJpegPreview(instantUrl);
+          console.warn('[EditorPage] RAW worker returned no preview, using fallback');
         }
       } catch (e) {
         console.error('[EditorPage] worker convert error', e);
@@ -248,8 +282,16 @@ const EditorPage = () => {
     
     setIsExporting(true);
     try {
-      // In a real app, this would process the image with all edits
-      const imageUrl = typeof uploadedImage === 'string' ? uploadedImage : uploadedImage.url;
+      // Prefer editedImageUrl or jpegPreview; uploadedImage.url may be undefined for native Files
+      const imageUrl =
+        editedImageUrl ||
+        jpegPreview ||
+        (typeof uploadedImage === 'string' ? uploadedImage : (uploadedImage?.url || uploadedImage?.preview || null));
+
+      if (!imageUrl) {
+        throw new Error('No exportable image URL available');
+      }
+
       const link = document.createElement('a');
       link.href = imageUrl;
       link.download = `edited-image.${settings.format}`;
@@ -334,6 +376,7 @@ const EditorPage = () => {
                   showSlider={showBeforeAfter}
                   sliderPosition={sliderPosition}
                   onSliderChange={setSliderPosition}
+                  curveLUTs={lutR && lutG && lutB ? { lutR, lutG, lutB } : null}
                 />
                 {isLoading && (
                   <div className="canvas-loading-overlay">
@@ -416,7 +459,10 @@ const EditorPage = () => {
                 </CollapsibleControlPanel>
                 
                 <CollapsibleControlPanel title="Tone Curves" defaultOpen={false}>
-                  <CurvesPanel isActive={true} />
+                  <CurvesPanel
+                    curves={curves}
+                    onChange={setCurves}
+                  />
                 </CollapsibleControlPanel>
                 
                 <CollapsibleControlPanel title="Presets" defaultOpen={true}>

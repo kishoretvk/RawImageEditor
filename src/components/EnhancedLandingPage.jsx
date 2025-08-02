@@ -43,14 +43,14 @@ const EnhancedLandingPage = () => {
 
   const demoImages = [
     {
-      before: 'demo-images/raw-before.jpg',
-      after: 'demo-images/raw-after.jpg',
+      before: 'demo-images/color-before.jpg',
+      after: 'demo-images/portrait-before.jpg',
       title: 'RAW Processing',
       description: 'Professional RAW development with enhanced details'
     },
     {
       before: 'demo-images/color-before.jpg',
-      after: 'demo-images/color-after.jpg',
+      after: 'demo-images/portrait-before.jpg',
       title: 'Color Grading',
       description: 'Advanced color correction and grading'
     }
@@ -136,7 +136,7 @@ const EnhancedLandingPage = () => {
           {showDemo && (
             <div className="demo-preview">
               <img 
-                src="demo-images/raw-after.jpg" 
+                src="demo-images/portrait-before.jpg" 
                 alt="Demo preview"
                 className="demo-image"
                 onError={(e) => {
