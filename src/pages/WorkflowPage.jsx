@@ -256,6 +256,18 @@ const WorkflowPage = () => {
 
   return (
     <div className="workflow-page">
+      {/* Resizable Logs Drawer to keep canvas space */}
+      {logsDrawerOpen && (
+        <LogsDrawer
+          jobId={logsJobId}
+          defaultWidth={360}
+          minWidth={240}
+          maxWidth={560}
+          position="right"
+          overlay={false}
+          onClose={() => setLogsDrawerOpen(false)}
+        />
+      )}
       <header className="workflow-header">
         <h1>Workflow Automation</h1>
         <p>Create, manage, and run powerful batch processing workflows.</p>
