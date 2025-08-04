@@ -6,6 +6,7 @@ import PresetManager from '../components/PresetManager';
 import '../styles/WorkflowPage.css';
 
 import { WorkflowRunner, buildDefaultRegistry } from '../utils/workflow/runner';
+import VisualWorkflow from '../components/workflow/VisualWorkflow';
 
 const WorkflowPage = () => {
   const [workflows, setWorkflows] = useState([]);
@@ -13,6 +14,7 @@ const WorkflowPage = () => {
   const [selectedWorkflow, setSelectedWorkflow] = useState(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState(null);
+  const [activeTab, setActiveTab] = useState('quick'); // 'quick' | 'visual'
 
   // Quick Batch state
   const [quickFiles, setQuickFiles] = useState([]);
@@ -24,6 +26,10 @@ const WorkflowPage = () => {
   const [wbRect, setWbRect] = useState({ x: 0.4, y: 0.4, w: 0.2, h: 0.2 }); // normalized defaults
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState([]); // [{nodeId,status,progress,message,data, itemIndex}]
+
+  // Preset selections
+  const [exportPresetId, setExportPresetId] = useState('');
+  const [watermarkPresetId, setWatermarkPresetId] = useState('');
 
   useEffect(() => {
     setWorkflows(WorkflowManager.getWorkflows());
@@ -81,6 +87,61 @@ const WorkflowPage = () => {
       }
     });
 
+    // Resolve presets (lazy import to avoid circulars and keep this file lightweight)
+    let exportPreset = null;
+    let watermarkPreset = null;
+    try {
+      const { PresetStore } = await import('../utils/presets/presetStore');
+      if (exportPresetId) exportPreset = PresetStore.get('export', exportPresetId);
+      if (watermarkPresetId) watermarkPreset = PresetStore.get('watermark', watermarkPresetId);
+    } catch {}
+
+    // Prepare Export node params based on exportPreset (fallback to UI fields if not provided)
+    const exportParams = (() => {
+      const base = {
+        format: 'jpeg',
+        filenamePattern: '{name}_edit',
+        download: true
+      };
+      if (exportPreset && exportPreset.settings) {
+        const s = exportPreset.settings || {};
+        base.format = s.format || base.format;
+        base.filenamePattern = s.filenamePattern || base.filenamePattern;
+        // Long edge resize could be handled inside export node later (not implemented here)
+        if (s.mode === 'quality') {
+          base.quality = typeof s.quality === 'number' ? s.quality : 0.9;
+        } else {
+          // target size mode (default)
+          base.targetSizeMB = Number.isFinite(s.targetSizeMB) ? s.targetSizeMB : (Number(targetSizeMB) || 2);
+          base.tolerancePct = Number.isFinite(s.tolerancePct) ? s.tolerancePct : (Number(tolerancePct) || 5);
+        }
+      } else {
+        // No export preset selected: use current Quick Batch controls for target sizing
+        base.targetSizeMB = Number(targetSizeMB) || 2;
+        base.tolerancePct = Number(tolerancePct) || 5;
+      }
+      return base;
+    })();
+
+    // Prepare Watermark node params from watermarkPreset (fallback to a sensible text watermark)
+    const watermarkParams = (() => {
+      const fallback = { type: 'text', text: '© RawImageEditor', position: 'br', opacity: 0.3 };
+      if (!watermarkPreset || !watermarkPreset.settings) return fallback;
+      const s = watermarkPreset.settings;
+      return {
+        type: s.type || 'text',
+        text: s.text || fallback.text,
+        fontFamily: s.fontFamily || 'Arial, sans-serif',
+        fontSize: Number.isFinite(s.fontSize) ? s.fontSize : 24,
+        opacity: Number.isFinite(s.opacity) ? s.opacity : fallback.opacity,
+        position: s.position || 'br',
+        offsetX: Number.isFinite(s.offsetX) ? s.offsetX : 16,
+        offsetY: Number.isFinite(s.offsetY) ? s.offsetY : 16,
+        pngSrc: s.pngSrc || '',
+        scale: Number.isFinite(s.scale) ? s.scale : 1.0,
+      };
+    })();
+
     // Build workflow spec
     const nodes = [
       { id: 'ingest', type: 'IngestList', params: { items: quickFiles } },
@@ -97,14 +158,8 @@ const WorkflowPage = () => {
       nodes.push({ id: 'split', type: 'SplitRGB', inputs: ['wb'], params: { useAdjusted: true, exportAll: true } });
     }
     nodes.push(
-      { id: 'wm', type: 'Watermark', inputs: [prevId], params: { type: 'text', text: '© RawImageEditor', position: 'br', opacity: 0.3 } },
-      { id: 'exp', type: 'Export', inputs: ['wm'], params: {
-        format: 'jpeg',
-        targetSizeMB: Number(targetSizeMB) || 2,
-        tolerancePct: Number(tolerancePct) || 5,
-        filenamePattern: '{name}_edit',
-        download: true
-      } }
+      { id: 'wm', type: 'Watermark', inputs: [prevId], params: watermarkParams },
+      { id: 'exp', type: 'Export', inputs: ['wm'], params: exportParams }
     );
 
     const spec = {
@@ -149,9 +204,25 @@ const WorkflowPage = () => {
       </header>
 
       <div className="workflow-container">
-        <aside className="workflow-sidebar">
-          {/* Quick Batch Runner */}
-          <div className="quick-batch card">
+        <div className="workflow-tabs">
+          <button
+            className={`wf-tab ${activeTab === 'quick' ? 'active' : ''}`}
+            onClick={() => setActiveTab('quick')}
+          >
+            Quick Batch
+          </button>
+          <button
+            className={`wf-tab ${activeTab === 'visual' ? 'active' : ''}`}
+            onClick={() => setActiveTab('visual')}
+          >
+            Visual Workflow
+          </button>
+        </div>
+        {activeTab === 'quick' ? (
+          <>
+          <aside className="workflow-sidebar">
+            {/* Quick Batch Runner */}
+            <div className="quick-batch card">
             <h2>Quick Batch</h2>
             <p className="muted">Run AutoWB (set-based), optional Split RGB, Watermark, and Export (target size) — browser only.</p>
 
@@ -173,6 +244,16 @@ const WorkflowPage = () => {
             <div className="field-row">
               <label>AutoWB Leader Index</label>
               <input type="number" min="0" max={Math.max(0, (quickFiles?.length || 1) - 1)} step="1" value={leaderIndex} onChange={(e) => setLeaderIndex(Number(e.target.value) || 0)} />
+            </div>
+
+            {/* Preset selectors */}
+            <div className="field-row">
+              <label>Export Preset</label>
+              <PresetDropdown type="export" value={exportPresetId} onChange={setExportPresetId} />
+            </div>
+            <div className="field-row">
+              <label>Watermark Preset</label>
+              <PresetDropdown type="watermark" value={watermarkPresetId} onChange={setWatermarkPresetId} />
             </div>
 
             <div className="field-row">
@@ -216,50 +297,57 @@ const WorkflowPage = () => {
             </div>
 
             {renderQuickProgress()}
-          </div>
-          <div className="sidebar-header">
-            <h2>Your Workflows</h2>
-            <button className="btn-primary" onClick={startNewWorkflow}>
-              + New Workflow
-            </button>
-          </div>
-          <ul className="workflow-list">
-            {workflows.map(wf => (
-              <li 
-                key={wf.id} 
-                className={`workflow-item ${selectedWorkflow?.id === wf.id ? 'active' : ''}`}
-                onClick={() => handleSelectWorkflow(wf)}
-              >
-                <span className="workflow-name">{wf.name}</span>
-                <div className="workflow-actions">
-                  <button onClick={(e) => { e.stopPropagation(); handleEditWorkflow(wf); }}>Edit</button>
-                  <button onClick={(e) => { e.stopPropagation(); handleDeleteWorkflow(wf.id); }}>Delete</button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </aside>
-
-        <main className="workflow-main">
-          {isBuilding ? (
-            <WorkflowBuilder 
-              presets={presets}
-              onSave={handleSaveWorkflow}
-              workflow={editingWorkflow}
-              onCancel={() => setIsBuilding(false)}
-            />
-          ) : selectedWorkflow ? (
-            <BatchWorkflowProcessor
-              workflow={selectedWorkflow}
-              presets={presets}
-            />
-          ) : (
-            <div className="empty-state">
-              <h2>Select a workflow to run, or create a new one.</h2>
-              <p>Workflows allow you to apply a series of edits to multiple images at once.</p>
             </div>
-          )}
-        </main>
+            <div className="sidebar-header">
+              <h2>Your Workflows</h2>
+              <button className="btn-primary" onClick={startNewWorkflow}>
+                + New Workflow
+              </button>
+            </div>
+            <ul className="workflow-list">
+              {workflows.map(wf => (
+                <li 
+                  key={wf.id} 
+                  className={`workflow-item ${selectedWorkflow?.id === wf.id ? 'active' : ''}`}
+                  onClick={() => handleSelectWorkflow(wf)}
+                >
+                  <span className="workflow-name">{wf.name}</span>
+                  <div className="workflow-actions">
+                    <button onClick={(e) => { e.stopPropagation(); handleEditWorkflow(wf); }}>Edit</button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteWorkflow(wf.id); }}>Delete</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </aside>
+
+          <main className="workflow-main">
+            {isBuilding ? (
+              <WorkflowBuilder 
+                presets={presets}
+                onSave={handleSaveWorkflow}
+                workflow={editingWorkflow}
+                onCancel={() => setIsBuilding(false)}
+              />
+            ) : selectedWorkflow ? (
+              <BatchWorkflowProcessor
+                workflow={selectedWorkflow}
+                presets={presets}
+              />
+            ) : (
+              <div className="empty-state">
+                <h2>Select a workflow to run, or create a new one.</h2>
+                <p>Workflows allow you to apply a series of edits to multiple images at once.</p>
+              </div>
+            )}
+          </main>
+          </>
+        ) : (
+          // Visual Workflow tab content
+          <div className="visual-workflow-container" style={{ height: 'calc(100vh - 160px)' }}>
+            <VisualWorkflow />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -269,6 +357,28 @@ function clamp01(x) {
   const n = Number(x);
   if (!Number.isFinite(n)) return 0;
   return Math.max(0, Math.min(1, n));
+}
+
+function PresetDropdown({ type, value, onChange }) {
+  const [options, setOptions] = React.useState([]);
+  React.useEffect(() => {
+    let mounted = true;
+    import('../utils/presets/presetStore').then(({ PresetStore }) => {
+      if (!mounted) return;
+      const list = PresetStore.list(type) || [];
+      setOptions(list);
+    }).catch(() => setOptions([]));
+    return () => { mounted = false; };
+  }, [type]);
+
+  return (
+    <select value={value || ''} onChange={(e) => onChange(e.target.value || '')}>
+      <option value="">-- none --</option>
+      {options.map((p) => (
+        <option key={p.id} value={p.id}>{p.name}</option>
+      ))}
+    </select>
+  );
 }
 
 export default WorkflowPage;
