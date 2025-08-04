@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import NodePalette from './NodePalette';
 import WorkflowCanvas from './WorkflowCanvas';
+import InspectorPanel from './InspectorPanel';
+import LogsDrawer from './LogsDrawer';
 import { defaultParamsFor, NodeTypes } from './nodeDefinitions';
 import { WorkflowRunner, buildDefaultRegistry } from '../../utils/workflow/runner';
 import { JobStore } from '../../utils/db/indexedDb';
@@ -30,6 +32,8 @@ export default function VisualWorkflow() {
   // Job persistence
   const [jobId, setJobId] = useState(null);
   const [history, setHistory] = useState([]);
+  // Right inspector + logs drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -238,15 +242,13 @@ export default function VisualWorkflow() {
                 <div className="name">{j.name}</div>
                 <div className="sub">{new Date(j.createdAt).toLocaleString()}</div>
                 <div className="status">{j.status}</div>
-                <button className="btn-small" onClick={async () => {
-                  const logs = await JobStore.getJobProgress(j.id, 1000);
-                  alert(`Logs for ${j.name}:\n` + logs.map(l => `[${new Date(l.ts).toLocaleTimeString()}] ${l.nodeId} ${Math.round((l.progress||0)*100)}% ${l.status} - ${l.message}`).join('\n'));
-                }}>Logs</button>
+                <button className="btn-small" onClick={() => { setJobId(j.id); setDrawerOpen(true); }}>Logs</button>
               </li>
             ))}
           </ul>
         </div>
       </aside>
+
       <main className="vw-main">
         <div className="vw-toolbar">
           <div className="tool">
@@ -258,19 +260,36 @@ export default function VisualWorkflow() {
           <button className="btn" disabled={running} onClick={run}>{running ? 'Running…' : 'Run'}</button>
         </div>
 
-        <WorkflowCanvas
-          nodes={nodes}
-          selectedIndex={selected}
-          onSelect={setSelected}
-          onChange={changeNode}
-          onAddAfter={addAfter}
-          onRemove={removeNode}
-          onMoveUp={moveUp}
-          onMoveDown={moveDown}
-        />
+        <div className="vw-center">
+          <WorkflowCanvas
+            nodes={nodes}
+            selectedIndex={selected}
+            onSelect={setSelected}
+            onChange={changeNode}
+            onAddAfter={addAfter}
+            onRemove={removeNode}
+            onMoveUp={moveUp}
+            onMoveDown={moveDown}
+          />
+        </div>
 
         {renderProgress()}
       </main>
+
+      <InspectorPanel
+        node={nodes[selected]}
+        onChange={(nextNode) => changeNode(selected, nextNode)}
+        onOpenLogs={() => jobId ? setDrawerOpen(true) : null}
+        onRefreshPresets={() => {}}
+      />
+
+      <LogsDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        jobId={jobId}
+        title="Visual Workflow Logs"
+      />
+
       <style>{styles}</style>
     </div>
   );
@@ -279,7 +298,7 @@ export default function VisualWorkflow() {
 const styles = `
 .visual-workflow {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px 1fr 360px;
   gap: 0;
   height: 100%;
 }
@@ -288,6 +307,7 @@ const styles = `
   border-right: 1px solid rgba(255,255,255,0.08);
   display: flex; flex-direction: column;
 }
+.vw-center { min-height: 0; }
 .vw-history { padding: 10px; border-top: 1px solid rgba(255,255,255,0.08); }
 .vw-history h4 { margin: 8px 0; }
 .vw-job-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }

@@ -14,6 +14,36 @@
   text-align: center;
   backdrop-filter: blur(6px);
 }
+.workflow-tabs {
+  display: inline-flex;
+  gap: 8px;
+  margin-top: 12px;
+  background: rgba(255,255,255,0.04);
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.workflow-tab {
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #9aa4b2;
+  cursor: pointer;
+  transition: all .15s ease;
+  background: transparent;
+  border: 1px solid transparent;
+  user-select: none;
+}
+.workflow-tab:hover {
+  color: #e6e9ef;
+}
+.workflow-tab.active {
+  color: #e6e9ef;
+  background: rgba(102,126,234,0.18);
+  border-color: rgba(102,126,234,0.35);
+  box-shadow: 0 6px 18px rgba(102,126,234,0.18);
+}
 
 .workflow-header h1 {
   font-size: 2.2rem;
@@ -30,14 +60,18 @@
 }
 
 .workflow-container {
-  display: flex;
+  /* Grid layout so sidebar and main align properly */
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 0;
   flex-grow: 1;
   overflow: hidden;
   border-top: 1px solid rgba(255,255,255,0.06);
 }
 
 .workflow-sidebar {
-  width: 320px;
+  width: 100%;
+  max-width: 360px;
   background: rgba(17, 20, 26, 0.6);
   border-right: 1px solid rgba(255,255,255,0.08);
   display: flex;
@@ -126,11 +160,75 @@
 }
 
 .workflow-main {
-  flex-grow: 1;
+  min-width: 0; /* prevent overflow cutting content */
   padding: 24px;
-  overflow-y: auto;
+  overflow: auto;
   background: linear-gradient(180deg, rgba(17,20,26,0.5), rgba(17,20,26,0.3));
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 16px;
 }
+.qb-toolbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px; border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; background: rgba(255,255,255,0.04);
+}
+.qb-toolbar .spacer { flex: 1; }
+.qb-toolbar .btn {
+  background: rgba(102,126,234,0.15); border: 1px solid rgba(102,126,234,0.35);
+  color: #e6e9ef; padding: 8px 12px; border-radius: 8px; cursor: pointer;
+}
+.qb-toolbar .btn:disabled { opacity: .6; cursor: default; }
+
+.qb-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+}
+.qb-card {
+  grid-column: span 12;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}
+@media (min-width: 980px) {
+  .qb-card.half { grid-column: span 6; }
+  .qb-card.third { grid-column: span 4; }
+}
+.qb-card h4 {
+  margin: 0 0 10px 0; font-size: 0.95rem; color: #e6e9ef;
+}
+.field-grid {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 10px;
+}
+.field-row {
+  display: contents;
+}
+.field-label {
+  font-size: 12px; color: #9aa4b2; align-self: center;
+}
+.field-control input[type="number"],
+.field-control input[type="text"],
+.field-control select,
+.field-control input[type="file"] {
+  width: 100%; padding: 8px 10px; border-radius: 8px;
+  background: rgba(255,255,255,0.06); color: #e6e9ef;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.field-control .hint { font-size: 12px; color: #97a3b6; margin-left: 8px; }
+.flag-row {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 8px;
+}
+.flag {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border-radius: 10px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+}
+.flag input[type="checkbox"] { width: 16px; height: 16px; }
 
 .empty-state {
   display: flex;
