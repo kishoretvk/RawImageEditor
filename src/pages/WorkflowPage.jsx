@@ -256,6 +256,22 @@ const WorkflowPage = () => {
       <header className="workflow-header">
         <h1>Workflow Automation</h1>
         <p>Create, manage, and run powerful batch processing workflows.</p>
+
+        {/* Pill tabs */}
+        <div className="workflow-tabs">
+          <button
+            className={`workflow-tab ${activeTab === 'quick' ? 'active' : ''}`}
+            onClick={() => setActiveTab('quick')}
+          >
+            Quick Batch
+          </button>
+          <button
+            className={`workflow-tab ${activeTab === 'visual' ? 'active' : ''}`}
+            onClick={() => setActiveTab('visual')}
+          >
+            Visual Workflow
+          </button>
+        </div>
       </header>
 
       <div className="workflow-container">
@@ -295,100 +311,128 @@ const WorkflowPage = () => {
           </div>
         ) : null}
 
-        <div className="workflow-tabs">
-          <button
-            className={`wf-tab ${activeTab === 'quick' ? 'active' : ''}`}
-            onClick={() => setActiveTab('quick')}
-          >
-            Quick Batch
-          </button>
-          <button
-            className={`wf-tab ${activeTab === 'visual' ? 'active' : ''}`}
-            onClick={() => setActiveTab('visual')}
-          >
-            Visual Workflow
-          </button>
-        </div>
         {activeTab === 'quick' ? (
           <>
           <aside className="workflow-sidebar">
             {/* Quick Batch Runner */}
             <div className="quick-batch card">
-            <h2>Quick Batch</h2>
-            <p className="muted">Run AutoWB (set-based), optional Split RGB, Watermark, and Export (target size) — browser only.</p>
+              <h2>Quick Batch</h2>
+              <p className="muted">Run AutoWB (set-based), optional Split RGB, Watermark, and Export (target size) — browser only.</p>
 
-            <div className="field">
-              <label>Files</label>
-              <input type="file" multiple onChange={onQuickFilesSelected} />
-              {quickFiles?.length ? <div className="hint">{quickFiles.length} files selected</div> : null}
-            </div>
-
-            <div className="field-row">
-              <label>Target Size (MB)</label>
-              <input type="number" min="0.1" step="0.1" value={targetSizeMB} onChange={(e) => setTargetSizeMB(e.target.value)} />
-            </div>
-            <div className="field-row">
-              <label>Tolerance (%)</label>
-              <input type="number" min="1" max="20" step="1" value={tolerancePct} onChange={(e) => setTolerancePct(e.target.value)} />
-            </div>
-
-            <div className="field-row">
-              <label>AutoWB Leader Index</label>
-              <input type="number" min="0" max={Math.max(0, (quickFiles?.length || 1) - 1)} step="1" value={leaderIndex} onChange={(e) => setLeaderIndex(Number(e.target.value) || 0)} />
-            </div>
-
-            {/* Preset selectors */}
-            <div className="field-row">
-              <label>Export Preset</label>
-              <PresetDropdown type="export" value={exportPresetId} onChange={setExportPresetId} />
-            </div>
-            <div className="field-row">
-              <label>Watermark Preset</label>
-              <PresetDropdown type="watermark" value={watermarkPresetId} onChange={setWatermarkPresetId} />
-            </div>
-
-            <div className="field-row">
-              <label>
-                <input type="checkbox" checked={wbUseRegion} onChange={(e) => setWbUseRegion(e.target.checked)} />
-                Use Region for WB (normalized)
-              </label>
-            </div>
-            {wbUseRegion && (
-              <div className="field-grid">
+              {/* Toolbar to mirror Visual Workflow rhythm */}
+              <div className="qb-toolbar" style={{ margin: '8px 0 14px' }}>
                 <div>
-                  <label>x</label>
-                  <input type="number" min="0" max="1" step="0.01" value={wbRect.x} onChange={(e) => setWbRect({ ...wbRect, x: clamp01(e.target.value) })} />
+                  <label style={{ fontSize: 12, color: '#9aa4b2', marginRight: 8 }}>Files</label>
+                  <input type="file" multiple onChange={onQuickFilesSelected} />
+                  {quickFiles?.length ? <span className="hint" style={{ marginLeft: 8, fontSize: 12, color: '#97a3b6' }}>{quickFiles.length} selected</span> : null}
                 </div>
-                <div>
-                  <label>y</label>
-                  <input type="number" min="0" max="1" step="0.01" value={wbRect.y} onChange={(e) => setWbRect({ ...wbRect, y: clamp01(e.target.value) })} />
-                </div>
-                <div>
-                  <label>w</label>
-                  <input type="number" min="0.01" max="1" step="0.01" value={wbRect.w} onChange={(e) => setWbRect({ ...wbRect, w: clamp01(e.target.value) })} />
-                </div>
-                <div>
-                  <label>h</label>
-                  <input type="number" min="0.01" max="1" step="0.01" value={wbRect.h} onChange={(e) => setWbRect({ ...wbRect, h: clamp01(e.target.value) })} />
-                </div>
+                <div className="spacer" />
+                <button className="btn" onClick={runQuickBatch} disabled={running || !quickFiles?.length}>
+                  {running ? 'Running…' : 'Run Batch'}
+                </button>
               </div>
-            )}
 
-            <div className="field-row">
-              <label>
-                <input type="checkbox" checked={quickSplit} onChange={(e) => setQuickSplit(e.target.checked)} />
-                Split Channels (R/G/B mono)
-              </label>
+              {/* Grid cards for fields */}
+              <div className="qb-grid">
+                <section className="qb-card half">
+                  <h4>Export Settings</h4>
+                  <div className="field-grid">
+                    <div className="field-row">
+                      <div className="field-label">Target Size (MB)</div>
+                      <div className="field-control">
+                        <input type="number" min="0.1" step="0.1" value={targetSizeMB} onChange={(e) => setTargetSizeMB(e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="field-row">
+                      <div className="field-label">Tolerance (%)</div>
+                      <div className="field-control">
+                        <input type="number" min="1" max="20" step="1" value={tolerancePct} onChange={(e) => setTolerancePct(e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="qb-card half">
+                  <h4>Leader & Presets</h4>
+                  <div className="field-grid">
+                    <div className="field-row">
+                      <div className="field-label">AutoWB Leader Index</div>
+                      <div className="field-control">
+                        <input type="number" min="0" max={Math.max(0, (quickFiles?.length || 1) - 1)} step="1" value={leaderIndex} onChange={(e) => setLeaderIndex(Number(e.target.value) || 0)} />
+                      </div>
+                    </div>
+                    <div className="field-row">
+                      <div className="field-label">Export Preset</div>
+                      <div className="field-control">
+                        <PresetDropdown type="export" value={exportPresetId} onChange={setExportPresetId} />
+                      </div>
+                    </div>
+                    <div className="field-row">
+                      <div className="field-label">Watermark Preset</div>
+                      <div className="field-control">
+                        <PresetDropdown type="watermark" value={watermarkPresetId} onChange={setWatermarkPresetId} />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="qb-card">
+                  <h4>White Balance Region</h4>
+                  <div className="field-grid">
+                    <div className="field-row">
+                      <div className="field-label">Use Region for WB</div>
+                      <div className="field-control">
+                        <label className="flag">
+                          <input type="checkbox" checked={wbUseRegion} onChange={(e) => setWbUseRegion(e.target.checked)} />
+                          Enabled
+                        </label>
+                      </div>
+                    </div>
+                    {wbUseRegion && (
+                      <>
+                        <div className="field-row">
+                          <div className="field-label">x</div>
+                          <div className="field-control">
+                            <input type="number" min="0" max="1" step="0.01" value={wbRect.x} onChange={(e) => setWbRect({ ...wbRect, x: clamp01(e.target.value) })} />
+                          </div>
+                        </div>
+                        <div className="field-row">
+                          <div className="field-label">y</div>
+                          <div className="field-control">
+                            <input type="number" min="0" max="1" step="0.01" value={wbRect.y} onChange={(e) => setWbRect({ ...wbRect, y: clamp01(e.target.value) })} />
+                          </div>
+                        </div>
+                        <div className="field-row">
+                          <div className="field-label">w</div>
+                          <div className="field-control">
+                            <input type="number" min="0.01" max="1" step="0.01" value={wbRect.w} onChange={(e) => setWbRect({ ...wbRect, w: clamp01(e.target.value) })} />
+                          </div>
+                        </div>
+                        <div className="field-row">
+                          <div className="field-label">h</div>
+                          <div className="field-control">
+                            <input type="number" min="0.01" max="1" step="0.01" value={wbRect.h} onChange={(e) => setWbRect({ ...wbRect, h: clamp01(e.target.value) })} />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </section>
+
+                <section className="qb-card">
+                  <h4>Flags</h4>
+                  <div className="flag-row">
+                    <label className="flag">
+                      <input type="checkbox" checked={quickSplit} onChange={(e) => setQuickSplit(e.target.checked)} />
+                      Split Channels (R/G/B mono)
+                    </label>
+                  </div>
+                </section>
+              </div>
+
+              {renderQuickProgress()}
             </div>
 
-            <div className="actions">
-              <button className="btn-primary" disabled={running || !quickFiles?.length} onClick={runQuickBatch}>
-                {running ? 'Running…' : 'Run Batch'}
-              </button>
-            </div>
-
-            {renderQuickProgress()}
-            </div>
             <div className="sidebar-header">
               <h2>Your Workflows</h2>
               <button className="btn-primary" onClick={startNewWorkflow}>
@@ -426,9 +470,11 @@ const WorkflowPage = () => {
                 presets={presets}
               />
             ) : (
-              <div className="empty-state">
+              <div className="empty-state" style={{ padding: 16 }}>
                 <h2>Select a workflow to run, or create a new one.</h2>
-                <p>Workflows allow you to apply a series of edits to multiple images at once.</p>
+                <p style={{ maxWidth: 640 }}>
+                  Workflows allow you to apply a series of edits to multiple images at once.
+                </p>
               </div>
             )}
           </main>
