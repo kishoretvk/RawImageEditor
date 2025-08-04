@@ -1,164 +1,108 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BeforeAfterSlider from './BeforeAfterSlider';
 import '../styles/EnhancedLandingPage.css';
 
 const EnhancedLandingPage = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [loadedImages, setLoadedImages] = useState(0);
-  const [showDemo, setShowDemo] = useState(false);
 
+  // Updated features highlighting newly implemented capabilities
   const features = [
-    {
-      icon: '📸',
-      title: 'Professional RAW Processing',
-      description: 'Process RAW files from any camera with professional-grade algorithms'
-    },
-    {
-      icon: '⚡',
-      title: 'Real-time Processing',
-      description: 'See changes instantly with GPU-accelerated processing'
-    },
-    {
-      icon: '🎨',
-      title: 'Advanced Color Grading',
-      description: 'Professional color correction with LUTs and curves'
-    },
-    {
-      icon: '🔄',
-      title: 'Batch Processing',
-      description: 'Process hundreds of images with custom workflows'
-    },
-    {
-      icon: '💾',
-      title: 'Preset Management',
-      description: 'Save and apply your favorite settings as presets'
-    },
-    {
-      icon: '📱',
-      title: 'Cross-Platform',
-      description: 'Works on any device with a web browser'
-    }
-  ];
-
-  const demoImages = [
-    {
-      before: 'demo-images/color-before.jpg',
-      after: 'demo-images/portrait-before.jpg',
-      title: 'RAW Processing',
-      description: 'Professional RAW development with enhanced details'
-    },
-    {
-      before: 'demo-images/color-before.jpg',
-      after: 'demo-images/portrait-before.jpg',
-      title: 'Color Grading',
-      description: 'Advanced color correction and grading'
-    }
+    { icon: '🎯', title: 'WB by Neutral Region', description: 'Drag a rectangle to auto‑balance color from a known neutral area.' },
+    { icon: '🧩', title: 'Split RGB Channels', description: 'Export R, G, B mono images from original or adjusted pixels.' },
+    { icon: '📦', title: 'Target Size Export', description: 'Export JPEG to a specific MB target with quality search and downscale.' },
+    { icon: '🎨', title: 'Curves & LUTs', description: 'Precise tonal control and creative looks with per‑channel curves.' },
+    { icon: '⚡', title: 'Fast In‑Browser', description: 'GPU‑accelerated preview with no uploads or installs.' },
+    { icon: '🔄', title: 'Batch & Workflows', description: 'Preset management and custom multi‑step processing.' }
   ];
 
   useEffect(() => {
-    // Preload demo images
+    // Preload only the images we actually use on the landing
     const images = [
-      'demo-images/raw-before.jpg',
-      'demo-images/raw-after.jpg',
-      'demo-images/color-before.jpg',
-      'demo-images/color-after.jpg'
+      '/demo-images/color-before.jpg',
+      '/demo-images/color-after.jpg'
     ];
-
     images.forEach(src => {
       const img = new Image();
       img.onload = () => setLoadedImages(prev => prev + 1);
-      img.onerror = () => setLoadedImages(prev => prev + 1); // Count errors too
+      img.onerror = () => setLoadedImages(prev => prev + 1);
       img.src = src;
     });
   }, []);
 
-  const handleStartEditing = () => {
+  const handleOpenDemo = () => {
     setIsLoading(true);
-    setTimeout(() => {
-      navigate('/demo');
-    }, 500);
+    setTimeout(() => navigate('/demo'), 300);
+  };
+
+  const handleOpenEditor = () => {
+    setIsLoading(true);
+    setTimeout(() => navigate('/editor'), 300);
   };
 
   const handleCreateWorkflow = () => {
     setIsLoading(true);
-    setTimeout(() => {
-      navigate('/workflow');
-    }, 500);
+    setTimeout(() => navigate('/workflow'), 300);
   };
 
   return (
     <div className="enhanced-landing">
       <div className="landing-hero">
         <div className="hero-content">
-          <h1 className="hero-title">
-            Professional RAW Image Editor
-            <span className="hero-subtitle">in Your Browser</span>
-          </h1>
+          <div className="hero-headline">
+            <h1 className="hero-title">
+              Pro‑grade RAW Editor
+              <span className="hero-subtitle">in your browser</span>
+            </h1>
+            <span className="whats-new-badge" role="status" aria-label="New features">
+              New: WB Region • RGB Split • Target Size Export
+            </span>
+          </div>
+
           <p className="hero-description">
-            Process RAW files from any camera with professional-grade tools. 
-            No downloads, no subscriptions, just pure processing power.
+            Develop RAW files with professional controls, instantly in the browser.
+            Keep your workflow fast—no uploads, no installs.
           </p>
-          
+
           <div className="hero-actions">
-            <button 
-              className="btn-primary"
-              onClick={handleStartEditing}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Loading...' : 'Start Editing'}
+            <button className="btn-primary" onClick={handleOpenEditor} disabled={isLoading}>
+              {isLoading ? 'Loading…' : 'Open Editor'}
             </button>
-            <button 
-              className="btn-secondary"
-              onClick={() => setShowDemo(!showDemo)}
-            >
-              View Demo
+            <button className="btn-secondary" onClick={handleOpenDemo} disabled={isLoading}>
+              {isLoading ? 'Loading…' : 'Open Demo'}
             </button>
           </div>
 
-          <div className="hero-stats">
-            <div className="stat">
-              <span className="stat-number">50+</span>
-              <span className="stat-label">Camera Profiles</span>
-            </div>
-            <div className="stat">
-              <span className="stat-number">100%</span>
-              <span className="stat-label">Browser Based</span>
-            </div>
-            <div className="stat">
-              <span className="stat-number">0ms</span>
-              <span className="stat-label">Upload Time</span>
-            </div>
+          <div className="hero-stats" aria-label="Key stats">
+            <div className="stat"><span className="stat-number">100%</span><span className="stat-label">Local Processing</span></div>
+            <div className="stat"><span className="stat-number">0</span><span className="stat-label">Installs</span></div>
+            <div className="stat"><span className="stat-number">3</span><span className="stat-label">New Pro Tools</span></div>
           </div>
         </div>
 
-        <div className="hero-visual">
-          {showDemo && (
-            <div className="demo-preview">
-              <img 
-                src="demo-images/portrait-before.jpg" 
-                alt="Demo preview"
-                className="demo-image"
-                onError={(e) => {
-                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMjIyIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE2Ij5EZW1vIEltYWdlPC90ZXh0Pgo8L3N2Zz4K';
-                }}
-              />
-              <div className="demo-overlay">
-                <span>Live Preview</span>
-              </div>
-            </div>
-          )}
+        <div className="hero-visual" aria-hidden="true">
+          {/* Lightweight teaser: small before/after slider with optimized demo images */}
+          <div className="demo-teaser">
+            <BeforeAfterSlider
+              beforeSrc="/demo-images/color-before.jpg"
+              afterSrc="/demo-images/color-after.jpg"
+              alt="Before/After teaser"
+            />
+            <div className="demo-caption">Quick teaser — see more on the Demo page</div>
+          </div>
         </div>
       </div>
 
       <div className="features-section">
         <h2>Professional Features</h2>
         <div className="features-grid">
-          {features.map((feature, index) => (
-            <div key={index} className="feature-card">
-              <div className="feature-icon">{feature.icon}</div>
-              <h3>{feature.title}</h3>
-              <p>{feature.description}</p>
+          {features.map((f, i) => (
+            <div key={i} className="feature-card" role="article">
+              <div className="feature-icon" aria-hidden="true">{f.icon}</div>
+              <h3>{f.title}</h3>
+              <p>{f.description}</p>
             </div>
           ))}
         </div>
@@ -166,52 +110,48 @@ const EnhancedLandingPage = () => {
 
       <div className="workflow-section">
         <h2>Your Workflow, Your Way</h2>
-        <div className="workflow-steps">
-          <div className="workflow-step">
+        <div className="workflow-steps" role="list">
+          <div className="workflow-step" role="listitem">
             <div className="step-number">1</div>
-            <h3>Upload RAW Files</h3>
-            <p>Drag and drop your RAW files or select from your device</p>
+            <h3>Pick or Upload</h3>
+            <p>Start from sample images or add your own RAWs.</p>
           </div>
-          <div className="workflow-step">
+          <div className="workflow-step" role="listitem">
             <div className="step-number">2</div>
-            <h3>Apply Presets</h3>
-            <p>Use built-in presets or create your own custom settings</p>
+            <h3>Balance & Adjust</h3>
+            <p>Use WB region, curves, and pro sliders to dial in your look.</p>
           </div>
-          <div className="workflow-step">
+          <div className="workflow-step" role="listitem">
             <div className="step-number">3</div>
-            <h3>Fine-tune Adjustments</h3>
-            <p>Adjust exposure, color, sharpness, and more with precision</p>
+            <h3>Preview & Compare</h3>
+            <p>Use before/after and channel views to validate results.</p>
           </div>
-          <div className="workflow-step">
+          <div className="workflow-step" role="listitem">
             <div className="step-number">4</div>
-            <h3>Export & Share</h3>
-            <p>Export in your preferred format or batch process multiple files</p>
+            <h3>Export Exactly</h3>
+            <p>Target exact JPEG size or split RGB channels for analysis.</p>
           </div>
         </div>
       </div>
 
       <div className="cta-section">
         <h2>Ready to Transform Your RAW Files?</h2>
-        <p>Join thousands of photographers who trust our professional RAW processor</p>
+        <p>Try the live demo or jump straight into the full editor.</p>
         <div className="cta-actions">
-          <button 
-            className="btn-cta"
-            onClick={handleStartEditing}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Loading...' : 'Start Free'}
+          <button className="btn-cta" onClick={handleOpenEditor} disabled={isLoading}>
+            {isLoading ? 'Loading…' : 'Open Editor'}
           </button>
-          <button 
-            className="btn-outline"
-            onClick={handleCreateWorkflow}
-          >
+          <button className="btn-outline" onClick={handleCreateWorkflow}>
             Create Workflow
           </button>
         </div>
       </div>
 
       <footer className="landing-footer">
-        <p>&copy; 2024 Professional RAW Editor. Built with WebAssembly and love.</p>
+        <p>&copy; {new Date().getFullYear()} RAW Image Editor · Built with Web tech</p>
+        <a className="changelog-link" href="https://github.com/kishoretvk/RawImageEditor" target="_blank" rel="noreferrer">
+          View on GitHub
+        </a>
       </footer>
     </div>
   );

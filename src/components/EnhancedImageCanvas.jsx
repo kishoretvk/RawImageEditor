@@ -7,7 +7,14 @@ const EnhancedImageCanvas = ({
   showSlider = false, 
   sliderPosition = 50,
   onSliderChange,
-  curveLUTs = null
+  curveLUTs = null,
+  // WB region selection mode and gains application
+  wbSelectEnabled = false,
+  onWbRegionSelected = null,
+  wbGains = null, // { rGain, gGain, bGain }
+  // Channel split export: when requested, return blobs for R/G/B
+  onExtractChannels = null,
+  extractChannelsFrom = 'processed' // 'processed' | 'original'
 }) => {
   const canvasRef = useRef(null);
   const originalCanvasRef = useRef(null);
@@ -15,9 +22,12 @@ const EnhancedImageCanvas = ({
   const [isLoading, setIsLoading] = useState(true);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
 
+  // WB region selection state (canvas coordinate space during drag)
+  const [wbDrag, setWbDrag] = useState(null); // { startX, startY, curX, curY }
+
   useEffect(() => {
     loadAndProcessImage();
-  }, [imageSrc, edits]);
+  }, [imageSrc, edits, wbGains]);
 
   const loadAndProcessImage = async () => {
     if (!imageSrc) return;
@@ -91,11 +101,23 @@ const EnhancedImageCanvas = ({
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
 
+    // Apply WB per-channel gains first if provided
+    const rGain = wbGains?.rGain ?? 1;
+    const gGain = wbGains?.gGain ?? 1;
+    const bGain = wbGains?.bGain ?? 1;
+
     // Apply basic edits
     for (let i = 0; i < data.length; i += 4) {
       let r = data[i];
       let g = data[i + 1];
       let b = data[i + 2];
+
+      // WB gains first
+      if (rGain !== 1 || gGain !== 1 || bGain !== 1) {
+        r = Math.min(255, r * rGain);
+        g = Math.min(255, g * gGain);
+        b = Math.min(255, b * bGain);
+      }
 
       // Exposure
       if (edits.exposure) {
@@ -180,6 +202,40 @@ const EnhancedImageCanvas = ({
     ctx.putImageData(imageData, 0, 0);
   };
 
+  // Extract mono channel canvases/blobs for R/G/B
+  const extractChannels = async (source = 'processed') => {
+    const srcCanvas = source === 'original' ? originalCanvasRef.current : processedCanvasRef.current;
+    if (!srcCanvas) return null;
+    const w = srcCanvas.width;
+    const h = srcCanvas.height;
+    const sctx = srcCanvas.getContext('2d');
+    const srcData = sctx.getImageData(0, 0, w, h).data;
+
+    const makeMono = (selector) => {
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const cctx = c.getContext('2d');
+      const img = cctx.createImageData(w, h);
+      const d = img.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const v = selector(srcData[i], srcData[i + 1], srcData[i + 2]);
+        d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255;
+      }
+      cctx.putImageData(img, 0, 0);
+      return c;
+    };
+
+    const rCanvas = makeMono((r,g,b) => r);
+    const gCanvas = makeMono((r,g,b) => g);
+    const bCanvas = makeMono((r,g,b) => b);
+
+    const toBlob = (canvas) => new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'));
+
+    const [rBlob, gBlob, bBlob] = await Promise.all([toBlob(rCanvas), toBlob(gCanvas), toBlob(bCanvas)]);
+    return { rBlob, gBlob, bBlob };
+  };
+
   const updateDisplayCanvas = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -232,6 +288,20 @@ const EnhancedImageCanvas = ({
       // Draw processed image
       ctx.drawImage(processedCanvas, x, y, scaledWidth, scaledHeight);
     }
+
+    // If WB selection overlay is enabled and dragging, draw rectangle overlay
+    if (wbSelectEnabled && wbDrag) {
+      const startX = Math.min(wbDrag.startX, wbDrag.curX);
+      const startY = Math.min(wbDrag.startY, wbDrag.curY);
+      const endX = Math.max(wbDrag.startX, wbDrag.curX);
+      const endY = Math.max(wbDrag.startY, wbDrag.curY);
+      ctx.save();
+      ctx.strokeStyle = '#4fd1c5';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeRect(startX, startY, endX - startX, endY - startY);
+      ctx.restore();
+    }
   };
 
   const drawSliderHandle = (ctx, x, y, height) => {
@@ -264,31 +334,156 @@ const EnhancedImageCanvas = ({
   };
 
   const handleMouseMove = (e) => {
-    if (!showSlider || !onSliderChange) return;
-
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // WB selection drag handling
+    if (wbSelectEnabled && wbDrag) {
+      setWbDrag((prev) => ({ ...prev, curX: x, curY: y }));
+      if (!isLoading) updateDisplayCanvas();
+      return;
+    }
+
+    if (!showSlider || !onSliderChange) return;
     const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
     onSliderChange(percentage);
   };
 
   const handleMouseDown = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // WB selection start
+    if (wbSelectEnabled) {
+      setWbDrag({ startX: x, startY: y, curX: x, curY: y });
+
+      const handleUp = async () => {
+        document.removeEventListener('mousemove', handleMove);
+        document.removeEventListener('mouseup', handleUp);
+
+        if (!wbDrag) {
+          setWbDrag(null);
+          return;
+        }
+        // Compute final rectangle in display canvas coordinates
+        const startX = Math.min(wbDrag.startX, wbDrag.curX);
+        const startY = Math.min(wbDrag.startY, wbDrag.curY);
+        const endX = Math.max(wbDrag.startX, wbDrag.curX);
+        const endY = Math.max(wbDrag.startY, wbDrag.curY);
+
+        // Map display canvas rect back to image pixel coordinates
+        const container = canvasRef.current;
+        const ctx = container.getContext('2d');
+
+        const originalCanvas = originalCanvasRef.current;
+        const processedCanvas = processedCanvasRef.current;
+        if (!originalCanvas || !processedCanvas) {
+          setWbDrag(null);
+          return;
+        }
+
+        // Recompute scaling to map coordinates (reuse logic from updateDisplayCanvas)
+        const containerRect = container.parentElement.getBoundingClientRect();
+        const cW = container.width;
+        const cH = container.height;
+        // Use last computed dims
+        const scale = Math.min(
+          cW / originalCanvas.width,
+          cH / originalCanvas.height
+        );
+        const scaledWidth = originalCanvas.width * scale;
+        const scaledHeight = originalCanvas.height * scale;
+        const baseX = (cW - scaledWidth) / 2;
+        const baseY = (cH - scaledHeight) / 2;
+
+        // Clamp selection to image area
+        const selX1 = Math.max(startX, baseX);
+        const selY1 = Math.max(startY, baseY);
+        const selX2 = Math.min(endX, baseX + scaledWidth);
+        const selY2 = Math.min(endY, baseY + scaledHeight);
+
+        const selW = Math.max(0, selX2 - selX1);
+        const selH = Math.max(0, selY2 - selY1);
+
+        if (selW < 2 || selH < 2) {
+          setWbDrag(null);
+          return;
+        }
+
+        // Convert to image pixel coordinates
+        const imgX = Math.round((selX1 - baseX) / scale);
+        const imgY = Math.round((selY1 - baseY) / scale);
+        const imgW = Math.round(selW / scale);
+        const imgH = Math.round(selH / scale);
+
+        // Sample from originalCanvas (pre-adjusted)
+        const octx = originalCanvas.getContext('2d');
+        const clampW = Math.min(imgW, originalCanvas.width - imgX);
+        const clampH = Math.min(imgH, originalCanvas.height - imgY);
+        if (clampW <= 0 || clampH <= 0) {
+          setWbDrag(null);
+          return;
+        }
+        const region = octx.getImageData(imgX, imgY, clampW, clampH);
+        const d = region.data;
+        let sumR = 0, sumG = 0, sumB = 0, count = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          sumR += d[i];
+          sumG += d[i + 1];
+          sumB += d[i + 2];
+          count++;
+        }
+        const avgR = sumR / count;
+        const avgG = sumG / count;
+        const avgB = sumB / count;
+        const L = (avgR + avgG + avgB) / 3 || 1;
+        const rGain = L / (avgR || 1);
+        const gGain = L / (avgG || 1);
+        const bGain = L / (avgB || 1);
+
+        if (onWbRegionSelected) {
+          onWbRegionSelected(
+            { x: imgX, y: imgY, width: clampW, height: clampH },
+            { avgR, avgG, avgB },
+            { rGain, gGain, bGain }
+          );
+        }
+
+        setWbDrag(null);
+      };
+
+      const handleMove = (ev) => {
+        const r = canvasRef.current.getBoundingClientRect();
+        const nx = ev.clientX - r.left;
+        const ny = ev.clientY - r.top;
+        setWbDrag((prev) => (prev ? { ...prev, curX: nx, curY: ny } : prev));
+        if (!isLoading) updateDisplayCanvas();
+      };
+
+      document.addEventListener('mousemove', handleMove);
+      document.addEventListener('mouseup', handleUp);
+      return;
+    }
+
+    // Before/After slider drag activation
     if (!showSlider) return;
-    
-    const handleMouseMove = (e) => {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+
+    const handleMove = (ev) => {
+      const r = canvasRef.current.getBoundingClientRect();
+      const nx = ev.clientX - r.left;
+      const percentage = Math.max(0, Math.min(100, (nx / r.width) * 100));
       onSliderChange(percentage);
     };
 
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+    const handleUp = () => {
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleUp);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleUp);
   };
 
   useEffect(() => {
@@ -306,7 +501,21 @@ const EnhancedImageCanvas = ({
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [isLoading, sliderPosition]);
+  }, [isLoading, sliderPosition, wbDrag, wbSelectEnabled]);
+
+  // If consumer requests channel extraction, run it when canvases are ready and notify once
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (typeof onExtractChannels === 'function' && originalCanvasRef.current && processedCanvasRef.current && !isLoading) {
+        const result = await extractChannels(extractChannelsFrom);
+        if (!cancelled) {
+          onExtractChannels(result);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [onExtractChannels, extractChannelsFrom, isLoading, imageSrc, edits, wbGains]);
 
   return (
     <div className="enhanced-canvas-container">
@@ -316,6 +525,7 @@ const EnhancedImageCanvas = ({
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
       />
+      {/* when WB selection is enabled, we rely on the same canvas; overlay drawn in updateDisplayCanvas */}
       
       <canvas ref={originalCanvasRef} style={{ display: 'none' }} />
       <canvas ref={processedCanvasRef} style={{ display: 'none' }} />
