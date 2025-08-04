@@ -8,6 +8,7 @@ import '../styles/WorkflowPage.css';
 import { WorkflowRunner, buildDefaultRegistry } from '../utils/workflow/runner';
 import VisualWorkflow from '../components/workflow/VisualWorkflow';
 import { JobStore } from '../utils/db/indexedDb';
+import LogsDrawer from '../components/workflow/LogsDrawer';
 
 const WorkflowPage = () => {
   const [workflows, setWorkflows] = useState([]);
@@ -35,6 +36,8 @@ const WorkflowPage = () => {
   // Preset selections
   const [exportPresetId, setExportPresetId] = useState('');
   const [watermarkPresetId, setWatermarkPresetId] = useState('');
+  const [logsDrawerOpen, setLogsDrawerOpen] = useState(false);
+  const [logsJobId, setLogsJobId] = useState(null);
 
   useEffect(() => {
     setWorkflows(WorkflowManager.getWorkflows());
@@ -300,11 +303,13 @@ const WorkflowPage = () => {
                     <div className="time">{new Date(j.createdAt).toLocaleString()}</div>
                   </div>
                   <div className="status">{j.status}</div>
-                  <button className="btn-secondary" onClick={async () => {
-                    const logs = await JobStore.getJobProgress(j.id, 1000);
-                    // Simple alert view (can be replaced with a nicer drawer)
-                    alert(`Logs for ${j.name}:\n` + logs.map(l => `[${new Date(l.ts).toLocaleTimeString()}] ${l.nodeId} ${Math.round((l.progress||0)*100)}% ${l.status} - ${l.message}`).join('\n'));
-                  }}>View Logs</button>
+                  <button
+                    className="btn-secondary"
+                    onClick={() => {
+                      setLogsJobId(j.id);
+                      setLogsDrawerOpen(true);
+                    }}
+                  >View Logs</button>
                 </li>
               ))}
             </ul>
