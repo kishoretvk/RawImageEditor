@@ -1,8 +1,22 @@
 import React from 'react';
-import { NodeTypes, defaultParamsFor } from './nodeDefinitions';
+import { NodeTypes } from './nodeDefinitions';
 import RegionPicker from '../RegionPicker';
+import Modal from './Modal';
+import ExportPresetEditor from '../ExportPresetEditor';
+import WatermarkEditor from '../WatermarkEditor';
 
-export default function WorkflowCanvas({ nodes, selectedIndex, onSelect, onChange, onAddAfter, onRemove, onMoveUp, onMoveDown }) {
+export default function WorkflowCanvas({
+  nodes,
+  selectedIndex,
+  onSelect,
+  onChange,
+  onAddAfter,
+  onRemove,
+  onMoveUp,
+  onMoveDown
+}) {
+  const [modal, setModal] = React.useState({ open: false, kind: null });
+
   const handleToggle = (i) => {
     const n = nodes[i];
     onChange(i, { ...n, enabled: !n.enabled });
@@ -16,6 +30,13 @@ export default function WorkflowCanvas({ nodes, selectedIndex, onSelect, onChang
   const handlePresetSelect = (i, key, id) => {
     const n = nodes[i];
     onChange(i, { ...n, params: { ...n.params, [key]: id } });
+  };
+
+  const openPresetEditor = (kind) => setModal({ open: true, kind });
+  const closePresetEditor = () => {
+    setModal({ open: false, kind: null });
+    // Optionally, trigger a refresh by reselecting the node to reload dropdown options
+    if (Number.isFinite(selectedIndex)) onSelect(selectedIndex);
   };
 
   return (
@@ -44,6 +65,7 @@ export default function WorkflowCanvas({ nodes, selectedIndex, onSelect, onChang
                 {renderInspector(def, n.params, {
                   onChange: (key, val) => handleParamChange(i, key, val),
                   onPresetSelect: (key, id) => handlePresetSelect(i, key, id),
+                  onOpenPresetEditor: openPresetEditor
                 })}
               </div>
             )}
@@ -55,6 +77,16 @@ export default function WorkflowCanvas({ nodes, selectedIndex, onSelect, onChang
           <p>No nodes yet. Add nodes from the palette to build your workflow.</p>
         </div>
       )}
+
+      <Modal
+        open={modal.open}
+        title={modal.kind === 'export' ? 'Manage Export Presets' : modal.kind === 'watermark' ? 'Manage Watermark Presets' : ''}
+        onClose={closePresetEditor}
+        width={820}
+      >
+        {modal.kind === 'export' && <ExportPresetEditor />}
+        {modal.kind === 'watermark' && <WatermarkEditor />}
+      </Modal>
 
       <style>{styles}</style>
     </div>
@@ -98,10 +130,20 @@ function renderInspector(def, params = {}, api) {
                 try { api.onChange(key, JSON.parse(e.target.value || '{}')); } catch {}
               }} rows={4} />
             ));
-          case 'preset':
-            return field(it.label, (
+          case 'preset': {
+            const dropdown = (
               <PresetDropdown presetType={it.presetType} value={val || ''} onChange={(id) => api.onPresetSelect(key, id)} />
+            );
+            const manageBtn = it.presetType === 'export' || it.presetType === 'watermark'
+              ? <button className="manage-btn" onClick={() => api.onOpenPresetEditor(it.presetType)}>Manage Presets</button>
+              : null;
+            return field(it.label, (
+              <div className="preset-row">
+                {dropdown}
+                {manageBtn}
+              </div>
             ));
+          }
           case 'region':
             return field(it.label, (
               <RegionPicker
@@ -200,4 +242,12 @@ const styles = `
   border: 1px solid rgba(255,255,255,0.1);
 }
 .checkbox { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.preset-row { display: flex; align-items: center; gap: 8px; }
+.manage-btn {
+  background: rgba(102,126,234,0.15); border: 1px solid rgba(102,126,234,0.35);
+  color: #e6e9ef; padding: 6px 10px; border-radius: 8px; cursor: pointer;
+}
+.manage-btn:hover {
+  background: rgba(102,126,234,0.25); border-color: rgba(102,126,234,0.5);
+}
 `;

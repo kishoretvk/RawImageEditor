@@ -7,6 +7,7 @@ import '../styles/WorkflowPage.css';
 
 import { WorkflowRunner, buildDefaultRegistry } from '../utils/workflow/runner';
 import VisualWorkflow from '../components/workflow/VisualWorkflow';
+import { JobStore } from '../utils/db/indexedDb';
 
 const WorkflowPage = () => {
   const [workflows, setWorkflows] = useState([]);
@@ -26,6 +27,10 @@ const WorkflowPage = () => {
   const [wbRect, setWbRect] = useState({ x: 0.4, y: 0.4, w: 0.2, h: 0.2 }); // normalized defaults
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState([]); // [{nodeId,status,progress,message,data, itemIndex}]
+  // Job persistence
+  const [jobId, setJobId] = useState(null);
+  const [resumeJob, setResumeJob] = useState(null);
+  const [jobHistory, setJobHistory] = useState([]);
 
   // Preset selections
   const [exportPresetId, setExportPresetId] = useState('');
@@ -34,6 +39,15 @@ const WorkflowPage = () => {
   useEffect(() => {
     setWorkflows(WorkflowManager.getWorkflows());
     setPresets(PresetManager.getPresets());
+    // Load job history and any in-flight job
+    (async () => {
+      try {
+        const inFlight = await JobStore.getLastIncompleteJob();
+        if (inFlight) setResumeJob(inFlight);
+        const history = await JobStore.listJobs(25);
+        setJobHistory(history);
+      } catch {}
+    })();
   }, []);
 
   const handleSaveWorkflow = (workflow) => {
@@ -78,12 +92,25 @@ const WorkflowPage = () => {
     if (!quickFiles || quickFiles.length === 0 || running) return;
     setRunning(true);
     setProgress([]);
+    setResumeJob(null);
+    let createdJobId = null;
 
     const registry = buildDefaultRegistry();
     const runner = new WorkflowRunner({
       registry,
-      onProgress: (evt) => {
+      onProgress: async (evt) => {
         setProgress((prev) => [...prev, { ...evt }]);
+        try {
+          if (createdJobId) {
+            await JobStore.pushProgress(createdJobId, {
+              itemIndex: evt.itemIndex ?? 0,
+              nodeId: evt.nodeId || 'node',
+              status: evt.status || 'info',
+              progress: evt.progress ?? 0,
+              message: evt.message || ''
+            });
+          }
+        } catch {}
       }
     });
 
@@ -169,12 +196,40 @@ const WorkflowPage = () => {
       nodes
     };
 
+    // Create a persistent job record
+    try {
+      const itemsMeta = (quickFiles || []).map(f => ({
+        name: f?.name || '',
+        size: f?.size || 0,
+        type: f?.type || ''
+      }));
+      createdJobId = await JobStore.createJob({
+        name: 'Quick Batch',
+        spec,
+        itemsMeta
+      });
+      setJobId(createdJobId);
+    } catch {}
+
     try {
       await runner.run(spec, quickFiles);
+      try {
+        if (createdJobId) {
+          await JobStore.completeJob(createdJobId, { count: quickFiles.length });
+        }
+      } catch {}
     } catch (e) {
       setProgress((prev) => [...prev, { nodeId: 'workflow', status: 'error', progress: 0, message: e?.message || String(e) }]);
+      try {
+        if (createdJobId) await JobStore.failJob(createdJobId, e?.message || String(e));
+      } catch {}
     } finally {
       setRunning(false);
+      // Refresh history
+      try {
+        const history = await JobStore.listJobs(25);
+        setJobHistory(history);
+      } catch {}
     }
   };
 
@@ -204,6 +259,42 @@ const WorkflowPage = () => {
       </header>
 
       <div className="workflow-container">
+        {/* Resume banner and Job history (Quick Batch scope) */}
+        {activeTab === 'quick' && (resumeJob ? (
+          <div className="resume-banner">
+            <div>
+              <strong>Resume available:</strong> {resumeJob.name} • {new Date(resumeJob.createdAt).toLocaleString()} • status: {resumeJob.status}
+            </div>
+            <button className="btn-secondary" onClick={async () => {
+              // Show the history/log view below
+              setActiveTab('quick');
+              // just clear the banner; user can inspect history list
+              setResumeJob(null);
+            }}>Dismiss</button>
+          </div>
+        ) : null)}
+        {activeTab === 'quick' && jobHistory?.length ? (
+          <div className="job-history card">
+            <h3>Recent Jobs</h3>
+            <ul className="job-list">
+              {jobHistory.map(j => (
+                <li key={j.id} className={`job ${j.status}`}>
+                  <div className="meta">
+                    <div className="name">{j.name}</div>
+                    <div className="time">{new Date(j.createdAt).toLocaleString()}</div>
+                  </div>
+                  <div className="status">{j.status}</div>
+                  <button className="btn-secondary" onClick={async () => {
+                    const logs = await JobStore.getJobProgress(j.id, 1000);
+                    // Simple alert view (can be replaced with a nicer drawer)
+                    alert(`Logs for ${j.name}:\n` + logs.map(l => `[${new Date(l.ts).toLocaleTimeString()}] ${l.nodeId} ${Math.round((l.progress||0)*100)}% ${l.status} - ${l.message}`).join('\n'));
+                  }}>View Logs</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         <div className="workflow-tabs">
           <button
             className={`wf-tab ${activeTab === 'quick' ? 'active' : ''}`}

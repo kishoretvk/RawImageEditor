@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import NodePalette from './NodePalette';
 import WorkflowCanvas from './WorkflowCanvas';
 import { defaultParamsFor, NodeTypes } from './nodeDefinitions';
 import { WorkflowRunner, buildDefaultRegistry } from '../../utils/workflow/runner';
+import { JobStore } from '../../utils/db/indexedDb';
 
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -26,6 +27,18 @@ export default function VisualWorkflow() {
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState([]); // [{nodeId, status, progress, message, itemIndex}]
   const [files, setFiles] = useState([]);
+  // Job persistence
+  const [jobId, setJobId] = useState(null);
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const hist = await JobStore.listJobs(20);
+        setHistory(hist);
+      } catch {}
+    })();
+  }, []);
 
   const addNode = (type) => {
     const n = { id: uid(), type, enabled: true, params: defaultParamsFor(type) };
@@ -145,22 +158,53 @@ export default function VisualWorkflow() {
     }
     setProgress([]);
     setRunning(true);
+    let createdJobId = null;
     try {
       const registry = buildDefaultRegistry();
       const runner = new WorkflowRunner({
         registry,
-        onProgress: (evt) => {
+        onProgress: async (evt) => {
           setProgress((prev) => [...prev, { ...evt }]);
+          try {
+            if (createdJobId) {
+              await JobStore.pushProgress(createdJobId, {
+                itemIndex: evt.itemIndex ?? 0,
+                nodeId: evt.nodeId || 'node',
+                status: evt.status || 'info',
+                progress: evt.progress ?? 0,
+                message: evt.message || ''
+              });
+            }
+          } catch {}
         },
       });
       const specNodes = await buildSpec();
       const spec = { version: 1, name: 'Visual Workflow', settings: { retry: 1, timeoutSec: 180 }, nodes: specNodes };
+
+      // Create job record
+      try {
+        const itemsMeta = (files || []).map(f => ({ name: f?.name || '', size: f?.size || 0, type: f?.type || '' }));
+        createdJobId = await JobStore.createJob({ name: 'Visual Workflow', spec, itemsMeta });
+        setJobId(createdJobId);
+      } catch {}
+
       // items: from UI files if first node is ingest
       await runner.run(spec, files || []);
+
+      try {
+        if (createdJobId) await JobStore.completeJob(createdJobId, { count: (files || []).length });
+      } catch {}
     } catch (e) {
       setProgress((prev) => [...prev, { nodeId: 'workflow', status: 'error', progress: 0, message: e?.message || String(e) }]);
+      try {
+        if (createdJobId) await JobStore.failJob(createdJobId, e?.message || String(e));
+      } catch {}
     } finally {
       setRunning(false);
+      try {
+        const hist = await JobStore.listJobs(20);
+        setHistory(hist);
+      } catch {}
     }
   };
 
@@ -186,6 +230,22 @@ export default function VisualWorkflow() {
     <div className="visual-workflow">
       <aside className="vw-left">
         <NodePalette onAdd={addNode} />
+        <div className="vw-history">
+          <h4>Recent Jobs</h4>
+          <ul className="vw-job-list">
+            {history.map(j => (
+              <li key={j.id} className={`vw-job ${j.status}`}>
+                <div className="name">{j.name}</div>
+                <div className="sub">{new Date(j.createdAt).toLocaleString()}</div>
+                <div className="status">{j.status}</div>
+                <button className="btn-small" onClick={async () => {
+                  const logs = await JobStore.getJobProgress(j.id, 1000);
+                  alert(`Logs for ${j.name}:\n` + logs.map(l => `[${new Date(l.ts).toLocaleTimeString()}] ${l.nodeId} ${Math.round((l.progress||0)*100)}% ${l.status} - ${l.message}`).join('\n'));
+                }}>Logs</button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </aside>
       <main className="vw-main">
         <div className="vw-toolbar">
@@ -226,7 +286,17 @@ const styles = `
 .vw-left {
   background: rgba(0,0,0,0.25);
   border-right: 1px solid rgba(255,255,255,0.08);
+  display: flex; flex-direction: column;
 }
+.vw-history { padding: 10px; border-top: 1px solid rgba(255,255,255,0.08); }
+.vw-history h4 { margin: 8px 0; }
+.vw-job-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.vw-job { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 6px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; }
+.vw-job .name { font-weight: 600; }
+.vw-job .sub { font-size: 11px; color: #97a3b6; }
+.vw-job .status { font-size: 12px; }
+.btn-small { font-size: 12px; padding: 4px 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); color: #e6e9ef; cursor: pointer; }
+.btn-small:hover { background: rgba(102,126,234,0.18); border-color: rgba(102,126,234,0.35); }
 .vw-main {
   display: flex; flex-direction: column; min-height: 0;
 }

@@ -2,42 +2,48 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #f0f2f5;
+  /* Modern background with subtle gradient */
+  background: radial-gradient(1200px 800px at 10% 0%, rgba(102,126,234,0.10), rgba(45,55,72,0.06)) , #0f1217;
+  color: #e6e9ef;
 }
 
 .workflow-header {
-  padding: 2rem;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 24px 28px;
+  background: rgba(17, 20, 26, 0.85);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   text-align: center;
+  backdrop-filter: blur(6px);
 }
 
 .workflow-header h1 {
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   font-weight: 800;
-  color: #1a202c;
+  letter-spacing: -0.02em;
+  color: #e6e9ef;
 }
 
 .workflow-header p {
-  font-size: 1.125rem;
-  color: #4a5568;
-  max-width: 600px;
-  margin: 0.5rem auto 0;
+  font-size: 1rem;
+  color: #9aa4b2;
+  max-width: 720px;
+  margin: 8px auto 0;
 }
 
 .workflow-container {
   display: flex;
   flex-grow: 1;
   overflow: hidden;
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
 
 .workflow-sidebar {
   width: 320px;
-  background: #ffffff;
-  border-right: 1px solid #e2e8f0;
+  background: rgba(17, 20, 26, 0.6);
+  border-right: 1px solid rgba(255,255,255,0.08);
   display: flex;
   flex-direction: column;
-  padding: 1.5rem;
+  padding: 18px;
+  backdrop-filter: blur(6px);
 }
 
 .sidebar-header {
@@ -48,25 +54,27 @@
 }
 
 .sidebar-header h2 {
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   font-weight: 700;
-  color: #2d3748;
+  color: #e6e9ef;
 }
 
 .btn-primary {
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
-  background: #1e3c72;
-  color: white;
+  transition: all 0.18s ease;
+  border: 1px solid rgba(102,126,234,0.35);
+  background: rgba(102,126,234,0.18);
+  color: #e6e9ef;
+  box-shadow: 0 6px 20px rgba(102,126,234,0.12);
 }
 
 .btn-primary:hover {
-  background: #2a5298;
+  background: rgba(102,126,234,0.28);
+  border-color: rgba(102,126,234,0.5);
 }
 
 .workflow-list {
@@ -88,35 +96,40 @@
 }
 
 .workflow-item:hover {
-  background-color: #f7fafc;
+  background-color: rgba(255,255,255,0.06);
 }
 
 .workflow-item.active {
-  background-color: #e2e8f0;
-  font-weight: 600;
+  background-color: rgba(102,126,234,0.12);
+  border: 1px solid rgba(102,126,234,0.35);
+  font-weight: 700;
 }
 
 .workflow-name {
-  color: #2d3748;
+  color: #e6e9ef;
 }
 
 .workflow-actions button {
-  background: none;
-  border: none;
-  color: #718096;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #e6e9ef;
   cursor: pointer;
-  margin-left: 0.5rem;
+  margin-left: 8px;
   font-size: 0.8rem;
+  border-radius: 8px;
+  padding: 6px 8px;
 }
 
 .workflow-actions button:hover {
-  color: #1e3c72;
+  background: rgba(102,126,234,0.18);
+  border-color: rgba(102,126,234,0.35);
 }
 
 .workflow-main {
   flex-grow: 1;
-  padding: 2rem;
+  padding: 24px;
   overflow-y: auto;
+  background: linear-gradient(180deg, rgba(17,20,26,0.5), rgba(17,20,26,0.3));
 }
 
 .empty-state {
@@ -126,7 +139,7 @@
   align-items: center;
   height: 100%;
   text-align: center;
-  color: #718096;
+  color: #97a3b6;
 }
 
 .empty-state h2 {
