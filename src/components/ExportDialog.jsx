@@ -14,9 +14,11 @@ export default function ExportDialog({
   onRequestSplitChannels,   // (useAdjusted:boolean) => void
   onExportTargetSize,       // (targetMB:number, options:{ tolerance:number, allowDownscale:boolean }) => void
   // Optional: direct processed canvas supplier to run target-size export here
-  getProcessedCanvas        // () => HTMLCanvasElement | Promise<HTMLCanvasElement>
+  getProcessedCanvas,       // () => HTMLCanvasElement | Promise<HTMLCanvasElement>
+  // Optional: hints for export UX
+  hasAlphaBackgroundRemoved = false
 }) {
-  const [format, setFormat] = useState('jpeg');
+  const [format, setFormat] = useState(hasAlphaBackgroundRemoved ? 'png' : 'jpeg');
   const [quality, setQuality] = useState(85);
   const [filename, setFilename] = useState('exported-image');
 
@@ -25,9 +27,10 @@ export default function ExportDialog({
   const [targetMB, setTargetMB] = useState('');
   const [tolerancePct, setTolerancePct] = useState(5);
   const [allowDownscale, setAllowDownscale] = useState(false);
+  const [preserveTransparency, setPreserveTransparency] = useState(!!hasAlphaBackgroundRemoved);
 
   const handleExport = () => {
-    if (onExport) onExport({ format, quality, filename });
+    if (onExport) onExport({ format, quality, filename, preserveTransparency });
   };
 
   const handleSplitChannels = () => {
@@ -86,6 +89,19 @@ export default function ExportDialog({
           <option value="tiff">TIFF</option>
         </select>
       </div>
+      {hasAlphaBackgroundRemoved && (
+        <label className="text-[11px] flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={preserveTransparency}
+            onChange={e => {
+              setPreserveTransparency(e.target.checked);
+              if (e.target.checked && format !== 'png') setFormat('png');
+            }}
+          />
+          Preserve transparency (background removed)
+        </label>
+      )}
 
       <div className="flex gap-2 items-center">
         <span className="text-xs">Quality</span>
