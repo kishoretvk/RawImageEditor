@@ -11,62 +11,50 @@
  */
 import React, { useState } from 'react';
 
-export default function WhiteBalanceTool({ onChange, enableWbSelect, lastWbInfo = null }) {
-  const [temp, setTemp] = useState(5500);
-  const [tint, setTint] = useState(0);
-  const [selectMode, setSelectMode] = useState(false);
+export default function WhiteBalanceTool({
+  whiteBalance,
+  onStartWBSelect,
+  onChangeSamplingSpace,
+  onResetWB
+}) {
+  const [temp, setTemp] = useState(whiteBalance?.temperature ?? 0);
+  const [tint, setTint] = useState(whiteBalance?.tint ?? 0);
 
-  const handleTemp = (e) => {
-    const v = Number(e.target.value);
-    setTemp(v);
-    onChange?.({ temp: v, tint });
-  };
-  const handleTint = (e) => {
-    const v = Number(e.target.value);
-    setTint(v);
-    onChange?.({ temp, tint: v });
-  };
-
-  const toggleWbSelect = () => {
-    const next = !selectMode;
-    setSelectMode(next);
-    enableWbSelect?.(next);
-  };
-
-  const handleResetWbGains = () => {
-    // Inform parent to clear wbGains (set to null)
-    onChange?.({ wbGains: null });
-  };
+  useEffect(() => {
+    setTemp(whiteBalance?.temperature ?? 0);
+    setTint(whiteBalance?.tint ?? 0);
+  }, [whiteBalance?.temperature, whiteBalance?.tint]);
 
   return (
     <div className="flex flex-col gap-3">
       <label className="text-xs font-semibold">White Balance</label>
 
-      {/* Temp/Tint controls */}
+      {/* Derived Temp/Tint (read-only preview from computed WB) */}
       <div className="flex gap-2 items-center">
-        <span className="text-xs w-10">Temp</span>
-        <input type="range" min="2000" max="9000" value={temp} onChange={handleTemp} className="flex-1" />
-        <span className="text-xs w-14 text-right">{temp}K</span>
+        <span className="text-xs w-20">Derived Temp</span>
+        <input type="range" min="-255" max="255" value={temp} readOnly className="flex-1 opacity-60" />
+        <span className="text-xs w-14 text-right">{Number.isFinite(temp) ? temp.toFixed(0) : 0}</span>
       </div>
       <div className="flex gap-2 items-center">
-        <span className="text-xs w-10">Tint</span>
-        <input type="range" min="-100" max="100" value={tint} onChange={handleTint} className="flex-1" />
-        <span className="text-xs w-14 text-right">{tint}</span>
+        <span className="text-xs w-20">Derived Tint</span>
+        <input type="range" min="-128" max="128" value={tint} readOnly className="flex-1 opacity-60" />
+        <span className="text-xs w-14 text-right">{Number.isFinite(tint) ? tint.toFixed(0) : 0}</span>
       </div>
 
       {/* WB Region Selection */}
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-1 flex items-center gap-2">
         <button
           type="button"
-          onClick={toggleWbSelect}
-          className={`px-3 py-1 rounded text-xs font-semibold border ${selectMode ? 'bg-teal-500/20 text-teal-300 border-teal-500/40' : 'bg-white/5 text-white/80 border-white/20'}`}
+          onClick={onStartWBSelect}
+          className="px-3 py-1 rounded text-xs font-semibold border bg-white/5 text-white/80 border-white/20"
           title="Click, then drag a rectangle on the image to compute WB gains from a neutral region"
         >
-          {selectMode ? 'WB Region Select: ON' : 'WB Region Select'}
+          WB Region Select
         </button>
+
         <button
           type="button"
-          onClick={handleResetWbGains}
+          onClick={onResetWB}
           className="px-3 py-1 rounded text-xs font-semibold bg-white/5 text-white/70 border border-white/20"
           title="Clear WB per-channel gains"
         >
@@ -74,13 +62,36 @@ export default function WhiteBalanceTool({ onChange, enableWbSelect, lastWbInfo 
         </button>
       </div>
 
-      {/* Show last computed averages and gains if available */}
-      {lastWbInfo && (
-        <div className="text-[11px] text-white/70 bg-white/5 border border-white/10 rounded p-2 mt-1">
-          <div>Avg RGB: {lastWbInfo.avgR?.toFixed(1)} / {lastWbInfo.avgG?.toFixed(1)} / {lastWbInfo.avgB?.toFixed(1)}</div>
-          <div>Gains: R {lastWbInfo.rGain?.toFixed(3)}, G {lastWbInfo.gGain?.toFixed(3)}, B {lastWbInfo.bGain?.toFixed(3)}</div>
-        </div>
-      )}
+      {/* Sampling Space */}
+      <div className="flex items-center gap-2 mt-2">
+        <span className="text-xs">Sampling:</span>
+        <label className="text-xs flex items-center gap-1">
+          <input
+            type="radio"
+            name="wb-sampling-space"
+            checked={(whiteBalance?.samplingSpace ?? 'original') === 'original'}
+            onChange={() => onChangeSamplingSpace?.('original')}
+          />
+          Original
+        </label>
+        <label className="text-xs flex items-center gap-1">
+          <input
+            type="radio"
+            name="wb-sampling-space"
+            checked={(whiteBalance?.samplingSpace ?? 'original') === 'processed'}
+            onChange={() => onChangeSamplingSpace?.('processed')}
+          />
+          Processed
+        </label>
+      </div>
+
+      {/* Current Multipliers */}
+      <div className="text-[11px] text-white/70 bg-white/5 border border-white/10 rounded p-2 mt-1">
+        <div>Multipliers:</div>
+        <div>R {whiteBalance?.multipliers?.r?.toFixed?.(3) ?? '1.000'}</div>
+        <div>G {whiteBalance?.multipliers?.g?.toFixed?.(3) ?? '1.000'}</div>
+        <div>B {whiteBalance?.multipliers?.b?.toFixed?.(3) ?? '1.000'}</div>
+      </div>
     </div>
   );
 }

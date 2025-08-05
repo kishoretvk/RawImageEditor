@@ -4,6 +4,8 @@ import { processImageWithEdits } from '../utils/rawProcessor';
 const EnhancedImageCanvas = ({ 
   imageSrc, 
   edits = {}, 
+  // local masks passed from EditorPage; default empty array to avoid ReferenceError
+  localMasks = [], 
   showSlider = false, 
   sliderPosition = 50,
   onSliderChange,
@@ -12,9 +14,10 @@ const EnhancedImageCanvas = ({
   wbSelectEnabled = false,
   onWbRegionSelected = null,
   wbGains = null, // { rGain, gGain, bGain }
+  wbSamplingSpace = 'original', // 'original' | 'processed'
   // Channel split export: when requested, return blobs for R/G/B
   onExtractChannels = null,
-  extractChannelsFrom = 'processed' // 'processed' | 'original'
+  extractChannelsFrom = 'processed', // 'processed' | 'original'
 }) => {
   const canvasRef = useRef(null);
   const originalCanvasRef = useRef(null);
@@ -101,10 +104,28 @@ const EnhancedImageCanvas = ({
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
 
+    // Pre-allocate scratch buffers once per call for NR/sharpen operations
+    const width = canvas.width;
+    const height = canvas.height;
+    const scratch = new Uint8ClampedArray(data.length);
+    const scratch2 = new Uint8ClampedArray(data.length);
+
     // Apply WB per-channel gains first if provided
     const rGain = wbGains?.rGain ?? 1;
     const gGain = wbGains?.gGain ?? 1;
     const bGain = wbGains?.bGain ?? 1;
+
+    // HSL band definitions (hue ranges in degrees)
+    const HSL_BANDS = [
+      { key: 'red', hueMin: 0, hueMax: 15 },
+      { key: 'orange', hueMin: 15, hueMax: 45 },
+      { key: 'yellow', hueMin: 45, hueMax: 75 },
+      { key: 'green', hueMin: 75, hueMax: 135 },
+      { key: 'aqua', hueMin: 135, hueMax: 165 },
+      { key: 'blue', hueMin: 165, hueMax: 255 },
+      { key: 'purple', hueMin: 255, hueMax: 285 },
+      { key: 'magenta', hueMin: 285, hueMax: 360 },
+    ];
 
     // Apply basic edits
     for (let i = 0; i < data.length; i += 4) {
@@ -194,13 +215,349 @@ const EnhancedImageCanvas = ({
         b = lutB[idxB];
       }
 
+      // Split Toning (apply after curves)
+      if (edits.splitToning) {
+        const { highlightsHue = 40, highlightsSat = 15, shadowsHue = 220, shadowsSat = 15, balance = 0 } = edits.splitToning || {};
+        // compute luminance in [0..1]
+        const luma = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+        // balance in [-1..1]
+        const bal = Math.max(-1, Math.min(1, balance / 100));
+        // shadows weight increases in darks; highlights in brights; balance shifts midpoint
+        const mid = 0.5 + bal * 0.25; // shift midpoint by balance
+        const shadowsW = luma < mid ? 1 - (luma / Math.max(0.0001, mid)) : 0;
+        const highlightsW = luma > mid ? (luma - mid) / Math.max(0.0001, 1 - mid) : 0;
+
+        // convert hue/sat to RGB tint at same luminance
+        const tintShadows = hslToRgb(shadowsHue, shadowsSat, luma * 100);
+        const tintHighlights = hslToRgb(highlightsHue, highlightsSat, luma * 100);
+
+        // blend tints by weights (normalized so sum <= 1)
+        const wSum = shadowsW + highlightsW || 1;
+        const wS = shadowsW / wSum;
+        const wH = highlightsW / wSum;
+
+        r = Math.max(0, Math.min(255, Math.round(r * (1 - (wS + wH)) + tintShadows[0] * wS + tintHighlights[0] * wH)));
+        g = Math.max(0, Math.min(255, Math.round(g * (1 - (wS + wH)) + tintShadows[1] * wS + tintHighlights[1] * wH)));
+        b = Math.max(0, Math.min(255, Math.round(b * (1 - (wS + wH)) + tintShadows[2] * wS + tintHighlights[2] * wH)));
+      }
+
+      // HSL adjustments per color band (after split toning to preserve tint intent)
+      if (edits.hslAdjustments) {
+        const hsl = rgbToHsl(r, g, b);
+        let [h, s, l] = hsl;
+
+        // Find matching band
+        for (const band of HSL_BANDS) {
+          if (h >= band.hueMin && h <= band.hueMax) {
+            const adj = edits.hslAdjustments[band.key];
+            if (adj) {
+              h = h + (adj.hue || 0);
+              s = Math.max(0, Math.min(100, s + (adj.sat || 0)));
+              l = Math.max(0, Math.min(100, l + (adj.lum || 0)));
+            }
+            break;
+          }
+        }
+
+        const [nr, ng, nb] = hslToRgb(h, s, l);
+        r = nr;
+        g = ng;
+        b = nb;
+      }
+
       data[i] = r;
       data[i + 1] = g;
       data[i + 2] = b;
     }
 
+    // Write basic/global edits back before detail processing
     ctx.putImageData(imageData, 0, 0);
+
+    // Apply Local Masks (gradient prototype) after global color edits, before sharpening
+    if (Array.isArray(edits?.localMasks) || Array.isArray(localMasks)) {
+      const masks = Array.isArray(edits?.localMasks) ? edits.localMasks : (Array.isArray(localMasks) ? localMasks : []);
+      if (masks.length > 0) {
+        try {
+          const { maskProcessor } = await import('../utils/maskProcessor');
+          const baseImg = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+          for (const m of masks) {
+            if (!m?.enabled) continue;
+            let mask;
+            if (m.type === 'gradient') {
+              mask = maskProcessor.generateLinearGradientMask({
+                width: canvas.width,
+                height: canvas.height,
+                start: m.start,
+                end: m.end,
+                feather: m.feather ?? 0.2,
+                invert: !!m.invert
+              });
+            } else {
+              continue; // future types (radial/brush/etc.)
+            }
+            // Apply local adjustments via processor and draw back
+            const adjusted = maskProcessor.applyMask(baseImg, { ...m, data: mask.data, width: mask.width, height: mask.height }, m.adjustments || {});
+            ctx.putImageData(adjusted, 0, 0);
+          }
+        } catch (e) {
+          // non-fatal
+          console.warn('Local mask application failed:', e);
+        }
+      }
+    }
+
+    // Detail Panel: Luma NR, Chroma NR, Sharpen (unsharp mask) with masking
+    const detail = edits.detailAdjustments || edits.detail || null;
+    if (detail) {
+      const {
+        lumaNR = 0,          // 0..100
+        chromaNR = 0,        // 0..100
+        sharpenAmount = 40,  // 0..150
+        sharpenRadius = 1.0, // 0.5..3.0
+        sharpenDetail = 25,  // 0..100
+        sharpenMasking = 0   // 0..100
+      } = detail || {};
+
+      // Read current processed pixels
+      const base = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const bd = base.data;
+
+      // Compute luma buffer
+      const lumaBuf = new Float32Array(width * height);
+      for (let y = 0, idx = 0; y < height; y++) {
+        for (let x = 0; x < width; x++, idx++) {
+          const o = idx * 4;
+          const r = bd[o], g = bd[o + 1], b = bd[o + 2];
+          lumaBuf[idx] = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        }
+      }
+
+      // Luma NR (separable blur on luma only)
+      if (lumaNR > 0) {
+        const sigma = 0.5 + (lumaNR / 100) * 1.5; // approx radius mapping
+        separableGaussianGray(lumaBuf, width, height, sigma);
+        // Recompose RGB by pushing luma towards denoised luma
+        for (let y = 0, idx = 0; y < height; y++) {
+          for (let x = 0; x < width; x++, idx++) {
+            const o = idx * 4;
+            const r = bd[o], g = bd[o + 1], b = bd[o + 2];
+            const curL = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            const targetL = lumaBuf[idx];
+            const delta = targetL - curL;
+            // distribute delta across channels by their contribution
+            bd[o]     = clamp8(r + delta * 0.2126);
+            bd[o + 1] = clamp8(g + delta * 0.7152);
+            bd[o + 2] = clamp8(b + delta * 0.0722);
+          }
+        }
+      }
+
+      // Chroma NR (light blur on a-b like components using simple difference from luma)
+      if (chromaNR > 0) {
+        // Build chroma buffers Cr, Cb as differences from luma
+        const Cr = new Float32Array(width * height);
+        const Cb = new Float32Array(width * height);
+        for (let y = 0, idx = 0; y < height; y++) {
+          for (let x = 0; x < width; x++, idx++) {
+            const o = idx * 4;
+            const r = bd[o], g = bd[o + 1], b = bd[o + 2];
+            const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            Cr[idx] = r - L;
+            Cb[idx] = b - L;
+          }
+        }
+        const sigmaC = 0.5 + (chromaNR / 100) * 1.2;
+        separableGaussianGray(Cr, width, height, sigmaC);
+        separableGaussianGray(Cb, width, height, sigmaC);
+        // Recompose RGB with smoothed chroma
+        for (let y = 0, idx = 0; y < height; y++) {
+          for (let x = 0; x < width; x++, idx++) {
+            const o = idx * 4;
+            const g = bd[o + 1];
+            const L = 0.2126 * bd[o] + 0.7152 * g + 0.0722 * bd[o + 2];
+            const rNew = L + Cr[idx];
+            const bNew = L + Cb[idx];
+            bd[o]     = clamp8(rNew);
+            bd[o + 2] = clamp8(bNew);
+          }
+        }
+      }
+
+      // Unsharp mask sharpen
+      if (sharpenAmount > 0) {
+        // Copy current to scratch
+        scratch.set(bd);
+        // Blur into scratch2
+        const sigmaS = Math.max(0.25, sharpenRadius);
+        separableGaussianRGBA(scratch, scratch2, width, height, sigmaS);
+
+        // Edge mask from difference magnitude (for masking and "detail")
+        // Compute mask strength based on sharpenMasking and sharpenDetail
+        const maskThresh = (sharpenMasking / 100) * 40; // threshold in [0..40] approx
+        const detailScale = 0.5 + (sharpenDetail / 100) * 1.5; // 0.5..2.0
+
+        for (let i = 0; i < bd.length; i += 4) {
+          const r = bd[i], g = bd[i + 1], b = bd[i + 2];
+          const rb = scratch2[i], gb = scratch2[i + 1], bb = scratch2[i + 2];
+          const dr = r - rb, dg = g - gb, db = b - bb;
+
+          const mag = Math.sqrt(dr * dr + dg * dg + db * db) / Math.sqrt(3);
+          const mask = mag <= maskThresh ? 0 : Math.min(1, (mag - maskThresh) / 128);
+
+          const k = (sharpenAmount / 100) * detailScale * mask;
+          bd[i]     = clamp8(r + dr * k);
+          bd[i + 1] = clamp8(g + dg * k);
+          bd[i + 2] = clamp8(b + db * k);
+        }
+      }
+
+      ctx.putImageData(base, 0, 0);
+    }
   };
+
+  // Utility: clamp to 0..255
+  function clamp8(v) {
+    return v < 0 ? 0 : v > 255 ? 255 : v | 0;
+  }
+
+  // Gaussian kernel helper
+  function gaussianKernel(sigma) {
+    const radius = Math.max(1, Math.ceil(sigma * 2.5));
+    const size = radius * 2 + 1;
+    const kernel = new Float32Array(size);
+    const s2 = sigma * sigma;
+    let sum = 0;
+    for (let i = -radius, j = 0; i <= radius; i++, j++) {
+      const v = Math.exp(-(i * i) / (2 * s2));
+      kernel[j] = v;
+      sum += v;
+    }
+    for (let j = 0; j < size; j++) kernel[j] /= sum;
+    return { kernel, radius };
+  }
+
+  // Separable Gaussian for gray buffer (Float32Array)
+  function separableGaussianGray(buf, w, h, sigma) {
+    const { kernel, radius } = gaussianKernel(sigma);
+    const tmp = new Float32Array(buf.length);
+
+    // horizontal
+    for (let y = 0; y < h; y++) {
+      const row = y * w;
+      for (let x = 0; x < w; x++) {
+        let acc = 0;
+        for (let k = -radius; k <= radius; k++) {
+          const xx = Math.min(w - 1, Math.max(0, x + k));
+          acc += buf[row + xx] * kernel[k + radius];
+        }
+        tmp[row + x] = acc;
+      }
+    }
+
+    // vertical
+    for (let x = 0; x < w; x++) {
+      for (let y = 0; y < h; y++) {
+        let acc = 0;
+        for (let k = -radius; k <= radius; k++) {
+          const yy = Math.min(h - 1, Math.max(0, y + k));
+          acc += tmp[yy * w + x] * kernel[k + radius];
+        }
+        buf[y * w + x] = acc;
+      }
+    }
+  }
+
+  // Separable Gaussian for RGBA Uint8ClampedArray
+  function separableGaussianRGBA(src, dst, w, h, sigma) {
+    const { kernel, radius } = gaussianKernel(sigma);
+    // horizontal
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const o = (y * w + x) * 4;
+        let ar = 0, ag = 0, ab = 0, aa = 0;
+        for (let k = -radius; k <= radius; k++) {
+          const xx = Math.min(w - 1, Math.max(0, x + k));
+          const oi = (y * w + xx) * 4;
+          const wgt = kernel[k + radius];
+          ar += src[oi] * wgt;
+          ag += src[oi + 1] * wgt;
+          ab += src[oi + 2] * wgt;
+          aa += src[oi + 3] * wgt;
+        }
+        dst[o] = ar; dst[o + 1] = ag; dst[o + 2] = ab; dst[o + 3] = aa;
+      }
+    }
+    // vertical
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const o = (y * w + x) * 4;
+        let ar = 0, ag = 0, ab = 0, aa = 0;
+        for (let k = -radius; k <= radius; k++) {
+          const yy = Math.min(h - 1, Math.max(0, y + k));
+          const oi = (yy * w + x) * 4;
+          const wgt = kernel[k + radius];
+          ar += dst[oi] * wgt;
+          ag += dst[oi + 1] * wgt;
+          ab += dst[oi + 2] * wgt;
+          aa += dst[oi + 3] * wgt;
+        }
+        // write back into src-like buffer (bd) target after full blur
+        dst[o] = ar; dst[o + 1] = ag; dst[o + 2] = ab; dst[o + 3] = aa;
+      }
+    }
+  }
+
+  // Helper: RGB to HSL
+  function rgbToHsl(r, g, b) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+      h = s = 0;
+    } else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+    return [h * 360, s * 100, l * 100];
+  }
+
+  // Helper: HSL to RGB
+  function hslToRgb(h, s, l) {
+    h /= 360;
+    s /= 100;
+    l /= 100;
+    let r, g, b;
+
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+  }
 
   // Extract mono channel canvases/blobs for R/G/B
   const extractChannels = async (source = 'processed') => {
@@ -418,15 +775,16 @@ const EnhancedImageCanvas = ({
         const imgW = Math.round(selW / scale);
         const imgH = Math.round(selH / scale);
 
-        // Sample from originalCanvas (pre-adjusted)
-        const octx = originalCanvas.getContext('2d');
-        const clampW = Math.min(imgW, originalCanvas.width - imgX);
-        const clampH = Math.min(imgH, originalCanvas.height - imgY);
+        // Choose sampling source based on wbSamplingSpace
+        const sampleCanvas = (wbSamplingSpace === 'processed' ? processedCanvas : originalCanvas) || originalCanvas;
+        const sctx = sampleCanvas.getContext('2d');
+        const clampW = Math.min(imgW, sampleCanvas.width - imgX);
+        const clampH = Math.min(imgH, sampleCanvas.height - imgY);
         if (clampW <= 0 || clampH <= 0) {
           setWbDrag(null);
           return;
         }
-        const region = octx.getImageData(imgX, imgY, clampW, clampH);
+        const region = sctx.getImageData(imgX, imgY, clampW, clampH);
         const d = region.data;
         let sumR = 0, sumG = 0, sumB = 0, count = 0;
         for (let i = 0; i < d.length; i += 4) {
@@ -540,3 +898,8 @@ const EnhancedImageCanvas = ({
 };
 
 export default EnhancedImageCanvas;
+
+// Local helpers (scoped) for detail and math
+function clamp8(v) {
+  return v < 0 ? 0 : v > 255 ? 255 : v | 0;
+}
