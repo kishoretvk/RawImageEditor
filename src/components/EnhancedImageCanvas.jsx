@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { processImageWithEdits } from '../utils/rawProcessor';
 
 const EnhancedImageCanvas = ({ 
@@ -28,8 +28,15 @@ const EnhancedImageCanvas = ({
   // WB region selection state (canvas coordinate space during drag)
   const [wbDrag, setWbDrag] = useState(null); // { startX, startY, curX, curY }
 
+  // rAF gate to avoid multiple reprocesses per frame
+  const rafGateRef = useRef(0);
   useEffect(() => {
-    loadAndProcessImage();
+    if (rafGateRef.current) return;
+    rafGateRef.current = requestAnimationFrame(() => {
+      rafGateRef.current = 0;
+      loadAndProcessImage();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageSrc, edits, wbGains]);
 
   const loadAndProcessImage = async () => {
@@ -100,6 +107,7 @@ const EnhancedImageCanvas = ({
   };
 
   const applyImageEdits = async (canvas, edits, curveLUTs) => {
+    console.time && console.time('[applyImageEdits total]');
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
@@ -126,6 +134,21 @@ const EnhancedImageCanvas = ({
       { key: 'purple', hueMin: 255, hueMax: 285 },
       { key: 'magenta', hueMin: 285, hueMax: 360 },
     ];
+
+    // Short-circuit feature checks to skip heavy work when inactive
+    const st = edits.splitToning || null;
+    const hasSplitToning = !!st && ((st.highlightsSat || 0) !== 0 || (st.shadowsSat || 0) !== 0);
+
+    const hsl = edits.hslAdjustments || null;
+    let hasHsl = false;
+    if (hsl) {
+      for (const band of HSL_BANDS) {
+        const adj = hsl[band.key];
+        if (adj && ((adj.hue || 0) !== 0 || (adj.sat || 0) !== 0 || (adj.lum || 0) !== 0)) {
+          hasHsl = true; break;
+        }
+      }
+    }
 
     // Apply basic edits
     for (let i = 0; i < data.length; i += 4) {
@@ -215,9 +238,9 @@ const EnhancedImageCanvas = ({
         b = lutB[idxB];
       }
 
-      // Split Toning (apply after curves)
-      if (edits.splitToning) {
-        const { highlightsHue = 40, highlightsSat = 15, shadowsHue = 220, shadowsSat = 15, balance = 0 } = edits.splitToning || {};
+      // Split Toning (apply after curves) — only if active
+      if (hasSplitToning) {
+        const { highlightsHue = 40, highlightsSat = 15, shadowsHue = 220, shadowsSat = 15, balance = 0 } = st || {};
         // compute luminance in [0..1]
         const luma = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
         // balance in [-1..1]
@@ -241,19 +264,18 @@ const EnhancedImageCanvas = ({
         b = Math.max(0, Math.min(255, Math.round(b * (1 - (wS + wH)) + tintShadows[2] * wS + tintHighlights[2] * wH)));
       }
 
-      // HSL adjustments per color band (after split toning to preserve tint intent)
-      if (edits.hslAdjustments) {
-        const hsl = rgbToHsl(r, g, b);
-        let [h, s, l] = hsl;
+      // HSL adjustments per color band — only if active
+      if (hasHsl) {
+        const hslv = rgbToHsl(r, g, b);
+        let [h, s, l] = hslv;
 
-        // Find matching band
         for (const band of HSL_BANDS) {
           if (h >= band.hueMin && h <= band.hueMax) {
-            const adj = edits.hslAdjustments[band.key];
+            const adj = hsl[band.key];
             if (adj) {
-              h = h + (adj.hue || 0);
-              s = Math.max(0, Math.min(100, s + (adj.sat || 0)));
-              l = Math.max(0, Math.min(100, l + (adj.lum || 0)));
+              if ((adj.hue || 0) !== 0) h = h + adj.hue;
+              if ((adj.sat || 0) !== 0) s = Math.max(0, Math.min(100, s + adj.sat));
+              if ((adj.lum || 0) !== 0) l = Math.max(0, Math.min(100, l + adj.lum));
             }
             break;
           }
@@ -272,6 +294,7 @@ const EnhancedImageCanvas = ({
 
     // Write basic/global edits back before detail processing
     ctx.putImageData(imageData, 0, 0);
+    console.timeEnd && console.timeEnd('[applyImageEdits total]');
 
     // Apply Local Masks (gradient prototype) after global color edits, before sharpening
     if (Array.isArray(edits?.localMasks) || Array.isArray(localMasks)) {
