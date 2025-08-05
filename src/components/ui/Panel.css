@@ -1,0 +1,44 @@
+@import "../../styles/tokens.css";
+
+.ui-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.ui-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  background: linear-gradient(180deg, var(--color-elev-2), var(--color-surface));
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ui-panel__title {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: var(--leading-tight);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.ui-panel__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.ui-panel__body {
+  padding: var(--space-lg);
+  max-height: 100%;
+  overflow: auto;
+}
+
+/* Compact modifier */
+.ui-panel.is-compact .ui-panel__body {
+  padding: var(--space-md);
+}

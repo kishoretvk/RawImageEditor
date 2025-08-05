@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import WorkflowCanvasRF from '../components/workflow/WorkflowCanvasRF.jsx';
 import './WorkflowPage.css';
+import Button from '../components/ui/Button.jsx';
+import '../styles/tokens.css';
 import { runWorkflow } from '../utils/workflow/runner';
 import { saveGraph, loadGraph } from '../utils/db/indexedDb';
 
@@ -130,10 +132,16 @@ export default function WorkflowPage() {
     <div className="workflow-page">
       <div className="workflow-header">
         <h1>Visual Workflow</h1>
-        <div className="workflow-actions">
-          <button className="btn" onClick={handleRun} disabled={isRunning}>{isRunning ? 'Running…' : 'Run'}</button>
-          <button className="btn secondary" onClick={handleSave} disabled={isRunning}>Save</button>
-          <button className="btn secondary" onClick={handleLoad} disabled={isRunning}>Load</button>
+        <div className="workflow-actions" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <Button onClick={handleRun} disabled={isRunning} variant="primary" size="md">
+            {isRunning ? 'Running…' : 'Run'}
+          </Button>
+          <Button onClick={handleSave} disabled={isRunning} variant="secondary" size="md">
+            Save
+          </Button>
+          <Button onClick={handleLoad} disabled={isRunning} variant="secondary" size="md">
+            Load
+          </Button>
         </div>
       </div>
       <div className="workflow-body">
@@ -145,12 +153,22 @@ export default function WorkflowPage() {
           />
         </div>
         <div className="workflow-inspector">
-          <h3>Inspector</h3>
-          <p>Select a node to edit its settings.</p>
-          <div className="workflow-log">
-            <h4>Run Log</h4>
-            <div className="log-lines">
-              {runLog.map((l, i) => (<div key={i}>{l}</div>))}
+          {/* Replace ad-hoc inspector box with reusable Panel */}
+          {/* Actions area can host quick controls (e.g., Clear Log) */}
+          {/* Panel provides consistent header, body, padding, and scroll */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="u-surface" style={{ padding: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px' }}>Inspector</h3>
+              <p style={{ marginTop: '8px', color: 'var(--color-text-dim)' }}>
+                Select a node to edit its settings.
+              </p>
+            </div>
+
+            <div className="u-surface" style={{ padding: '12px' }}>
+              <h4 style={{ margin: 0, fontSize: '16px' }}>Run Log</h4>
+              <div className="log-lines" style={{ marginTop: '8px', display: 'grid', gap: '6px', maxHeight: 240, overflow: 'auto' }}>
+                {runLog.map((l, i) => (<div key={i} style={{ color: 'var(--color-text-dim)' }}>{l}</div>))}
+              </div>
             </div>
           </div>
           {/* TODO: bind real selected-node inspector */}
