@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -48,14 +48,25 @@ export default function WorkflowCanvasRF({
   initialEdges = [],
   onGraphChange,
 }) {
-  const [nodes, setNodes] = React.useState(initialNodes);
-  const [edges, setEdges] = React.useState(initialEdges);
+  // Hold local state
+  const [nodes, setNodes] = useState(initialNodes);
+  const [edges, setEdges] = useState(initialEdges);
   const idRef = useRef(1000);
+
+  // Notify parent AFTER first paint to avoid setState-in-render warning
+  useEffect(() => {
+    // Defer to next microtask to ensure child render completes
+    queueMicrotask?.(() => {
+      onGraphChange && onGraphChange({ nodes, edges });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // only once on mount
 
   const onNodesChange = useCallback((changes) => {
     setNodes((nds) => {
       const next = applyNodeChanges(changes, nds);
-      onGraphChange && onGraphChange({ nodes: next, edges });
+      // Defer parent notification to avoid setState during child render
+      queueMicrotask?.(() => onGraphChange && onGraphChange({ nodes: next, edges }));
       return next;
     });
   }, [edges, onGraphChange]);
@@ -63,7 +74,8 @@ export default function WorkflowCanvasRF({
   const onEdgesChange = useCallback((changes) => {
     setEdges((eds) => {
       const next = applyEdgeChanges(changes, eds);
-      onGraphChange && onGraphChange({ nodes, edges: next });
+      // Defer parent notification to avoid setState during child render
+      queueMicrotask?.(() => onGraphChange && onGraphChange({ nodes, edges: next }));
       return next;
     });
   }, [nodes, onGraphChange]);
@@ -71,7 +83,8 @@ export default function WorkflowCanvasRF({
   const onConnect = useCallback((params) => {
     setEdges((eds) => {
       const next = addEdge({ ...params, animated: true, style: { stroke: '#667eea' } }, eds);
-      onGraphChange && onGraphChange({ nodes, edges: next });
+      // Defer parent notification to avoid setState during child render
+      queueMicrotask?.(() => onGraphChange && onGraphChange({ nodes, edges: next }));
       return next;
     });
   }, [nodes, onGraphChange]);
