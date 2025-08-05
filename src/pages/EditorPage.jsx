@@ -440,6 +440,7 @@ const EditorPage = () => {
       <div className={`editor-header auto-hide-header`}>
         <div className="header-left" style={{ gap: '0.5rem' }}>
           {/* Collapsible menu button replacing the Back link */}
+          {/* Top-left actions menu anchored to the header; dropdown overlays the image and stays within viewport */}
           <details style={{ position: 'relative' }}>
             <summary
               className="header-button"
@@ -457,90 +458,109 @@ const EditorPage = () => {
             >
               ☰
             </summary>
+
+            {/* Full overlay to trap clicks and ensure the panel sits over the preview */}
             <div
               style={{
-                position: 'absolute',
-                top: 'calc(100% + 10px)',
-                left: 0,
-                background: 'rgba(31,31,31,0.98)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 14,
-                minWidth: 280,
-                zIndex: 1000,
-                padding: 10,
-                boxShadow: '0 18px 48px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
-                backdropFilter: 'blur(8px)'
+                position: 'fixed',
+                inset: 0,
+                zIndex: 2000
               }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                // click-away close
+                const el = e.currentTarget.previousElementSibling; // summary
+                // Do nothing; clicking overlay will close via details default if we toggle open attr
+              }}
             >
-              {/* Caret */}
-              <div style={{
-                position: 'absolute',
-                top: -8,
-                left: 16,
-                width: 16,
-                height: 16,
-                background: 'rgba(31,31,31,0.98)',
-                borderLeft: '1px solid rgba(255,255,255,0.08)',
-                borderTop: '1px solid rgba(255,255,255,0.08)',
-                transform: 'rotate(45deg)'
-              }} />
-              {/* Grid menu */}
-              <nav
+              {/* Dropdown panel positioned relative to the summary button */}
+              <div
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                  gap: 10,
-                  alignItems: 'stretch'
+                  position: 'absolute',
+                  // compute a safe position near the header-left area (top-left corner + offset)
+                  top: '64px',
+                  left: '16px',
+                  background: 'rgba(31,31,31,0.98)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 14,
+                  minWidth: 320,
+                  maxWidth: 'calc(100vw - 32px)',
+                  zIndex: 2100,
+                  padding: 12,
+                  boxShadow: '0 18px 48px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
+                  backdropFilter: 'blur(8px)'
                 }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <Link
-                  to="/"
-                  className="header-button"
+                {/* Caret */}
+                <div style={{
+                  position: 'absolute',
+                  top: -8,
+                  left: 28,
+                  width: 16,
+                  height: 16,
+                  background: 'rgba(31,31,31,0.98)',
+                  borderLeft: '1px solid rgba(255,255,255,0.08)',
+                  borderTop: '1px solid rgba(255,255,255,0.08)',
+                  transform: 'rotate(45deg)'
+                }} />
+
+                {/* Grid menu */}
+                <nav
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: 44,
-                    borderRadius: 12,
-                    textAlign: 'center',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                    gap: 12,
+                    alignItems: 'stretch'
                   }}
                 >
-                  ← Back to Home
-                </Link>
-                <button
-                  className="header-button"
-                  style={{ height: 44, borderRadius: 12 }}
-                  onClick={onUndo}
-                >
-                  Undo
-                </button>
-                <button
-                  className="header-button"
-                  style={{ height: 44, borderRadius: 12 }}
-                  onClick={onRedo}
-                >
-                  Redo
-                </button>
-                <button
-                  className="header-button"
-                  style={{ height: 44, borderRadius: 12 }}
-                  onClick={handleReset}
-                >
-                  Reset
-                </button>
-                <button
-                  className="header-button primary"
-                  style={{ height: 44, borderRadius: 12, gridColumn: '1 / -1' }}
-                  onClick={handleExport}
-                  disabled={!uploadedImage || isExporting}
-                >
-                  {isExporting ? 'Exporting...' : 'Export'}
-                </button>
-              </nav>
+                  <Link
+                    to="/"
+                    className="header-button"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: 44,
+                      borderRadius: 12,
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                  >
+                    ← Back to Home
+                  </Link>
+                  <button
+                    className="header-button"
+                    style={{ height: 44, borderRadius: 12 }}
+                    onClick={onUndo}
+                  >
+                    Undo
+                  </button>
+                  <button
+                    className="header-button"
+                    style={{ height: 44, borderRadius: 12 }}
+                    onClick={onRedo}
+                  >
+                    Redo
+                  </button>
+                  <button
+                    className="header-button"
+                    style={{ height: 44, borderRadius: 12 }}
+                    onClick={handleReset}
+                  >
+                    Reset
+                  </button>
+                  <button
+                    className="header-button primary"
+                    style={{ height: 44, borderRadius: 12, gridColumn: '1 / -1' }}
+                    onClick={handleExport}
+                    disabled={!uploadedImage || isExporting}
+                  >
+                    {isExporting ? 'Exporting...' : 'Export'}
+                  </button>
+                </nav>
+              </div>
             </div>
           </details>
 
