@@ -21,6 +21,7 @@ import { buildLUTsFromCurves } from '../utils/curveUtils';
 import FileUploader from '../components/FileUploader';
 import EditorUploadPlaceholder from '../components/EditorUploadPlaceholder';
 import EnhancedImageCanvas from '../components/EnhancedImageCanvas';
+import ExportDialog from '../components/ExportDialog';
 import PresetSelector from '../components/PresetSelector';
 import PresetBuilder from '../components/PresetBuilder';
 import PresetManager from '../components/PresetManager';
