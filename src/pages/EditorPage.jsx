@@ -46,6 +46,15 @@ const EditorPage = () => {
     sharpening: 0,
     noiseReduction: 0,
   });
+
+  // White balance state (WB Region Select - Step A)
+  const [whiteBalance, setWhiteBalance] = useState({
+    multipliers: { r: 1, g: 1, b: 1 },
+    temperature: 0,
+    tint: 0,
+    samplingSpace: 'original', // 'original' | 'processed'
+    selecting: false
+  });
   const [uploadedImage, setUploadedImage] = useState(null);
   const [jpegPreview, setJpegPreview] = useState(null);
   const objectUrlRef = useRef(null);
@@ -123,7 +132,7 @@ const EditorPage = () => {
 
   useEffect(() => {
     // edits are passed down; no direct URL swaps here
-  }, [adjustments, colorAdjustments, sharpness, effects, geometry, advanced, ai]);
+  }, [adjustments, colorAdjustments, sharpness, effects, geometry, advanced, ai, whiteBalance]);
 
   const handleFileUpload = async (incoming) => {
     try {
@@ -365,6 +374,26 @@ const EditorPage = () => {
                   onSliderChange={setSliderPosition}
                   curveLUTs={lutR && lutG && lutB ? { lutR, lutG, lutB } : null}
                   ai={ai}
+                  // WB Region Select wiring
+                  wbGains={{
+                    rGain: whiteBalance.multipliers.r,
+                    gGain: whiteBalance.multipliers.g,
+                    bGain: whiteBalance.multipliers.b
+                  }}
+                  wbSelectEnabled={whiteBalance.selecting}
+                  wbSamplingSpace={whiteBalance.samplingSpace}
+                  onWbRegionSelected={(rect, { avgR, avgG, avgB }, { rGain, gGain, bGain }) => {
+                    // derive simple temperature/tint heuristics from averages
+                    const temperature = (avgR - avgB) || 0;
+                    const tint = (avgG - (avgR + avgB) / 2) / 2 || 0;
+                    setWhiteBalance(prev => ({
+                      ...prev,
+                      multipliers: { r: rGain, g: gGain, b: bGain },
+                      temperature,
+                      tint,
+                      selecting: false
+                    }));
+                  }}
                 />
                 {isLoading && (
                   <div className="canvas-loading-overlay">
@@ -428,6 +457,16 @@ const EditorPage = () => {
                   <ColorAdjustmentsPanel
                     colorAdjustments={colorAdjustments}
                     onChange={(next) => setColorAdjustments((prev) => ({ ...prev, ...(next || {}) }))}
+                  />
+                </CollapsibleControlPanel>
+
+                {/* White Balance Tool (WB Region Select) */}
+                <CollapsibleControlPanel title="White Balance" defaultOpen={false}>
+                  <WhiteBalanceTool
+                    whiteBalance={whiteBalance}
+                    onStartWBSelect={() => setWhiteBalance(prev => ({ ...prev, selecting: true }))}
+                    onChangeSamplingSpace={(val) => setWhiteBalance(prev => ({ ...prev, samplingSpace: val }))}
+                    onResetWB={() => setWhiteBalance({ multipliers: { r: 1, g: 1, b: 1 }, temperature: 0, tint: 0, samplingSpace: 'original', selecting: false })}
                   />
                 </CollapsibleControlPanel>
 
