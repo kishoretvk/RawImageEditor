@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BeforeAfterSlider from './BeforeAfterSlider';
+import Button from '../components/ui/Button.jsx';
 import '../styles/EnhancedLandingPage.css';
+import '../styles/tokens.css';
 
 const EnhancedLandingPage = () => {
   const navigate = useNavigate();
@@ -23,10 +25,11 @@ const EnhancedLandingPage = () => {
   ];
 
   useEffect(() => {
-    // Preload only the images we actually use on the landing
+    // Preload only the images we actually use on the landing (base-aware)
+    const base = (import.meta?.env?.BASE_URL || '/');
     const images = [
-      '/RawImageEditor/demo-images/color-before.jpg',
-      '/RawImageEditor/demo-images/color-after.jpg'
+      `${base}demo-images/color-before.jpg`,
+      `${base}demo-images/color-after.jpg`
     ];
     images.forEach(src => {
       const img = new Image();
@@ -70,26 +73,35 @@ const EnhancedLandingPage = () => {
             Keep your workflow fast—no uploads, no installs.
           </p>
 
-          <div className="hero-actions">
-            <button className="btn-primary" onClick={handleOpenEditor} disabled={isLoading}>
+          <div className="hero-actions" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <Button variant="primary" size="lg" onClick={handleOpenEditor} disabled={isLoading}>
               {isLoading ? 'Loading…' : 'Open Editor'}
-            </button>
-            <button className="btn-secondary" onClick={handleOpenDemo} disabled={isLoading}>
+            </Button>
+            <Button variant="secondary" size="lg" onClick={handleOpenDemo} disabled={isLoading}>
               {isLoading ? 'Loading…' : 'Open Demo'}
-            </button>
+            </Button>
           </div>
 
           {/* Quick scenarios to jump into Demo with presets */}
-          <div className="quick-scenarios" style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn-chip" onClick={() => navigate('/demo?tool=portrait')}>Portrait Enhance</button>
-            <button className="btn-chip" onClick={() => navigate('/demo?tool=landscape')}>Landscape Enhance</button>
-            <button className="btn-chip" onClick={() => navigate('/demo?tool=hsl')}>HSL Pop</button>
-            <button className="btn-chip" onClick={() => navigate('/demo?tool=splittoning')}>Split Toning Mood</button>
-            <button className="btn-chip" onClick={() => navigate('/demo?tool=detail')}>Detail Cleanup</button>
-            <button className="btn-chip" onClick={() => navigate('/demo?tool=bgblur')}>Background Blur</button>
-            <button className="btn-chip" onClick={() => navigate('/demo?tool=bgremove')}>Background Remove (PNG)</button>
-            <button className="btn-chip" onClick={() => navigate('/demo?tool=target2mb')}>Export 2 MB</button>
-            <button className="btn-chip" onClick={() => navigate('/demo?tool=rgbsplit')}>RGB Split</button>
+          <div
+            className="quick-scenarios"
+            style={{
+              marginTop: 12,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, max-content))',
+              gap: '8px 10px',
+              alignItems: 'start'
+            }}
+          >
+            <Button variant="ghost" size="sm" onClick={() => navigate('/demo?tool=portrait')}>Portrait Enhance</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/demo?tool=landscape')}>Landscape Enhance</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/demo?tool=hsl')}>HSL Pop</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/demo?tool=splittoning')}>Split Toning Mood</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/demo?tool=detail')}>Detail Cleanup</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/demo?tool=bgblur')}>Background Blur</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/demo?tool=bgremove')}>Background Remove (PNG)</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/demo?tool=target2mb')}>Export 2 MB</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/demo?tool=rgbsplit')}>RGB Split</Button>
           </div>
 
           <div className="hero-stats" aria-label="Key stats">
@@ -103,8 +115,8 @@ const EnhancedLandingPage = () => {
         {/* Lightweight teaser: small before/after slider with optimized demo images */}
         <div className="demo-teaser">
           <BeforeAfterSlider
-            beforeSrc="/RawImageEditor/demo-images/color-before.jpg"
-            afterSrc="/RawImageEditor/demo-images/color-after.jpg"
+            beforeSrc={`${import.meta.env.BASE_URL}demo-images/color-before.jpg`}
+            afterSrc={`${import.meta.env.BASE_URL}demo-images/color-after.jpg`}
             alt="Before/After teaser"
           />
           <div className="demo-caption">Quick teaser — see more on the Demo page</div>
@@ -154,13 +166,13 @@ const EnhancedLandingPage = () => {
       <div className="cta-section">
         <h2>Ready to Transform Your RAW Files?</h2>
         <p>Try the live demo or jump straight into the full editor.</p>
-        <div className="cta-actions">
-          <button className="btn-cta" onClick={handleOpenEditor} disabled={isLoading}>
+        <div className="cta-actions" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <Button variant="primary" size="md" onClick={handleOpenEditor} disabled={isLoading}>
             {isLoading ? 'Loading…' : 'Open Editor'}
-          </button>
-          <button className="btn-outline" onClick={handleCreateWorkflow}>
+          </Button>
+          <Button variant="secondary" size="md" onClick={handleCreateWorkflow}>
             Create Workflow
-          </button>
+          </Button>
         </div>
       </div>
 
