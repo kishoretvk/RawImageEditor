@@ -21,6 +21,7 @@ import PresetBuilder from '../components/PresetBuilder';
 import PresetManager from '../components/PresetManager';
 import UnifiedSlider from '../components/UnifiedSlider';
 import WhiteBalanceTool from '../components/WhiteBalanceTool';
+import BottomSheet from '../components/BottomSheet';
 import '../styles/unified-slider.css';
 
 // Enhanced collapsible panel wrapper
@@ -131,6 +132,9 @@ const EditorPage = () => {
   const [isResizing, setIsResizing] = useState(false);
   const [showBeforeAfter, setShowBeforeAfter] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  // Mobile bottom-sheet state
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+  const [showMoreTools, setShowMoreTools] = useState(false);
 
   // Channel split UI state
   const [channelSource, setChannelSource] = useState('processed'); // 'processed' | 'original'
@@ -405,8 +409,17 @@ const EditorPage = () => {
       </div>
 
       <div className="editor-content">
+        {/* Mobile toolbar */}
+        <div className="mobile-toolbar" style={{ display: 'none' }}>
+          <button
+            className="header-button"
+            onClick={() => setIsMobileSheetOpen(true)}
+          >
+            Adjustments
+          </button>
+        </div>
         <div className="editor-main">
-          <div className="canvas-container">
+          <div className="canvas-container" style={{ minHeight: '65vh' }}>
             {!uploadedImage ? (
               <div className="upload-placeholder">
                 <FileUploader onFileUpload={handleFileUpload} />
@@ -726,8 +739,9 @@ const EditorPage = () => {
               <div className="sidebar-header">
                 <h3>Adjustments</h3>
               </div>
-              
-              <div className="adjustment-panels">
+
+              {/* Desktop/Tablet adjustments sidebar (hidden on narrow screens via CSS) */}
+              <div className="adjustment-panels desktop-only">
                 <CollapsibleControlPanel title="Basic Adjustments" defaultOpen={true}>
                   {/* Use the 'edits' prop name expected by the panel and defensively merge updates */}
                   <BasicAdjustmentsPanel
@@ -812,6 +826,120 @@ const EditorPage = () => {
                 </CollapsibleControlPanel>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Mobile bottom sheet for adjustments */}
+        {uploadedImage && (
+          <div className="mobile-only">
+            <BottomSheet
+              open={isMobileSheetOpen}
+              onClose={() => setIsMobileSheetOpen(false)}
+              initialHeight={Math.round((typeof window !== 'undefined' ? window.innerHeight : 800) * 0.5)}
+              minHeight={200}
+            >
+              <div className="sheet-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px' }}>
+                <strong>Adjustments</strong>
+                <button className="header-button" onClick={() => setIsMobileSheetOpen(false)}>Close</button>
+              </div>
+
+              <div className="adjustment-panels">
+                <CollapsibleControlPanel title="Basic Adjustments" defaultOpen={true}>
+                  <BasicAdjustmentsPanel
+                    edits={adjustments}
+                    onChange={(next) =>
+                      setAdjustments((prev) => ({ ...prev, ...(next || {}) }))
+                    }
+                  />
+                </CollapsibleControlPanel>
+
+                {/* "More tools" toggle */}
+                <div style={{ padding: '4px 8px' }}>
+                  <button
+                    className="header-button"
+                    onClick={() => setShowMoreTools((v) => !v)}
+                    aria-expanded={showMoreTools}
+                    aria-controls="more-tools-section"
+                  >
+                    {showMoreTools ? 'Hide More Tools' : 'Show More Tools'}
+                  </button>
+                </div>
+
+                {showMoreTools && (
+                  <div id="more-tools-section">
+                    <CollapsibleControlPanel title="Color Adjustments" defaultOpen={false}>
+                      <ColorAdjustmentsPanel
+                        colorAdjustments={colorAdjustments}
+                        onChange={(next) =>
+                          setColorAdjustments((prev) => ({ ...prev, ...(next || {}) }))
+                        }
+                      />
+                    </CollapsibleControlPanel>
+
+                    <CollapsibleControlPanel title="Sharpness & Detail" defaultOpen={false}>
+                      <SharpnessPanel sharpness={sharpness} onChange={setSharpness} />
+                    </CollapsibleControlPanel>
+
+                    <CollapsibleControlPanel title="Effects & Filters" defaultOpen={false}>
+                      <EffectsPanel effects={effects} onChange={setEffects} />
+                    </CollapsibleControlPanel>
+
+                    <CollapsibleControlPanel title="Geometry" defaultOpen={false}>
+                      <GeometryPanel geometry={geometry} onChange={setGeometry} />
+                    </CollapsibleControlPanel>
+
+                    <CollapsibleControlPanel title="Advanced" defaultOpen={false}>
+                      <AdvancedPanel advanced={advanced} onChange={setAdvanced} />
+                    </CollapsibleControlPanel>
+
+                    <CollapsibleControlPanel title="White Balance" defaultOpen={false}>
+                      <WhiteBalanceTool
+                        enableWbSelect={setWbSelectEnabled}
+                        lastWbInfo={lastWbInfo}
+                        onChange={(payload) => {
+                          if (Object.prototype.hasOwnProperty.call(payload, 'wbGains')) {
+                            setWbGains(payload.wbGains);
+                            if (!payload.wbGains) setLastWbInfo(null);
+                          }
+                          if (Object.prototype.hasOwnProperty.call(payload, 'temp') || Object.prototype.hasOwnProperty.call(payload, 'tint')) {
+                            const temperature = typeof payload.temp === 'number' ? payload.temp : colorAdjustments.temperature;
+                            const tint = typeof payload.tint === 'number' ? payload.tint : colorAdjustments.tint;
+                            setColorAdjustments(prev => ({ ...prev, temperature, tint }));
+                          }
+                        }}
+                      />
+                    </CollapsibleControlPanel>
+
+                    <CollapsibleControlPanel title="Tone Curves" defaultOpen={false}>
+                      <CurvesPanel
+                        curves={curves}
+                        onChange={setCurves}
+                      />
+                    </CollapsibleControlPanel>
+
+                    <CollapsibleControlPanel title="Presets" defaultOpen={false}>
+                      <PresetSelector 
+                        onPresetSelect={(preset) => {
+                          const { settings } = preset;
+                          setAdjustments(prev => ({...prev, ...settings}));
+                          setColorAdjustments(prev => ({...prev, ...settings}));
+                          setSharpness(prev => ({...prev, ...settings}));
+                          setEffects(prev => ({...prev, ...settings}));
+                          setGeometry(prev => ({...prev, ...settings}));
+                          setAdvanced(prev => ({...prev, ...settings}));
+                        }}
+                      />
+                      <PresetBuilder 
+                        onSave={(preset) => {
+                          PresetManager.savePreset(preset);
+                        }}
+                        currentEdits={allEdits}
+                      />
+                    </CollapsibleControlPanel>
+                  </div>
+                )}
+              </div>
+            </BottomSheet>
           </div>
         )}
       </div>

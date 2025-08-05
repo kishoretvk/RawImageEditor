@@ -233,6 +233,20 @@
   .editor-content {
     flex-direction: column;
   }
+
+  /* Show mobile toolbar and hide desktop-only panels */
+  .mobile-toolbar {
+    display: flex !important;
+    justify-content: center;
+    padding: 0.5rem;
+    gap: 0.5rem;
+    border-bottom: 1px solid #404040;
+    background: #1f1f1f;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
   
   .editor-sidebar {
     width: 100% !important;
@@ -244,10 +258,117 @@
   .resize-handle {
     display: none;
   }
+
+  .canvas-container {
+    min-height: 65vh; /* ensure image remains visible on phones */
+  }
   
   .canvas-controls {
+    position: fixed;
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    transform: none;
     flex-direction: column;
     gap: 0.5rem;
+    z-index: 40;
+  }
+
+  /* Mobile-only helpers */
+  .mobile-only {
+    display: block !important;
+  }
+}
+
+/* Default hide mobile helpers on larger screens */
+.mobile-toolbar,
+.mobile-only {
+  display: none;
+}
+
+/* BottomSheet styles (reusable) */
+.rieb-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  opacity: 0;
+  transition: opacity 200ms ease;
+  z-index: 60;
+}
+.rieb-backdrop-show { opacity: 1; pointer-events: auto; }
+.rieb-backdrop-hide { opacity: 0; pointer-events: none; }
+
+.rieb-bottom-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  background: #1f1f1f;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+  transform: translateY(100%);
+  transition: transform 220ms ease;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  overscroll-behavior: contain;
+}
+
+.rieb-bottom-sheet.rieb-sheet-open {
+  transform: translateY(0%);
+}
+
+.rieb-bottom-sheet.rieb-sheet-closed {
+  transform: translateY(100%);
+}
+
+.rieb-sheet-handle {
+  width: 100%;
+  padding: 8px 0 4px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: ns-resize;
+}
+
+.rieb-sheet-grip {
+  width: 42px;
+  height: 5px;
+  border-radius: 999px;
+  background: #3a3a3a;
+}
+
+.rieb-sheet-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid #2f2f2f;
+  color: #e5e5e5;
+  font-weight: 600;
+}
+
+.rieb-sheet-content {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 8px 16px 8px;
+}
+
+/* Improve touch targets for sliders/buttons on mobile */
+@media (max-width: 768px) {
+  .header-button,
+  .control-button,
+  .panel-header {
+    min-height: 44px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
   }
 }
 
