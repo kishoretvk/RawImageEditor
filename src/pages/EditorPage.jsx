@@ -343,19 +343,39 @@ const EditorPage = () => {
     return () => {};
   }, [mode]);
 
-  const callAI = (type, payload = {}) => new Promise((resolve) => {
-    const worker = aiWorkerRef.current;
-    if (!worker) return resolve({ ok: false, error: 'worker-not-ready' });
-    const id = type + '-' + Math.random().toString(36).slice(2);
-    const handler = (e) => {
-      const msg = e.data;
-      if (!msg || msg.id !== id) return;
-      worker.removeEventListener('message', handler);
-      resolve(msg);
-    };
-    worker.addEventListener('message', handler);
-    worker.postMessage({ id, type, payload });
-  });
+  // Safe worker call with timeout to avoid dangling async listeners
+  const callAI = (type, payload = {}, { timeoutMs = 10000 } = {}) =>
+    new Promise((resolve) => {
+      const worker = aiWorkerRef.current;
+      if (!worker) return resolve({ ok: false, error: 'worker-not-ready' });
+      const id = type + '-' + Math.random().toString(36).slice(2);
+
+      let settled = false;
+      const handler = (e) => {
+        const msg = e.data;
+        if (!msg || msg.id !== id) return;
+        worker.removeEventListener('message', handler);
+        settled = true;
+        resolve(msg);
+      };
+
+      worker.addEventListener('message', handler);
+
+      // Failsafe timeout to prevent "async response but channel closed" errors
+      const to = setTimeout(() => {
+        if (settled) return;
+        try { worker.removeEventListener('message', handler); } catch {}
+        resolve({ ok: false, id, error: 'timeout', type });
+      }, timeoutMs);
+
+      try {
+        worker.postMessage({ id, type, payload });
+      } catch (err) {
+        clearTimeout(to);
+        try { worker.removeEventListener('message', handler); } catch {}
+        resolve({ ok: false, id, error: 'postMessage-failed', detail: String(err) });
+      }
+    });
 
   // AI Preview/Apply handlers (stub)
   const onPreviewPortrait = async () => {
