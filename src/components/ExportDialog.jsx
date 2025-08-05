@@ -1,19 +1,53 @@
-// ExportDialog.jsx
-// UI for export format, quality, filename
+/**
+ * ExportDialog.jsx
+ * Extended export UI:
+ * - Existing: format, quality, filename
+ * - New: Split Channels (R/G/B) via onRequestSplitChannels(useAdjusted)
+ * - New: Target Size (MB) export (UI only; actual toJPEGTargetSize wiring added after util impl)
+ */
 import React, { useState } from 'react';
 
-export default function ExportDialog({ onExport }) {
+export default function ExportDialog({
+  onExport,
+  // New props (optional, safe to omit)
+  onRequestSplitChannels,   // (useAdjusted:boolean) => void
+  onExportTargetSize,       // (targetMB:number, options:{ tolerance:number, allowDownscale:boolean }) => void
+}) {
   const [format, setFormat] = useState('jpeg');
   const [quality, setQuality] = useState(85);
   const [filename, setFilename] = useState('exported-image');
+
+  // New state for features
+  const [useAdjusted, setUseAdjusted] = useState(true);
+  const [targetMB, setTargetMB] = useState('');
+  const [tolerancePct, setTolerancePct] = useState(5);
+  const [allowDownscale, setAllowDownscale] = useState(false);
 
   const handleExport = () => {
     if (onExport) onExport({ format, quality, filename });
   };
 
+  const handleSplitChannels = () => {
+    if (typeof onRequestSplitChannels === 'function') {
+      onRequestSplitChannels(!!useAdjusted);
+    }
+  };
+
+  const handleTargetSizeExport = () => {
+    const mb = parseFloat(targetMB);
+    const tol = Math.max(0, Math.min(100, Number.isFinite(+tolerancePct) ? +tolerancePct : 5));
+    if (!Number.isFinite(mb) || mb <= 0) return;
+    if (typeof onExportTargetSize === 'function') {
+      onExportTargetSize(mb, { tolerance: tol / 100, allowDownscale: !!allowDownscale });
+    }
+  };
+
+  const targetMode = Number.isFinite(parseFloat(targetMB)) && parseFloat(targetMB) > 0;
+
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-xs">Export Image</label>
+    <div className="flex flex-col gap-3">
+      <label className="text-xs font-semibold">Export Image</label>
+
       <div className="flex gap-2 items-center">
         <span className="text-xs">Format</span>
         <select value={format} onChange={e => setFormat(e.target.value)}>
@@ -22,16 +56,95 @@ export default function ExportDialog({ onExport }) {
           <option value="tiff">TIFF</option>
         </select>
       </div>
+
       <div className="flex gap-2 items-center">
         <span className="text-xs">Quality</span>
-        <input type="range" min="10" max="100" value={quality} onChange={e => setQuality(Number(e.target.value))} />
+        <input
+          type="range"
+          min="10"
+          max="100"
+          value={quality}
+          onChange={e => setQuality(Number(e.target.value))}
+          disabled={targetMode} // disabled when target size is used
+        />
         <span className="text-xs">{quality}%</span>
       </div>
+
       <div className="flex gap-2 items-center">
         <span className="text-xs">Filename</span>
         <input type="text" value={filename} onChange={e => setFilename(e.target.value)} />
       </div>
-      <button className="bg-success text-white px-2 py-1 rounded" onClick={handleExport}>Export</button>
+
+      <button className="bg-success text-white px-2 py-1 rounded" onClick={handleExport}>
+        Export
+      </button>
+
+      {/* Split Channels */}
+      <div className="mt-3 p-2 rounded border border-white/10 bg-white/5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold">Split Channels (R/G/B)</span>
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={useAdjusted}
+                onChange={e => setUseAdjusted(e.target.checked)}
+              />
+              Use current adjustments
+            </label>
+            <button
+              className="px-2 py-1 rounded bg-blue-600/80 text-white text-xs"
+              onClick={handleSplitChannels}
+              title="Export R/G/B mono images"
+            >
+              Split
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Target Size Export */}
+      <div className="p-2 rounded border border-white/10 bg-white/5">
+        <div className="text-xs font-semibold mb-2">Target Size (MB) Export</div>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs w-24">Target Size</span>
+          <input
+            className="flex-1"
+            type="number"
+            min="0"
+            step="0.1"
+            value={targetMB}
+            onChange={e => setTargetMB(e.target.value)}
+            placeholder="e.g. 2.0"
+          />
+        </div>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs w-24">Tolerance (%)</span>
+          <input
+            className="w-20"
+            type="number"
+            min="0"
+            max="50"
+            value={tolerancePct}
+            onChange={e => setTolerancePct(Number(e.target.value))}
+          />
+        </div>
+        <label className="text-[11px] flex items-center gap-2 mb-2">
+          <input
+            type="checkbox"
+            checked={allowDownscale}
+            onChange={e => setAllowDownscale(e.target.checked)}
+          />
+          Allow auto downscale if needed
+        </label>
+        <button
+          className="px-2 py-1 rounded bg-emerald-600/80 text-white text-xs"
+          onClick={handleTargetSizeExport}
+          title="Encode JPEG to meet target size"
+        >
+          Export at Target Size
+        </button>
+      </div>
     </div>
   );
 }
