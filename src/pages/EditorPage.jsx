@@ -21,6 +21,7 @@ import PresetBuilder from '../components/PresetBuilder';
 import PresetManager from '../components/PresetManager';
 import UnifiedSlider from '../components/UnifiedSlider';
 import '../styles/unified-slider.css';
+import WhiteBalanceTool from '../components/WhiteBalanceTool';
 
 // AI imports (stubs)
 import AITab from '../components/ai/AITab';
@@ -129,6 +130,30 @@ const EditorPage = () => {
   const [isResizing, setIsResizing] = useState(false);
   const [showBeforeAfter, setShowBeforeAfter] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Split channels wiring (B)
+  const [extractChannelsFrom, setExtractChannelsFrom] = useState(null); // 'original' | 'processed' | null
+
+  const downloadBlob = (blob, name) => {
+    if (!blob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 0);
+  };
+
+  const handleExtractedChannels = React.useCallback(({ rBlob, gBlob, bBlob }) => {
+    // Use current timestamp to avoid name collisions
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    downloadBlob(rBlob, `channel-R-${ts}.png`);
+    downloadBlob(gBlob, `channel-G-${ts}.png`);
+    downloadBlob(bBlob, `channel-B-${ts}.png`);
+    // clear request to avoid re-trigger
+    setExtractChannelsFrom(null);
+  }, []);
 
   useEffect(() => {
     // edits are passed down; no direct URL swaps here
@@ -394,6 +419,9 @@ const EditorPage = () => {
                       selecting: false
                     }));
                   }}
+                  // Split channels one-shot trigger
+                  onExtractChannels={extractChannelsFrom ? handleExtractedChannels : null}
+                  extractChannelsFrom={extractChannelsFrom || 'processed'}
                 />
                 {isLoading && (
                   <div className="canvas-loading-overlay">
@@ -442,6 +470,29 @@ const EditorPage = () => {
             <div className="sidebar-content">
               <div className="sidebar-header">
                 <h3>Adjustments</h3>
+              </div>
+
+              {/* Quick Channel Split action (exports from here for now) */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 border border-white/10 mb-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-white/80">Split Channels (R/G/B)</div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="header-button"
+                      title="Split from original (no adjustments)"
+                      onClick={() => setExtractChannelsFrom('original')}
+                    >
+                      Original
+                    </button>
+                    <button
+                      className="header-button primary"
+                      title="Split from processed (with current adjustments)"
+                      onClick={() => setExtractChannelsFrom('processed')}
+                    >
+                      Processed
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="adjustment-panels">

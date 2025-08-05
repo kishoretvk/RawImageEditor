@@ -12,6 +12,7 @@ const EnhancedImageCanvas = ({
   wbSelectEnabled = false,
   onWbRegionSelected = null,
   wbGains = null, // { rGain, gGain, bGain }
+  wbSamplingSpace = 'original', // 'original' | 'processed'
   // Channel split export: when requested, return blobs for R/G/B
   onExtractChannels = null,
   extractChannelsFrom = 'processed' // 'processed' | 'original'
@@ -418,15 +419,16 @@ const EnhancedImageCanvas = ({
         const imgW = Math.round(selW / scale);
         const imgH = Math.round(selH / scale);
 
-        // Sample from originalCanvas (pre-adjusted)
-        const octx = originalCanvas.getContext('2d');
-        const clampW = Math.min(imgW, originalCanvas.width - imgX);
-        const clampH = Math.min(imgH, originalCanvas.height - imgY);
+        // Choose sampling source based on wbSamplingSpace
+        const sampleCanvas = (wbSamplingSpace === 'processed' ? processedCanvas : originalCanvas) || originalCanvas;
+        const sctx = sampleCanvas.getContext('2d');
+        const clampW = Math.min(imgW, sampleCanvas.width - imgX);
+        const clampH = Math.min(imgH, sampleCanvas.height - imgY);
         if (clampW <= 0 || clampH <= 0) {
           setWbDrag(null);
           return;
         }
-        const region = octx.getImageData(imgX, imgY, clampW, clampH);
+        const region = sctx.getImageData(imgX, imgY, clampW, clampH);
         const d = region.data;
         let sumR = 0, sumG = 0, sumB = 0, count = 0;
         for (let i = 0; i < d.length; i += 4) {
