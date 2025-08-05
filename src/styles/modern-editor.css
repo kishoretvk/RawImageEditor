@@ -12,10 +12,20 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
+  padding: 0.5rem 1rem; /* compact to reclaim vertical space */
   background: #2a2a2a;
   border-bottom: 1px solid #404040;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  transition: transform 200ms ease, opacity 200ms ease;
+}
+
+/* Hook for auto-hide header when scrolling down (toggled from React) */
+.editor-header.auto-hide-header.header-hidden {
+  transform: translateY(-100%);
+  opacity: 0;
 }
 
 .header-left {
@@ -36,9 +46,12 @@
 }
 
 .header-left h1 {
-  font-size: 1.5rem;
+  font-size: 1.25rem; /* slightly smaller to keep header single-line */
   font-weight: 600;
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-right {
@@ -234,6 +247,17 @@
     flex-direction: column;
   }
 
+  /* keep header single row on mobile */
+  .editor-header {
+    padding: 0.5rem 0.75rem;
+  }
+  .header-left {
+    gap: 0.5rem;
+  }
+  .header-right {
+    gap: 0.375rem;
+  }
+
   /* Show mobile toolbar and hide desktop-only panels */
   .mobile-toolbar {
     display: flex !important;
@@ -260,7 +284,7 @@
   }
 
   .canvas-container {
-    min-height: 65vh; /* ensure image remains visible on phones */
+    min-height: 70vh; /* ensure image remains visible on phones; header auto-hides too */
   }
   
   .canvas-controls {
@@ -284,6 +308,11 @@
 .mobile-toolbar,
 .mobile-only {
   display: none;
+}
+
+/* Utility: hide class for elements we want collapsed on mobile */
+.hidden {
+  display: none !important;
 }
 
 /* BottomSheet styles (reusable) */
