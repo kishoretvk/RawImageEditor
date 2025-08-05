@@ -4,7 +4,7 @@ import '../styles/WorkflowPage.css';
 import Button from '../components/ui/Button.jsx';
 import '../styles/tokens.css';
 import { runWorkflow } from '../utils/workflow/runner';
-import { saveGraph, loadGraph } from '../utils/db/indexedDb';
+import { JobStore } from '../utils/db/indexedDb';
 
 /**
  * Map React Flow nodes/edges to runner graph format.
@@ -107,8 +107,13 @@ export default function WorkflowPage() {
 
   const handleSave = useCallback(async () => {
     try {
-      await saveGraph('current', graph);
-      appendLog('Graph saved.');
+      // Persist graph as a "job" record for simplicity
+      const id = await JobStore.createJob({
+        name: 'workflow-graph-current',
+        spec: { type: 'graph', graph },
+        itemsMeta: []
+      });
+      appendLog(`Graph saved as job ${id}.`);
     } catch (e) {
       appendLog(`Save failed: ${e?.message || e}`);
     }
@@ -116,10 +121,12 @@ export default function WorkflowPage() {
 
   const handleLoad = useCallback(async () => {
     try {
-      const loaded = await loadGraph('current');
-      if (loaded && loaded.nodes && loaded.edges) {
-        setGraph(loaded);
-        appendLog('Graph loaded.');
+      // Attempt to load the last incomplete "graph" job as our saved graph
+      const last = await JobStore.getLastIncompleteJob();
+      const specGraph = last?.spec?.graph;
+      if (specGraph && specGraph.nodes && specGraph.edges) {
+        setGraph(specGraph);
+        appendLog(`Graph loaded from job ${last.id}.`);
       } else {
         appendLog('No saved graph found.');
       }

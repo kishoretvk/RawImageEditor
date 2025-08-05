@@ -8,6 +8,9 @@ import PresetManager from '../components/PresetManager';
 import ImageSlider from '../components/ImageSlider';
 import BeforeAfterDemo from '../components/BeforeAfterDemo';
 import '../styles/EnhancedProfessionalLanding.css';
+import '../styles/tokens.css';
+import Card from '../components/ui/Card.jsx';
+import Button from '../components/ui/Button.jsx';
 
 const ProfessionalDemo = () => {
   const [activeDemo, setActiveDemo] = useState('landing');
@@ -169,7 +172,30 @@ const ProfessionalDemo = () => {
       </nav>
 
       <div className="demo-content">
-        {renderDemoContent()}
+        {/* Wrap the dynamic demo section in a Card to unify surface and spacing */}
+        <Card
+          title={{
+            landing: 'Professional Landing',
+            workflow: 'Workflow Builder',
+            batch: 'Batch Processing',
+            presets: 'Preset Management',
+            slider: 'Before/After Slider',
+            comparison: 'Image Comparison'
+          }[activeDemo] || 'Professional Demo'}
+          actions={
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Button variant="secondary" size="sm" onClick={() => setActiveDemo('landing')}>Landing</Button>
+              <Button variant="secondary" size="sm" onClick={() => setActiveDemo('workflow')}>Workflow</Button>
+              <Button variant="secondary" size="sm" onClick={() => setActiveDemo('batch')}>Batch</Button>
+              <Button variant="secondary" size="sm" onClick={() => setActiveDemo('presets')}>Presets</Button>
+              <Button variant="secondary" size="sm" onClick={() => setActiveDemo('slider')}>Slider</Button>
+              <Button variant="secondary" size="sm" onClick={() => setActiveDemo('comparison')}>Comparison</Button>
+            </div>
+          }
+          variant="elevated"
+        >
+          {renderDemoContent()}
+        </Card>
       </div>
 
       {isLoading && (
