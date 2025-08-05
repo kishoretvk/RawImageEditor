@@ -1,4 +1,7 @@
 import React from 'react';
+import '../../styles/tokens.css';
+import Button from '../ui/Button.jsx';
+import Panel from '../ui/Panel.jsx';
 
 const SliderControl = ({ label, value, min, max, step = 0.01, onChange, defaultValue }) => {
   // Guard against undefined/NaN so the slider is always controlled
@@ -57,10 +60,7 @@ const BasicAdjustmentsPanel = ({ edits = {}, onChange }) => {
   }
 
   return (
-    <div className="w-full bg-white/5 backdrop-blur-md rounded-xl p-6 shadow-md text-white space-y-6">
-      <h2 className="text-sm font-semibold tracking-wider text-gray-300 uppercase mb-4">
-        Basic Adjustments
-      </h2>
+    <Panel title="Basic Adjustments" className="w-full space-y-6">
 
       {/* Exposure & Tonal Group */}
       <div>
@@ -196,14 +196,15 @@ const BasicAdjustmentsPanel = ({ edits = {}, onChange }) => {
 
       {/* Reset All */}
       <div className="pt-2">
-        <button
+        <Button
+          size="sm"
+          variant="ghost"
           onClick={() => onChange({})}
-          className="text-xs text-red-400 hover:text-red-500 underline"
         >
           Reset All Adjustments
-        </button>
+        </Button>
       </div>
-    </div>
+    </Panel>
   );
 };
 

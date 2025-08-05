@@ -1,6 +1,9 @@
-// EditorSidebar.jsx
-// Sidebar for editor tools (Histogram, Crop, White Balance, etc.)
+/* EditorSidebar.jsx
+   Sidebar for editor tools (Histogram, Crop, White Balance, etc.) */
 import React, { useEffect, useState, useContext } from 'react';
+import '../styles/tokens.css';
+import Button from './ui/Button.jsx';
+import Panel from './ui/Panel.jsx';
 import Histogram from './Histogram';
 import CropTool from './CropTool';
 import WhiteBalanceTool from './WhiteBalanceTool';
@@ -73,33 +76,17 @@ export default function EditorSidebar({ rawPixels, channelCount, onUndo, onRedo,
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-          <h3 className="text-white font-semibold mb-3 flex items-center">
-            ⚡ Quick Actions
-          </h3>
+        <Panel title="⚡ Quick Actions" className="mb-3">
           <div className="grid grid-cols-2 gap-2">
-            <button 
-              onClick={onUndo}
-              className="px-3 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 transition-colors text-sm font-semibold"
-            >
-              ↶ Undo
-            </button>
-            <button 
-              onClick={onRedo}
-              className="px-3 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 transition-colors text-sm font-semibold"
-            >
-              ↷ Redo
-            </button>
+            <Button size="sm" variant="secondary" onClick={onUndo}>↶ Undo</Button>
+            <Button size="sm" variant="secondary" onClick={onRedo}>↷ Redo</Button>
           </div>
-        </div>
+        </Panel>
 
         {/* Crop Tool */}
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-          <h3 className="text-white font-semibold mb-3 flex items-center">
-            ✂️ Crop & Transform
-          </h3>
+        <Panel title="✂️ Crop & Transform" className="mb-3">
           <CropTool onChange={onCrop} />
-        </div>
+        </Panel>
 
         {/* Basic Adjustments */}
         <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
@@ -209,20 +196,14 @@ export default function EditorSidebar({ rawPixels, channelCount, onUndo, onRedo,
         </div>
 
         {/* White Balance Tool */}
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-          <h3 className="text-white font-semibold mb-3 flex items-center">
-            🎨 White Balance
-          </h3>
+        <Panel title="🎨 White Balance" className="mb-3">
           <WhiteBalanceTool onChange={onWhiteBalance} />
-        </div>
+        </Panel>
 
         {/* Reset Tools */}
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-          <h3 className="text-white font-semibold mb-3 flex items-center">
-            🔄 Reset Options
-          </h3>
+        <Panel title="🔄 Reset Options">
           <ResetTools onReset={onReset} />
-        </div>
+        </Panel>
       </div>
     </div>
   );

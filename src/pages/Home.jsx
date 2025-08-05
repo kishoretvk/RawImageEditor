@@ -1,4 +1,7 @@
 import React from 'react';
+import '../styles/tokens.css';
+import Button from '../components/ui/Button.jsx';
+import Card from '../components/ui/Card.jsx';
 
 import cheetah from '../assets/images/cheetah-horizontal.jpg';
 import elephant from '../assets/images/elephant-horizontal.jpg';
@@ -21,29 +24,39 @@ const Home = () => (
     <div className="relative z-10 text-center py-32 w-full">
       <h1 className="text-6xl font-bold mb-8 drop-shadow-lg">Unleash the RAW Power.</h1>
       <div className="flex justify-center gap-6 mb-8">
-        <button
-          className="bg-blue-500 text-black font-bold px-8 py-4 rounded-xl shadow-lg border-2 border-blue-700 hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-200"
-          onClick={() => window.location.href = '/upload'}
-        >
+        <Button variant="primary" size="lg" onClick={() => (window.location.href = '/upload')}>
           Get Started
-        </button>
-        <button
-          className="bg-blue-700 text-black font-bold px-8 py-4 rounded-xl shadow border-2 border-blue-800 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-400 transition duration-200"
-          onClick={() => window.location.href = '/editor'}
-        >
+        </Button>
+        <Button variant="secondary" size="lg" onClick={() => (window.location.href = '/editor')}>
           Edit RAW Image
-        </button>
-        <button className="bg-white text-blue-700 font-bold px-8 py-4 rounded-xl border-2 border-blue-300 shadow hover:bg-blue-100 transition-colors">Watch the Vision</button>
+        </Button>
+        <Button variant="ghost" size="lg">Watch the Vision</Button>
       </div>
       {/* Feature previews */}
       <div className="flex flex-wrap justify-center gap-8 mt-16">
         {previewImages.map((img, i) => (
-          <div key={i} className="bg-white bg-opacity-90 rounded-2xl shadow-lg p-4 flex flex-col items-center w-72">
-            <img src={img} alt="preview" className="rounded-xl mb-4 h-40 w-full object-cover" />
-            <div className="font-bold text-lg mb-2">{['Exposure', 'Contrast', 'Highlights', 'Shadows', 'Color', 'Vibrance', 'Clarity'][i % 7]}</div>
-            <input type="range" min="0" max="2" step="0.01" defaultValue={1} className="w-full accent-blue-500 mb-2" />
-            <button className="bg-blue-500 text-black font-bold px-4 py-2 rounded-xl shadow border-2 border-blue-700 hover:bg-blue-600 transition duration-200 mt-2">Live Preview</button>
-          </div>
+          <Card
+            key={i}
+            image={img}
+            title={['Exposure', 'Contrast', 'Highlights', 'Shadows', 'Color', 'Vibrance', 'Clarity'][i % 7]}
+            actions={
+              <Button size="sm" variant="secondary">Live Preview</Button>
+            }
+            className="w-72"
+            variant="elevated"
+          >
+            <div className="text-sm opacity-80">
+              Fine-tune {['exposure', 'contrast', 'highlights', 'shadows', 'color', 'vibrance', 'clarity'][i % 7]} with real-time feedback.
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="2"
+              step="0.01"
+              defaultValue={1}
+              className="w-full accent-blue-500 mt-3"
+            />
+          </Card>
         ))}
       </div>
       <div className="flex justify-center gap-8 mt-12">
