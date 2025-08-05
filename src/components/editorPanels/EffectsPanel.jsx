@@ -1,4 +1,7 @@
 import React from 'react';
+import '../../styles/tokens.css';
+import Panel from '../ui/Panel.jsx';
+import Button from '../ui/Button.jsx';
 
 const EffectsPanel = ({ effects = {}, onChange }) => {
   const defaultEffects = {
@@ -11,16 +14,25 @@ const EffectsPanel = ({ effects = {}, onChange }) => {
     duotone: 0,
     split_toning: 0
   };
-  
+
   const currentEffects = { ...defaultEffects, ...effects };
-  
+
   const handleChange = (key, value) => {
     onChange({ ...currentEffects, [key]: value });
   };
-  
+
+  const handleReset = () => {
+    onChange({ ...defaultEffects });
+  };
+
   return (
-    <div className="space-y-4">
-      <div>
+    <Panel
+      title="Effects & Filters"
+      actions={<Button size="sm" variant="secondary" onClick={handleReset}>Reset</Button>}
+      className="is-compact"
+    >
+      <div className="space-y-4">
+        <div>
         <label className="block text-gray-300 font-medium mb-2 text-sm">
           Vignette
           <span className="text-gray-500 ml-2">{currentEffects.vignette.toFixed(2)}</span>
@@ -147,7 +159,8 @@ const EffectsPanel = ({ effects = {}, onChange }) => {
           className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
         />
       </div>
-    </div>
+      </div>
+    </Panel>
   );
 };
 

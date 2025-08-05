@@ -25,8 +25,8 @@ const EnhancedLandingPage = () => {
   useEffect(() => {
     // Preload only the images we actually use on the landing
     const images = [
-      '/demo-images/color-before.jpg',
-      '/demo-images/color-after.jpg'
+      '/RawImageEditor/demo-images/color-before.jpg',
+      '/RawImageEditor/demo-images/color-after.jpg'
     ];
     images.forEach(src => {
       const img = new Image();
@@ -103,8 +103,8 @@ const EnhancedLandingPage = () => {
         {/* Lightweight teaser: small before/after slider with optimized demo images */}
         <div className="demo-teaser">
           <BeforeAfterSlider
-            beforeSrc="/demo-images/color-before.jpg"
-            afterSrc="/demo-images/color-after.jpg"
+            beforeSrc="/RawImageEditor/demo-images/color-before.jpg"
+            afterSrc="/RawImageEditor/demo-images/color-after.jpg"
             alt="Before/After teaser"
           />
           <div className="demo-caption">Quick teaser — see more on the Demo page</div>

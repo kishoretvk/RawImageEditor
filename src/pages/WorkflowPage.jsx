@@ -3,7 +3,7 @@ import WorkflowCanvasRF from '../components/workflow/WorkflowCanvasRF.jsx';
 import '../styles/WorkflowPage.css';
 import Button from '../components/ui/Button.jsx';
 import '../styles/tokens.css';
-import { runWorkflow } from '../utils/workflow/runner';
+import * as Runner from '../utils/workflow/runner';
 import { JobStore } from '../utils/db/indexedDb';
 
 /**
@@ -96,7 +96,13 @@ export default function WorkflowPage() {
         }
       };
 
-      await runWorkflow(runnerGraph, ctx);
+      if (Runner.runWorkflow) {
+        await Runner.runWorkflow(runnerGraph, ctx);
+      } else if (Runner.default) {
+        await Runner.default(runnerGraph, ctx);
+      } else {
+        throw new Error('runWorkflow export not found in utils/workflow/runner.js');
+      }
       appendLog('Workflow run finished.');
     } catch (e) {
       appendLog(`Run failed: ${e?.message || e}`);
