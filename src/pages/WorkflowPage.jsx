@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import WorkflowCanvasRF from '../components/workflow/WorkflowCanvasRF.jsx';
-import './WorkflowPage.css';
+import '../styles/WorkflowPage.css';
 import Button from '../components/ui/Button.jsx';
 import '../styles/tokens.css';
 import { runWorkflow } from '../utils/workflow/runner';
