@@ -6,12 +6,15 @@
  * - New: Target Size (MB) export (UI only; actual toJPEGTargetSize wiring added after util impl)
  */
 import React, { useState } from 'react';
+import { toJPEGTargetSize } from '../utils/imageProcessing';
 
 export default function ExportDialog({
   onExport,
   // New props (optional, safe to omit)
   onRequestSplitChannels,   // (useAdjusted:boolean) => void
   onExportTargetSize,       // (targetMB:number, options:{ tolerance:number, allowDownscale:boolean }) => void
+  // Optional: direct processed canvas supplier to run target-size export here
+  getProcessedCanvas        // () => HTMLCanvasElement | Promise<HTMLCanvasElement>
 }) {
   const [format, setFormat] = useState('jpeg');
   const [quality, setQuality] = useState(85);
@@ -33,12 +36,39 @@ export default function ExportDialog({
     }
   };
 
-  const handleTargetSizeExport = () => {
+  const handleTargetSizeExport = async () => {
     const mb = parseFloat(targetMB);
-    const tol = Math.max(0, Math.min(100, Number.isFinite(+tolerancePct) ? +tolerancePct : 5));
+    const tolPct = Math.max(0, Math.min(100, Number.isFinite(+tolerancePct) ? +tolerancePct : 5));
     if (!Number.isFinite(mb) || mb <= 0) return;
+
+    // Prefer external handler if provided
     if (typeof onExportTargetSize === 'function') {
-      onExportTargetSize(mb, { tolerance: tol / 100, allowDownscale: !!allowDownscale });
+      onExportTargetSize(mb, { tolerance: tolPct / 100, allowDownscale: !!allowDownscale });
+      return;
+    }
+
+    // Fallback: if we have a canvas provider, do the export here
+    if (typeof getProcessedCanvas === 'function') {
+      try {
+        const canvas = await getProcessedCanvas();
+        if (!canvas) return;
+        const { blob, quality, finalBytes, width, height } = await toJPEGTargetSize(canvas, mb, {
+          tolerance: tolPct / 100,
+          allowDownscale: !!allowDownscale
+        });
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `export-target-${mb}MB-q${Math.round(quality * 100)}-${width}x${height}.jpg`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 0);
+        }
+      } catch (e) {
+        console.warn('Target size export failed:', e);
+      }
     }
   };
 

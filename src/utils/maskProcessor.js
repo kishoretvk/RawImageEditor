@@ -11,6 +11,102 @@ export class MaskProcessor {
     this.opacity = 1.0;
   }
 
+  /**
+   * Generate linear gradient alpha buffer in image space.
+   * options: { width, height, start:{x:0..1,y:0..1}, end:{x:0..1,y:0..1}, feather:0..0.5, invert:boolean }
+   * Returns { data:Float32Array, width, height }
+   */
+  generateLinearGradientMask({ width, height, start, end, feather = 0.2, invert = false }) {
+    const w = Math.max(1, Math.floor(width));
+    const h = Math.max(1, Math.floor(height));
+    const out = new Float32Array(w * h);
+
+    // Convert normalized start/end to pixel coords
+    const sx = (start?.x ?? 0.25) * w;
+    const sy = (start?.y ?? 0.25) * h;
+    const ex = (end?.x ?? 0.75) * w;
+    const ey = (end?.y ?? 0.75) * h;
+
+    // Axis vector and its length
+    const ax = ex - sx;
+    const ay = ey - sy;
+    const len = Math.max(1e-6, Math.hypot(ax, ay));
+    const nx = -ay / len; // normal unit
+    const ny = ax / len;
+
+    // Feather (thickness of transition band) in pixels, relative to min dimension
+    const band = Math.max(0, Math.min(0.5, feather)) * Math.min(w, h);
+
+    // For each pixel, compute signed distance to axis and map to [0..1] alpha
+    // Define inside region on one side of the axis, transition across band width.
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        // vector from start point to pixel
+        const px = x - sx;
+        const py = y - sy;
+        // signed distance from axis
+        const d = px * nx + py * ny; // positive on one side, negative on the other
+
+        // Map distance to alpha: center at 0, full on one side, falloff across band
+        let a;
+        if (band <= 1e-6) {
+          a = d >= 0 ? 1 : 0;
+        } else {
+          // Smoothstep-like transition: d in [-band/2, +band/2]
+          const t = (d / (band * 0.5) + 1) * 0.5; // map to [0..1]
+          const tt = t < 0 ? 0 : t > 1 ? 1 : t;
+          // use smootherstep
+          a = tt * tt * (3 - 2 * tt);
+        }
+
+        if (invert) a = 1 - a;
+        out[y * w + x] = a;
+      }
+    }
+
+    return { data: out, width: w, height: h };
+  }
+
+  /**
+   * Generate radial gradient alpha buffer in image space.
+   * options: { width, height, center:{x:0..1,y:0..1}, radius:0..1 (relative), feather:0..1, invert:boolean }
+   * Returns { data:Float32Array, width, height }
+   */
+  generateRadialGradientMask({ width, height, center, radius = 0.3, feather = 0.2, invert = false }) {
+    const w = Math.max(1, Math.floor(width));
+    const h = Math.max(1, Math.floor(height));
+    const out = new Float32Array(w * h);
+
+    const cx = (center?.x ?? 0.5) * w;
+    const cy = (center?.y ?? 0.5) * h;
+    const maxR = Math.max(1e-6, radius * Math.min(w, h));
+    const band = Math.max(0, feather) * Math.min(w, h); // transition band
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const d = Math.hypot(x - cx, y - cy);
+        // Inside radius full 1, outside falloff across band
+        let t;
+        if (band <= 1e-6) {
+          t = d <= maxR ? 1 : 0;
+        } else {
+          const a0 = maxR;           // start of falloff
+          const a1 = maxR + band;    // end of falloff
+          if (d <= a0) t = 1;
+          else if (d >= a1) t = 0;
+          else {
+            const u = 1 - (d - a0) / (a1 - a0); // map to [0..1]
+            t = u * u * (3 - 2 * u);            // smootherstep
+          }
+        }
+        const a = invert ? (1 - t) : t;
+        out[y * w + x] = a;
+      }
+    }
+
+    return { data: out, width: w, height: h };
+  }
+
   // Create different types of masks
   async createMask(type, options = {}) {
     switch (type) {
@@ -43,47 +139,27 @@ export class MaskProcessor {
     };
   }
 
-  // Linear gradient mask
-  createGradientMask({ start, end, angle, feather }) {
-    const mask = new Float32Array(256 * 256); // Simplified for demo
-    
-    for (let y = 0; y < 256; y++) {
-      for (let x = 0; x < 256; x++) {
-        const distance = this.calculateGradientDistance(x, y, start, end, angle);
-        mask[y * 256 + x] = Math.max(0, Math.min(1, 1 - distance));
-      }
-    }
-    
+  // Linear gradient mask (image-sized)
+  createGradientMask({ width = 256, height = 256, start, end, feather = 0.2, invert = false }) {
+    const { data, width: w, height: h } = this.generateLinearGradientMask({ width, height, start, end, feather, invert });
     return {
       type: 'gradient',
-      start,
-      end,
-      angle,
-      feather,
-      data: mask
+      start, end, feather, invert,
+      data,
+      width: w,
+      height: h
     };
   }
 
-  // Radial gradient mask
-  createRadialMask({ center, radius, feather }) {
-    const mask = new Float32Array(256 * 256);
-    
-    for (let y = 0; y < 256; y++) {
-      for (let x = 0; x < 256; x++) {
-        const distance = Math.sqrt(
-          Math.pow(x - center.x, 2) + Math.pow(y - center.y, 2)
-        );
-        const normalizedDistance = distance / radius;
-        mask[y * 256 + x] = Math.max(0, Math.min(1, 1 - normalizedDistance));
-      }
-    }
-    
+  // Radial gradient mask (image-sized)
+  createRadialMask({ width = 256, height = 256, center, radius = 0.3, feather = 0.2, invert = false }) {
+    const { data, width: w, height: h } = this.generateRadialGradientMask({ width, height, center, radius, feather, invert });
     return {
       type: 'radial',
-      center,
-      radius,
-      feather,
-      data: mask
+      center, radius, feather, invert,
+      data,
+      width: w,
+      height: h
     };
   }
 
@@ -196,28 +272,24 @@ export class MaskProcessor {
   applyMask(imageData, mask, adjustments) {
     const { data, width, height } = imageData;
     const output = new Uint8ClampedArray(data);
-    
+
     // Ensure mask matches image dimensions
-    const maskData = this.resizeMask(mask.data, mask.width, mask.height, width, height);
-    
+    const maskData = this.resizeMask(mask.data, mask.width ?? width, mask.height ?? height, width, height);
+
     for (let i = 0; i < data.length; i += 4) {
-      const pixelIndex = Math.floor(i / 4);
-      const maskValue = maskData[pixelIndex];
-      
-      if (maskValue > 0) {
-        // Apply adjustments based on mask value
-        const adjusted = this.applyAdjustments(
-          [data[i], data[i + 1], data[i + 2]],
-          adjustments,
-          maskValue
-        );
-        
-        output[i] = adjusted[0];
-        output[i + 1] = adjusted[1];
-        output[i + 2] = adjusted[2];
-      }
+      const pixelIndex = (i >> 2);
+      const m = maskData[pixelIndex]; // 0..1
+      if (m <= 0) continue;
+
+      const r0 = data[i], g0 = data[i + 1], b0 = data[i + 2];
+      const [r1, g1, b1] = this.applyAdjustments([r0, g0, b0], adjustments, 1);
+
+      // Blend by mask alpha m
+      output[i]     = r0 + (r1 - r0) * m;
+      output[i + 1] = g0 + (g1 - g0) * m;
+      output[i + 2] = b0 + (b1 - b0) * m;
     }
-    
+
     return new ImageData(output, width, height);
   }
 
@@ -296,17 +368,14 @@ export class MaskProcessor {
     return mask;
   }
 
+  // Deprecated helper retained for compatibility; prefer generateLinearGradientMask
   calculateGradientDistance(x, y, start, end, angle) {
-    const radians = angle * Math.PI / 180;
+    const radians = (angle ?? 0) * Math.PI / 180;
     const cos = Math.cos(radians);
     const sin = Math.sin(radians);
-    
     const dx = x - start.x;
     const dy = y - start.y;
-    
-    return (dx * cos + dy * sin) / Math.sqrt(
-      Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2)
-    );
+    return (dx * cos + dy * sin) / Math.max(1e-6, Math.hypot(end.x - start.x, end.y - start.y));
   }
 
   colorDistance(color1, color2) {
@@ -338,47 +407,35 @@ export class MaskProcessor {
     return resized;
   }
 
-  applyAdjustments([r, g, b], adjustments, maskValue) {
+  applyAdjustments([r, g, b], adjustments) {
     const {
       exposure = 0,
       contrast = 0,
       saturation = 0,
-      hue = 0,
-      temperature = 0,
-      tint = 0
-    } = adjustments;
-    
-    // Apply exposure
-    r *= Math.pow(2, exposure);
-    g *= Math.pow(2, exposure);
-    b *= Math.pow(2, exposure);
-    
-    // Apply contrast
-    const contrastFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-    r = contrastFactor * (r - 128) + 128;
-    g = contrastFactor * (g - 128) + 128;
-    b = contrastFactor * (b - 128) + 128;
-    
-    // Apply saturation
+      // hue, temperature, tint could be added here if needed for local adjustments
+    } = adjustments ?? {};
+
+    // Exposure
+    const exp = Math.pow(2, exposure);
+    r *= exp; g *= exp; b *= exp;
+
+    // Contrast (simple linear around 128)
+    const cf = (259 * (contrast + 255)) / (255 * (259 - contrast));
+    r = cf * (r - 128) + 128;
+    g = cf * (g - 128) + 128;
+    b = cf * (b - 128) + 128;
+
+    // Saturation
     const gray = 0.299 * r + 0.587 * g + 0.114 * b;
     r = gray + (r - gray) * (1 + saturation / 100);
     g = gray + (g - gray) * (1 + saturation / 100);
     b = gray + (b - gray) * (1 + saturation / 100);
-    
-    // Apply mask blending
-    const originalR = r;
-    const originalG = g;
-    const originalB = b;
-    
-    r = originalR * maskValue + (r * (1 - maskValue));
-    g = originalG * maskValue + (g * (1 - maskValue));
-    b = originalB * maskValue + (b * (1 - maskValue));
-    
-    return [
-      Math.max(0, Math.min(255, r)),
-      Math.max(0, Math.min(255, g)),
-      Math.max(0, Math.min(255, b))
-    ];
+
+    // Clamp
+    r = r < 0 ? 0 : r > 255 ? 255 : r;
+    g = g < 0 ? 0 : g > 255 ? 255 : g;
+    b = b < 0 ? 0 : b > 255 ? 255 : b;
+    return [r, g, b];
   }
 }
 

@@ -8,11 +8,13 @@ import ConversionSettings from '../components/ConversionSettings';
 import BasicAdjustmentsPanel from '../components/editorPanels/BasicAdjustmentsPanel';
 import ColorAdjustmentsPanel from '../components/editorPanels/ColorAdjustmentsPanel';
 import SharpnessPanel from '../components/editorPanels/SharpnessPanel';
+import DetailPanel from '../components/editorPanels/DetailPanel';
 import EffectsPanel from '../components/editorPanels/EffectsPanel';
 import GeometryPanel from '../components/editorPanels/GeometryPanel';
 import AdvancedPanel from '../components/editorPanels/AdvancedPanel';
 import CurvesPanel from '../components/editorPanels/CurvesPanel';
 import HSLPanel, { defaultHSLState } from '../components/editorPanels/HSLPanel';
+import SplitToningPanel from '../components/editorPanels/SplitToningPanel';
 import { buildLUTsFromCurves } from '../utils/curveUtils';
 import FileUploader from '../components/FileUploader';
 import EditorUploadPlaceholder from '../components/EditorUploadPlaceholder';
@@ -81,10 +83,29 @@ const EditorPage = () => {
     detail: 0.5,
     masking: 0,
   });
+
+  // Detail panel state (separate from simple Sharpness panel) with defaults
+  const [detailAdjustments, setDetailAdjustments] = useState({
+    lumaNR: 0,
+    chromaNR: 0,
+    sharpenAmount: 40,
+    sharpenRadius: 1.0,
+    sharpenDetail: 25,
+    sharpenMasking: 0
+  });
   const [effects, setEffects] = useState({
     vignette: 0,
     grain: 0,
     blur: 0,
+  });
+
+  // Split Toning state with confirmed defaults
+  const [splitToning, setSplitToning] = useState({
+    highlightsHue: 40,
+    highlightsSat: 15,
+    shadowsHue: 220,
+    shadowsSat: 15,
+    balance: 0
   });
   const [geometry, setGeometry] = useState({
     crop: 0,
@@ -134,6 +155,7 @@ const EditorPage = () => {
   const [isResizing, setIsResizing] = useState(false);
   const [showBeforeAfter, setShowBeforeAfter] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showExport, setShowExport] = useState(false);
 
   // Split channels wiring (B)
   const [extractChannelsFrom, setExtractChannelsFrom] = useState(null); // 'original' | 'processed' | null
@@ -285,11 +307,15 @@ const EditorPage = () => {
     ...adjustments,
     ...colorAdjustments,
     ...sharpness,
+    // detail panel adjustments for NR + sharpen pipeline
+    detailAdjustments,
     ...effects,
     ...geometry,
     ...advanced,
     // inject HSL adjustments in a dedicated object so canvas can apply a pass
-    hslAdjustments
+    hslAdjustments,
+    // split toning params grouped under splitToning
+    splitToning
   };
 
   // AI worker wiring (stubs)
@@ -367,6 +393,15 @@ const EditorPage = () => {
           <button className="header-button" onClick={handleReset}>Reset</button>
           <button className="header-button primary" onClick={handleExport} disabled={!uploadedImage || isExporting}>
             {isExporting ? 'Exporting...' : 'Export'}
+          </button>
+          {/* Open Export Dialog button (inline simple modal substitute) */}
+          <button
+            className="header-button"
+            onClick={() => setShowExport(true)}
+            disabled={!uploadedImage}
+            title="Open Export Options"
+          >
+            Export Options
           </button>
         </div>
       </div>
@@ -457,6 +492,77 @@ const EditorPage = () => {
             )}
           </div>
 
+          {/* Local Adjustments Overlay (Gradient) */}
+          {uploadedImage && (
+            <div style={{ position: 'relative' }}>
+              {/* Overlay rendered above the canvas container to edit gradient mask */}
+              {/* We keep it simple: a single gradient mask prototype */}
+            </div>
+          )}
+
+          {showExport && (
+            <div className="modal-backdrop">
+              <div className="modal-panel">
+                <div className="modal-header">
+                  <h3>Export</h3>
+                  <button className="header-button" onClick={() => setShowExport(false)}>Close</button>
+                </div>
+                <div className="modal-body">
+                  <ExportDialog
+                    onExport={({ format, quality, filename }) => {
+                      // basic inline export of current preview URL; advanced handled in canvas utils
+                      const imageUrl =
+                        editedImageUrl ||
+                        jpegPreview ||
+                        (typeof uploadedImage === 'string' ? uploadedImage : (uploadedImage?.url || uploadedImage?.preview || null));
+                      if (!imageUrl) return;
+                      const a = document.createElement('a');
+                      a.href = imageUrl;
+                      a.download = `${filename || 'export'}.${format || 'jpeg'}`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    }}
+                    onRequestSplitChannels={(useAdjusted) => {
+                      setExtractChannelsFrom(useAdjusted ? 'processed' : 'original');
+                    }}
+                    // Provide handler to run target-size export via util
+                    onExportTargetSize={async (targetMB, options) => {
+                      try {
+                        // Get processed canvas from EnhancedImageCanvas' hidden processed canvas
+                        const canvas = document.querySelector('.enhanced-canvas')?.parentElement?.querySelector('canvas[style*="display: none"] + canvas') || null;
+                        // Fallback: access our ref if available
+                        const processedCanvas = document.querySelector('.enhanced-canvas')?.parentElement?.querySelector('canvas[style*="display: none"]:last-child') || null;
+                        const c = processedCanvas || canvas;
+                        if (!c) return;
+                        const { toJPEGTargetSize } = await import('../utils/imageProcessing');
+                        const { blob } = await toJPEGTargetSize(c, targetMB, options || { tolerance: 0.05, allowDownscale: false });
+                        if (blob) {
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `export-${targetMB}MB.jpg`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          setTimeout(() => URL.revokeObjectURL(url), 0);
+                        }
+                      } catch (e) {
+                        console.warn('Target size export failed:', e);
+                      }
+                    }}
+                    // Optional direct canvas provider for internal fallback mode
+                    getProcessedCanvas={() => {
+                      // try to locate processed hidden canvas used for drawing
+                      const processedCanvas = document.querySelector('.enhanced-canvas')?.parentElement?.querySelector('canvas[style*="display: none"]:last-child') || null;
+                      return processedCanvas || null;
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {uploadedImage && (
             <div className="histogram-container">
               <Histogram
@@ -502,6 +608,11 @@ const EditorPage = () => {
               </div>
 
               <div className="adjustment-panels">
+
+                {/* Local Adjustments */}
+                <CollapsibleControlPanel title="Local Adjustments" defaultOpen={false}>
+                  <LocalAdjustmentsPanel />
+                </CollapsibleControlPanel>
                 <CollapsibleControlPanel title="Basic Adjustments" defaultOpen={true}>
                   {/* Use the 'edits' prop name expected by the panel and defensively merge updates */}
                   <BasicAdjustmentsPanel
@@ -524,6 +635,17 @@ const EditorPage = () => {
                   />
                 </CollapsibleControlPanel>
 
+                <CollapsibleControlPanel title="Split Toning" defaultOpen={false}>
+                  <SplitToningPanel
+                    edits={{ splitToning }}
+                    onEditsChange={(next) => {
+                      // next is full edits object with splitToning inside
+                      const st = next?.splitToning || splitToning;
+                      setSplitToning(st);
+                    }}
+                  />
+                </CollapsibleControlPanel>
+
                 {/* White Balance Tool (WB Region Select) */}
                 <CollapsibleControlPanel title="White Balance" defaultOpen={false}>
                   <WhiteBalanceTool
@@ -536,6 +658,13 @@ const EditorPage = () => {
 
                 <CollapsibleControlPanel title="Sharpness & Detail" defaultOpen={false}>
                   <SharpnessPanel sharpness={sharpness} onChange={setSharpness} />
+                </CollapsibleControlPanel>
+
+                <CollapsibleControlPanel title="Detail (NR + Sharpen)" defaultOpen={false}>
+                  <DetailPanel
+                    detail={detailAdjustments}
+                    onChange={setDetailAdjustments}
+                  />
                 </CollapsibleControlPanel>
 
                 <CollapsibleControlPanel title="Effects & Filters" defaultOpen={false}>
