@@ -15,6 +15,8 @@ import AdvancedPanel from '../components/editorPanels/AdvancedPanel';
 import CurvesPanel from '../components/editorPanels/CurvesPanel';
 import HSLPanel, { defaultHSLState } from '../components/editorPanels/HSLPanel';
 import SplitToningPanel from '../components/editorPanels/SplitToningPanel';
+import LocalAdjustmentsPanel from '../components/LocalAdjustmentsPanel';
+import GradientMaskOverlay from '../components/GradientMaskOverlay';
 import { buildLUTsFromCurves } from '../utils/curveUtils';
 import FileUploader from '../components/FileUploader';
 import EditorUploadPlaceholder from '../components/EditorUploadPlaceholder';
@@ -156,6 +158,10 @@ const EditorPage = () => {
   const [showBeforeAfter, setShowBeforeAfter] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showExport, setShowExport] = useState(false);
+
+  // Local adjustments state
+  const [localMasks, setLocalMasks] = useState([]);
+  const [editingMaskId, setEditingMaskId] = useState(null);
 
   // Split channels wiring (B)
   const [extractChannelsFrom, setExtractChannelsFrom] = useState(null); // 'original' | 'processed' | null
@@ -435,6 +441,7 @@ const EditorPage = () => {
                 <EnhancedImageCanvas
                   imageSrc={editedImageUrl}
                   edits={allEdits}
+                  localMasks={localMasks}
                   showSlider={showBeforeAfter}
                   sliderPosition={sliderPosition}
                   onSliderChange={setSliderPosition}
@@ -493,10 +500,28 @@ const EditorPage = () => {
           </div>
 
           {/* Local Adjustments Overlay (Gradient) */}
-          {uploadedImage && (
+          {uploadedImage && editingMaskId && (
             <div style={{ position: 'relative' }}>
-              {/* Overlay rendered above the canvas container to edit gradient mask */}
-              {/* We keep it simple: a single gradient mask prototype */}
+              {(() => {
+                const m = localMasks.find(mm => mm.id === editingMaskId);
+                if (!m || !m.enabled) return null;
+                if (m.type === 'gradient') {
+                  // Use image dimensions if available, otherwise rely on container size via effect
+                  const w = (document.querySelector('.enhanced-canvas')?.width) || 800;
+                  const h = (document.querySelector('.enhanced-canvas')?.height) || 600;
+                  return (
+                    <GradientMaskOverlay
+                      width={w}
+                      height={h}
+                      mask={m}
+                      onChange={(nextMask) => {
+                        setLocalMasks(prev => prev.map(mm => mm.id === m.id ? nextMask : mm));
+                      }}
+                    />
+                  );
+                }
+                return null;
+              })()}
             </div>
           )}
 
@@ -611,7 +636,11 @@ const EditorPage = () => {
 
                 {/* Local Adjustments */}
                 <CollapsibleControlPanel title="Local Adjustments" defaultOpen={false}>
-                  <LocalAdjustmentsPanel />
+                  <LocalAdjustmentsPanel
+                    masks={localMasks}
+                    onChange={setLocalMasks}
+                    onEditOverlay={(id) => setEditingMaskId(prev => prev === id ? null : id)}
+                  />
                 </CollapsibleControlPanel>
                 <CollapsibleControlPanel title="Basic Adjustments" defaultOpen={true}>
                   {/* Use the 'edits' prop name expected by the panel and defensively merge updates */}

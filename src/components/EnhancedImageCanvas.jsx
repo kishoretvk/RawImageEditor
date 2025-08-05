@@ -4,6 +4,8 @@ import { processImageWithEdits } from '../utils/rawProcessor';
 const EnhancedImageCanvas = ({ 
   imageSrc, 
   edits = {}, 
+  // local masks passed from EditorPage; default empty array to avoid ReferenceError
+  localMasks = [], 
   showSlider = false, 
   sliderPosition = 50,
   onSliderChange,
@@ -271,6 +273,40 @@ const EnhancedImageCanvas = ({
     // Write basic/global edits back before detail processing
     ctx.putImageData(imageData, 0, 0);
 
+    // Apply Local Masks (gradient prototype) after global color edits, before sharpening
+    if (Array.isArray(edits?.localMasks) || Array.isArray(localMasks)) {
+      const masks = Array.isArray(edits?.localMasks) ? edits.localMasks : (Array.isArray(localMasks) ? localMasks : []);
+      if (masks.length > 0) {
+        try {
+          const { maskProcessor } = await import('../utils/maskProcessor');
+          const baseImg = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+          for (const m of masks) {
+            if (!m?.enabled) continue;
+            let mask;
+            if (m.type === 'gradient') {
+              mask = maskProcessor.generateLinearGradientMask({
+                width: canvas.width,
+                height: canvas.height,
+                start: m.start,
+                end: m.end,
+                feather: m.feather ?? 0.2,
+                invert: !!m.invert
+              });
+            } else {
+              continue; // future types (radial/brush/etc.)
+            }
+            // Apply local adjustments via processor and draw back
+            const adjusted = maskProcessor.applyMask(baseImg, { ...m, data: mask.data, width: mask.width, height: mask.height }, m.adjustments || {});
+            ctx.putImageData(adjusted, 0, 0);
+          }
+        } catch (e) {
+          // non-fatal
+          console.warn('Local mask application failed:', e);
+        }
+      }
+    }
+
     // Detail Panel: Luma NR, Chroma NR, Sharpen (unsharp mask) with masking
     const detail = edits.detailAdjustments || edits.detail || null;
     if (detail) {
@@ -281,7 +317,7 @@ const EnhancedImageCanvas = ({
         sharpenRadius = 1.0, // 0.5..3.0
         sharpenDetail = 25,  // 0..100
         sharpenMasking = 0   // 0..100
-      } = normalizeDetail(detail);
+      } = detail || {};
 
       // Read current processed pixels
       const base = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -862,3 +898,8 @@ const EnhancedImageCanvas = ({
 };
 
 export default EnhancedImageCanvas;
+
+// Local helpers (scoped) for detail and math
+function clamp8(v) {
+  return v < 0 ? 0 : v > 255 ? 255 : v | 0;
+}
