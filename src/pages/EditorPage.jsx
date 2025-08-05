@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import '../styles/tokens.css';
+import Button from '../components/ui/Button.jsx';
+import Panel from '../components/ui/Panel.jsx';
 import { convertRawToJpeg } from '../utils/imageProcessing';
 import { isRawFile } from '../utils/rawFileDetector';
 import Histogram from '../components/Histogram';
@@ -500,38 +503,40 @@ const EditorPage = () => {
           <h1>RAW Image Editor</h1>
         </div>
         <div className="header-right">
-          <button className="header-button" onClick={onUndo}>Undo</button>
-          <button className="header-button" onClick={onRedo}>Redo</button>
-          <button className="header-button" onClick={handleReset}>Reset</button>
-          <button className="header-button primary" onClick={handleExport} disabled={!uploadedImage || isExporting}>
+          <Button size="sm" variant="ghost" onClick={onUndo}>Undo</Button>
+          <Button size="sm" variant="ghost" onClick={onRedo}>Redo</Button>
+          <Button size="sm" variant="secondary" onClick={handleReset}>Reset</Button>
+          <Button size="sm" variant="primary" onClick={handleExport} disabled={!uploadedImage || isExporting}>
             {isExporting ? 'Exporting...' : 'Export'}
-          </button>
-          {/* Open Export Dialog button (inline simple modal substitute) */}
-          <button
-            className="header-button"
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
             onClick={() => setShowExport(true)}
             disabled={!uploadedImage}
             title="Open Export Options"
           >
             Export Options
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Edit | AI segmented toggle */}
       <div style={{ display: 'flex', gap: 8, padding: '8px 12px' }}>
-        <button
-          className={`header-button ${mode === 'edit' ? 'primary' : ''}`}
+        <Button
+          variant={mode === 'edit' ? 'primary' : 'secondary'}
+          size="sm"
           onClick={() => setMode('edit')}
         >
           Edit
-        </button>
-        <button
-          className={`header-button ${mode === 'ai' ? 'primary' : ''}`}
+        </Button>
+        <Button
+          variant={mode === 'ai' ? 'primary' : 'secondary'}
+          size="sm"
           onClick={() => setMode('ai')}
         >
           AI
-        </button>
+        </Button>
       </div>
 
       <div className="editor-content">
@@ -584,12 +589,13 @@ const EditorPage = () => {
                   </div>
                 )}
                 <div className="canvas-controls">
-                  <button
-                    className={`control-button ${showBeforeAfter ? 'active' : ''}`}
+                  <Button
+                    variant={showBeforeAfter ? 'primary' : 'secondary'}
+                    size="sm"
                     onClick={() => setShowBeforeAfter(!showBeforeAfter)}
                   >
                     {showBeforeAfter ? 'Hide' : 'Show'} Before/After
-                  </button>
+                  </Button>
                   {showBeforeAfter && (
                     <UnifiedSlider
                       value={sliderPosition}
@@ -717,27 +723,26 @@ const EditorPage = () => {
               </div>
 
               {/* Quick Channel Split action (exports from here for now) */}
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 border border-white/10 mb-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-white/80">Split Channels (R/G/B)</div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      className="header-button"
-                      title="Split from original (no adjustments)"
-                      onClick={() => setExtractChannelsFrom('original')}
-                    >
-                      Original
-                    </button>
-                    <button
-                      className="header-button primary"
-                      title="Split from processed (with current adjustments)"
-                      onClick={() => setExtractChannelsFrom('processed')}
-                    >
-                      Processed
-                    </button>
-                  </div>
+              <Panel title="Split Channels (R/G/B)" className="mb-3">
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    title="Split from original (no adjustments)"
+                    onClick={() => setExtractChannelsFrom('original')}
+                  >
+                    Original
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    title="Split from processed (with current adjustments)"
+                    onClick={() => setExtractChannelsFrom('processed')}
+                  >
+                    Processed
+                  </Button>
                 </div>
-              </div>
+              </Panel>
 
               <div className="adjustment-panels">
 
