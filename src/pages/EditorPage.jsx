@@ -12,6 +12,7 @@ import EffectsPanel from '../components/editorPanels/EffectsPanel';
 import GeometryPanel from '../components/editorPanels/GeometryPanel';
 import AdvancedPanel from '../components/editorPanels/AdvancedPanel';
 import CurvesPanel from '../components/editorPanels/CurvesPanel';
+import HSLPanel, { defaultHSLState } from '../components/editorPanels/HSLPanel';
 import { buildLUTsFromCurves } from '../utils/curveUtils';
 import FileUploader from '../components/FileUploader';
 import EditorUploadPlaceholder from '../components/EditorUploadPlaceholder';
@@ -95,6 +96,9 @@ const EditorPage = () => {
     curves: 1,
     channelMixer: 1,
   });
+
+  // HSL / Color Mixer state
+  const [hslAdjustments, setHslAdjustments] = useState(defaultHSLState());
 
   // AI: Edit | AI segmented toggle
   const [mode, setMode] = useState('edit'); // 'edit' | 'ai'
@@ -283,7 +287,9 @@ const EditorPage = () => {
     ...sharpness,
     ...effects,
     ...geometry,
-    ...advanced
+    ...advanced,
+    // inject HSL adjustments in a dedicated object so canvas can apply a pass
+    hslAdjustments
   };
 
   // AI worker wiring (stubs)
@@ -508,6 +514,13 @@ const EditorPage = () => {
                   <ColorAdjustmentsPanel
                     colorAdjustments={colorAdjustments}
                     onChange={(next) => setColorAdjustments((prev) => ({ ...prev, ...(next || {}) }))}
+                  />
+                </CollapsibleControlPanel>
+
+                <CollapsibleControlPanel title="HSL / Color Mixer" defaultOpen={false}>
+                  <HSLPanel
+                    hsl={hslAdjustments}
+                    onChange={setHslAdjustments}
                   />
                 </CollapsibleControlPanel>
 
