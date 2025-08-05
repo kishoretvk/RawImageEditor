@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import ImageSlider from '../components/ImageSlider';
 import BeforeAfterDemo from '../components/BeforeAfterDemo';
 import './DemoPage.css';
+import '../styles/tokens.css';
+import Card from '../components/ui/Card.jsx';
+import Button from '../components/ui/Button.jsx';
 
 const samples = [
   { key: 'color', name: 'Color', before: '/demo-images/color-before.jpg', after: '/demo-images/color-after.jpg' },
@@ -119,16 +122,19 @@ const DemoPage = () => {
       </div>
 
       <div className="demo-cta">
-        <h3>Move beyond the basics</h3>
-        <p>Open the full editor to try WB region, RGB split, and target‑size export.</p>
-        <div className="cta-buttons">
-          <button className="cta-primary" onClick={() => navigate('/editor')}>
-            Open Editor
-          </button>
-          <button className="cta-secondary" onClick={() => navigate('/workflow')}>
-            Create Workflow
-          </button>
-        </div>
+        <Card
+          title="Move beyond the basics"
+          subtitle="Open the full editor to try WB region, RGB split, and target‑size export."
+          actions={
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button variant="primary" size="md" onClick={() => navigate('/editor')}>Open Editor</Button>
+              <Button variant="secondary" size="md" onClick={() => navigate('/workflow')}>Create Workflow</Button>
+            </div>
+          }
+          variant="elevated"
+        >
+          {/* Keep existing layout classes; minimal markup inside Card */}
+        </Card>
       </div>
     </div>
   );
