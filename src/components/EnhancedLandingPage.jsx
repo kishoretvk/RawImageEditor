@@ -11,8 +11,12 @@ const EnhancedLandingPage = () => {
   // Updated features highlighting newly implemented capabilities
   const features = [
     { icon: '🎯', title: 'WB by Neutral Region', description: 'Drag a rectangle to auto‑balance color from a known neutral area.' },
+    { icon: '🎚️', title: 'HSL / Split Toning', description: 'Per‑hue adjustments and highlight/shadow toning with balance.' },
+    { icon: '🔎', title: 'Detail (NR + Sharpen)', description: 'Luminance/chroma noise reduction and unsharp masking.' },
+    { icon: '🤖', title: 'AI Portrait & Landscape', description: 'Auto exposure/contrast/warmth and texture tuning.' },
     { icon: '🧩', title: 'Split RGB Channels', description: 'Export R, G, B mono images from original or adjusted pixels.' },
-    { icon: '📦', title: 'Target Size Export', description: 'Export JPEG to a specific MB target with quality search and downscale.' },
+    { icon: '📦', title: 'Target Size Export', description: 'Export JPEG to a specific MB target with quality search/downscale.' },
+    { icon: '🪄', title: 'Background Tools', description: 'Blur or remove background; PNG transparency supported.' },
     { icon: '🎨', title: 'Curves & LUTs', description: 'Precise tonal control and creative looks with per‑channel curves.' },
     { icon: '⚡', title: 'Fast In‑Browser', description: 'GPU‑accelerated preview with no uploads or installs.' },
     { icon: '🔄', title: 'Batch & Workflows', description: 'Preset management and custom multi‑step processing.' }
@@ -21,8 +25,8 @@ const EnhancedLandingPage = () => {
   useEffect(() => {
     // Preload only the images we actually use on the landing
     const images = [
-      '/public/demo-images/color-before.jpg',
-      '/public/demo-images/color-after.jpg'
+      '/demo-images/color-before.jpg',
+      '/demo-images/color-after.jpg'
     ];
     images.forEach(src => {
       const img = new Image();
@@ -57,7 +61,7 @@ const EnhancedLandingPage = () => {
               <span className="hero-subtitle">in your browser</span>
             </h1>
             <span className="whats-new-badge" role="status" aria-label="New features">
-              New: WB Region • RGB Split • Target Size Export
+              New: HSL • Split Toning • Detail • AI Portrait/Landscape • Background Tools • Target Size
             </span>
           </div>
 
@@ -75,6 +79,19 @@ const EnhancedLandingPage = () => {
             </button>
           </div>
 
+          {/* Quick scenarios to jump into Demo with presets */}
+          <div className="quick-scenarios" style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn-chip" onClick={() => navigate('/demo?tool=portrait')}>Portrait Enhance</button>
+            <button className="btn-chip" onClick={() => navigate('/demo?tool=landscape')}>Landscape Enhance</button>
+            <button className="btn-chip" onClick={() => navigate('/demo?tool=hsl')}>HSL Pop</button>
+            <button className="btn-chip" onClick={() => navigate('/demo?tool=splittoning')}>Split Toning Mood</button>
+            <button className="btn-chip" onClick={() => navigate('/demo?tool=detail')}>Detail Cleanup</button>
+            <button className="btn-chip" onClick={() => navigate('/demo?tool=bgblur')}>Background Blur</button>
+            <button className="btn-chip" onClick={() => navigate('/demo?tool=bgremove')}>Background Remove (PNG)</button>
+            <button className="btn-chip" onClick={() => navigate('/demo?tool=target2mb')}>Export 2 MB</button>
+            <button className="btn-chip" onClick={() => navigate('/demo?tool=rgbsplit')}>RGB Split</button>
+          </div>
+
           <div className="hero-stats" aria-label="Key stats">
             <div className="stat"><span className="stat-number">100%</span><span className="stat-label">Local Processing</span></div>
             <div className="stat"><span className="stat-number">0</span><span className="stat-label">Installs</span></div>
@@ -86,8 +103,8 @@ const EnhancedLandingPage = () => {
         {/* Lightweight teaser: small before/after slider with optimized demo images */}
         <div className="demo-teaser">
           <BeforeAfterSlider
-            beforeSrc="/public/demo-images/color-before.jpg"
-            afterSrc="/public/demo-images/color-after.jpg"
+            beforeSrc="/demo-images/color-before.jpg"
+            afterSrc="/demo-images/color-after.jpg"
             alt="Before/After teaser"
           />
           <div className="demo-caption">Quick teaser — see more on the Demo page</div>

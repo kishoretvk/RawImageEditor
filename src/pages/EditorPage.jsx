@@ -309,6 +309,9 @@ const EditorPage = () => {
     }
   }, [isResizing]);
 
+  // Background alpha flag must be declared before use in allEdits
+  const [hasAlphaBackgroundRemoved, setHasAlphaBackgroundRemoved] = useState(false);
+
   const allEdits = {
     ...adjustments,
     ...colorAdjustments,
@@ -477,7 +480,6 @@ const EditorPage = () => {
   const onApplyBgBlur = async () => { await onPreviewBgBlur(); };
 
   // Background remove: set a state flag so Export can default to PNG; canvas can later respect alpha when masks arrive
-  const [hasAlphaBackgroundRemoved, setHasAlphaBackgroundRemoved] = useState(false);
   const onPreviewBgRemove = async () => {
     setAi((prev) => ({ ...prev, loading: true }));
     const res = await callAI('backgroundRemove', {});
@@ -637,7 +639,8 @@ const EditorPage = () => {
                 </div>
                 <div className="modal-body">
                   <ExportDialog
-                    onExport={({ format, quality, filename }) => {
+                    hasAlphaBackgroundRemoved={hasAlphaBackgroundRemoved}
+                    onExport={({ format, quality, filename, preserveTransparency }) => {
                       // basic inline export of current preview URL; advanced handled in canvas utils
                       const imageUrl =
                         editedImageUrl ||
