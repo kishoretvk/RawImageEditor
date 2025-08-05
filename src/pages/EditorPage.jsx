@@ -321,7 +321,9 @@ const EditorPage = () => {
     // inject HSL adjustments in a dedicated object so canvas can apply a pass
     hslAdjustments,
     // split toning params grouped under splitToning
-    splitToning
+    splitToning,
+    // background alpha removal flag for export/canvas awareness
+    hasAlphaBackgroundRemoved
   };
 
   // AI worker wiring (stubs)
@@ -378,31 +380,112 @@ const EditorPage = () => {
     });
 
   // AI Preview/Apply handlers (stub)
+  // Map portrait params from worker into editor adjustments for visible change
+  const applyPortraitParamsToEdits = (params) => {
+    if (!params) return;
+    const {
+      exposureDelta = 0,
+      contrastMid = 0,      // 0..~0.15
+      warmthBias = 0,       // 0..~0.08
+      clarityDelta = 0,     // negative -> NR, positive -> sharpen
+      saturationDelta = 0,
+      vibranceDelta = 0
+    } = params;
+
+    // Basic/global adjustments
+    setAdjustments(prev => ({
+      ...prev,
+      exposure: (prev.exposure || 0) + exposureDelta, // exposure is log2 stop-like scaling
+      contrast: (prev.contrast || 0) + Math.round(contrastMid * 100), // map to slider range
+    }));
+
+    setColorAdjustments(prev => ({
+      ...prev,
+      temperature: (prev.temperature || 0) + Math.round(warmthBias * 100),
+      saturation: (prev.saturation || 0) + Math.round(saturationDelta * 100),
+      // vibrance slider may not exist; approximate by slight saturation if vibranceDelta present
+      // If you add a dedicated vibrance control later, wire it here.
+    }));
+
+    // Detail: clarity approximation
+    setDetailAdjustments(prev => {
+      const next = { ...prev };
+      if (clarityDelta < 0) {
+        // increase luma NR slightly
+        next.lumaNR = Math.min(100, (next.lumaNR || 0) + Math.round(Math.abs(clarityDelta) * 50));
+      } else if (clarityDelta > 0) {
+        // increase sharpening amount modestly
+        next.sharpenAmount = Math.min(150, (next.sharpenAmount || 40) + Math.round(clarityDelta * 80));
+      }
+      return next;
+    });
+  };
+
   const onPreviewPortrait = async () => {
     setAi((prev) => ({ ...prev, loading: true }));
     const res = await callAI('portraitEnhance', { strength: ai.portrait?.strength ?? 50 });
-    setAi((prev) => ({ ...prev, portrait: { ...prev.portrait, params: res?.payload?.params || null }, lastRun: 'portraitPreview', loading: false }));
+    const params = res?.payload?.params || null;
+    // Apply directly for visible preview
+    applyPortraitParamsToEdits(params);
+    setAi((prev) => ({ ...prev, portrait: { ...prev.portrait, params }, lastRun: 'portraitPreview', loading: false }));
   };
   const onApplyPortrait = async () => {
-    // same as preview, but we can flag "applied" later
+    // Apply again to ensure persisted state (already applied in preview)
     await onPreviewPortrait();
   };
+  const applyLandscapeParamsToEdits = (params) => {
+    if (!params) return;
+    const { sky = {}, ground = {}, global = {} } = params;
+    const { vibrance = 0, texture = 0 } = ground;
+    const { curveMid = 0 } = global;
+
+    // Global saturation/vibrance approximation
+    setColorAdjustments(prev => ({
+      ...prev,
+      saturation: (prev.saturation || 0) + Math.round((vibrance || 0) * 80)
+    }));
+
+    // Gentle mid-curve via contrast
+    setAdjustments(prev => ({
+      ...prev,
+      contrast: (prev.contrast || 0) + Math.round((curveMid || 0) * 100)
+    }));
+
+    // Texture approximation through sharpening
+    setDetailAdjustments(prev => ({
+      ...prev,
+      sharpenAmount: Math.min(150, (prev.sharpenAmount || 40) + Math.round((texture || 0) * 120))
+    }));
+  };
+
   const onPreviewLandscape = async () => {
     setAi((prev) => ({ ...prev, loading: true }));
     const res = await callAI('landscapeEnhance', { strength: ai.landscape?.strength ?? 50 });
-    setAi((prev) => ({ ...prev, landscape: { ...prev.landscape, params: res?.payload?.params || null }, lastRun: 'landscapePreview', loading: false }));
+    const params = res?.payload?.params || null;
+    applyLandscapeParamsToEdits(params);
+    setAi((prev) => ({ ...prev, landscape: { ...prev.landscape, params }, lastRun: 'landscapePreview', loading: false }));
   };
   const onApplyLandscape = async () => { await onPreviewLandscape(); };
+  // Background blur: approximate visibly by adding slight global blur in Effects panel for now
   const onPreviewBgBlur = async () => {
     setAi((prev) => ({ ...prev, loading: true }));
     const res = await callAI('backgroundBlur', { blurStrength: ai.bg?.blurStrength ?? 10 });
-    setAi((prev) => ({ ...prev, bg: { ...prev.bg, blurStrength: res?.payload?.blurStrength ?? prev.bg.blurStrength }, lastRun: 'bgBlurPreview', loading: false }));
+    const blurStrength = res?.payload?.blurStrength ?? ai.bg?.blurStrength ?? 10;
+    setEffects(prev => ({ ...prev, blur: Math.min(100, Math.max(0, blurStrength)) }));
+    setAi((prev) => ({ ...prev, bg: { ...prev.bg, blurStrength }, lastRun: 'bgBlurPreview', loading: false }));
   };
   const onApplyBgBlur = async () => { await onPreviewBgBlur(); };
+
+  // Background remove: set a state flag so Export can default to PNG; canvas can later respect alpha when masks arrive
+  const [hasAlphaBackgroundRemoved, setHasAlphaBackgroundRemoved] = useState(false);
   const onPreviewBgRemove = async () => {
     setAi((prev) => ({ ...prev, loading: true }));
     const res = await callAI('backgroundRemove', {});
-    setAi((prev) => ({ ...prev, bg: { ...prev.bg, removed: !!(res?.payload?.transparent) }, lastRun: 'bgRemovePreview', loading: false }));
+    const ok = !!(res?.payload?.transparent);
+    if (ok) {
+      setHasAlphaBackgroundRemoved(true);
+    }
+    setAi((prev) => ({ ...prev, bg: { ...prev.bg, removed: ok }, lastRun: 'bgRemovePreview', loading: false }));
   };
   const onApplyBgRemove = async () => { await onPreviewBgRemove(); };
 

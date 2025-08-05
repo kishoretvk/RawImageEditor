@@ -21,8 +21,8 @@ const EnhancedLandingPage = () => {
   useEffect(() => {
     // Preload only the images we actually use on the landing
     const images = [
-      '/demo-images/color-before.jpg',
-      '/demo-images/color-after.jpg'
+      '/public/demo-images/color-before.jpg',
+      '/public/demo-images/color-after.jpg'
     ];
     images.forEach(src => {
       const img = new Image();
@@ -82,17 +82,17 @@ const EnhancedLandingPage = () => {
           </div>
         </div>
 
-        <div className="hero-visual" aria-hidden="true">
-          {/* Lightweight teaser: small before/after slider with optimized demo images */}
-          <div className="demo-teaser">
-            <BeforeAfterSlider
-              beforeSrc="/demo-images/color-before.jpg"
-              afterSrc="/demo-images/color-after.jpg"
-              alt="Before/After teaser"
-            />
-            <div className="demo-caption">Quick teaser — see more on the Demo page</div>
-          </div>
+      <div className="hero-visual" aria-hidden="true">
+        {/* Lightweight teaser: small before/after slider with optimized demo images */}
+        <div className="demo-teaser">
+          <BeforeAfterSlider
+            beforeSrc="/public/demo-images/color-before.jpg"
+            afterSrc="/public/demo-images/color-after.jpg"
+            alt="Before/After teaser"
+          />
+          <div className="demo-caption">Quick teaser — see more on the Demo page</div>
         </div>
+      </div>
       </div>
 
       <div className="features-section">
