@@ -47,11 +47,20 @@ export default function WorkflowCanvasRF({
   initialNodes = [],
   initialEdges = [],
   onGraphChange,
+  onSelectionChange, // optional: notify parent when selection changes
 }) {
   // Hold local state
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
   const idRef = useRef(1000);
+
+  // Keep local state in sync if parent provides new initialNodes/Edges (e.g., load graph)
+  useEffect(() => {
+    setNodes(initialNodes || []);
+  }, [initialNodes]);
+  useEffect(() => {
+    setEdges(initialEdges || []);
+  }, [initialEdges]);
 
   // Notify parent AFTER first paint to avoid setState-in-render warning
   useEffect(() => {
@@ -91,6 +100,15 @@ export default function WorkflowCanvasRF({
 
   const defaultViewport = useMemo(() => ({ x: 0, y: 0, zoom: 0.9 }), []);
 
+  // Forward selection changes to parent
+  const handleSelectionChange = useCallback((sel) => {
+    // sel has { nodes: Node[], edges: Edge[] } when using ReactFlow onSelectionChange
+    const ids = Array.isArray(sel?.nodes) ? sel.nodes.map(n => n.id) : [];
+    if (onSelectionChange) {
+      try { onSelectionChange(ids); } catch {}
+    }
+  }, [onSelectionChange]);
+
   return (
     <div style={{ width: '100%', height: '100%', background: '#0f1216' }}>
       <ReactFlow
@@ -102,6 +120,7 @@ export default function WorkflowCanvasRF({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onSelectionChange={handleSelectionChange}
         proOptions={{ hideAttribution: true }}
       >
         <MiniMap

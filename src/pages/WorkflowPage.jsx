@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import WorkflowCanvasRF from '../components/workflow/WorkflowCanvasRF.jsx';
+import NodePalette from '../components/workflow/NodePalette.jsx';
 import InspectorPanel from '../components/workflow/InspectorPanel.jsx';
 import '../styles/WorkflowPage.css';
 import Button from '../components/ui/Button.jsx';
@@ -52,6 +53,56 @@ export default function WorkflowPage() {
 
   const onGraphChange = useCallback((next) => {
     setGraph(next);
+  }, []);
+
+  // Add a new node with sensible defaults; supports both {type, params} and string type
+  const addNode = useCallback((spec) => {
+    const typeRaw = typeof spec === 'string' ? spec : spec?.type;
+    if (!typeRaw) return;
+    const params = (typeof spec === 'object' && spec?.params) ? spec.params : {};
+    const rfType = typeRaw.endsWith('Node') ? typeRaw : `${typeRaw}Node`;
+
+    // simple id and positioning heuristic
+    const idx = (graph.nodes?.length || 0) + 1;
+    const id = `${typeRaw}-${idx}`;
+    const last = graph.nodes?.[graph.nodes.length - 1] || null;
+    const position = last ? { x: (last.position?.x || 80) + 240, y: last.position?.y || 200 } : { x: 80, y: 200 };
+
+    const labels = {
+      ingestNode: ['Ingest', 'Load image(s)'],
+      lensCorrectionNode: ['Lens Correction', 'Distortion, CA, Vignette'],
+      applyPresetNode: ['Apply Preset', 'Tone, Color, Curves'],
+      splitRGBNode: ['Split RGB', 'Per-channel outputs'],
+      exportNode: ['Export', 'Size target, Format']
+    };
+    const [label, subtitle] = labels[rfType] || ['Node', ''];
+
+    const newNode = {
+      id,
+      type: rfType,
+      position,
+      data: { label, subtitle, params }
+    };
+
+    setGraph((g) => ({ ...g, nodes: [...(g.nodes || []), newNode] }));
+  }, [graph]);
+
+  // Optional: create a starter graph quickly
+  const seedStarterGraph = useCallback(() => {
+    setGraph(() => {
+      const nodes = [
+        { id: 'ingest', type: 'ingestNode', position: { x: 80, y: 200 }, data: { label: 'Ingest', subtitle: 'Load image(s)', params: { source: 'upload' } } },
+        { id: 'lens', type: 'lensCorrectionNode', position: { x: 320, y: 200 }, data: { label: 'Lens Correction', subtitle: 'Distortion, CA, Vignette', params: { profile: 'auto', distortion: 0, caRed: 0, caBlue: 0, vignette: 0 } } },
+        { id: 'preset', type: 'applyPresetNode', position: { x: 580, y: 200 }, data: { label: 'Apply Preset', subtitle: 'Tone, Color, Curves', params: {} } },
+        { id: 'export', type: 'exportNode', position: { x: 840, y: 200 }, data: { label: 'Export', subtitle: 'Size target, Format', params: { sizeMB: 4, format: 'image/jpeg', quality: 0.9, filename: 'export' } } }
+      ];
+      const edges = [
+        { id: 'e1', source: 'ingest', target: 'lens' },
+        { id: 'e2', source: 'lens', target: 'preset' },
+        { id: 'e3', source: 'preset', target: 'export' }
+      ];
+      return { nodes, edges };
+    });
   }, []);
 
   // Progress update helper: set node.data.progress 0..1 and trigger re-render
@@ -204,7 +255,19 @@ export default function WorkflowPage() {
           </Button>
         </div>
       </div>
-      <div className="workflow-body">
+      <div className="workflow-body" style={{ display: 'grid', gridTemplateColumns: '260px 1fr 360px', gap: '12px', padding: '12px', minHeight: 0 }}>
+        {/* LEFT: Node palette */}
+        <div className="workflow-palette u-surface" style={{ padding: '12px', overflow: 'auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <h3 style={{ margin: 0, fontSize: 16 }}>Nodes</h3>
+            {(!graph.nodes || graph.nodes.length === 0) && (
+              <Button size="sm" variant="secondary" onClick={seedStarterGraph}>Starter Graph</Button>
+            )}
+          </div>
+          <NodePalette onAdd={addNode} />
+        </div>
+
+        {/* CENTER: Canvas */}
         <div className="workflow-canvas">
           <WorkflowCanvasRF
             initialNodes={graph.nodes}
@@ -213,6 +276,8 @@ export default function WorkflowPage() {
             onSelectionChange={(ids) => setSelectedNodeId(Array.isArray(ids) ? ids[0] : ids || null)}
           />
         </div>
+
+        {/* RIGHT: Inspector + Log */}
         <div className="workflow-inspector">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
             <div className="u-surface" style={{ padding: '12px', minHeight: 0 }}>

@@ -138,3 +138,124 @@ export function buildDefaultRegistry() {
   reg.register('Export', nodeExport);
   return reg;
 }
+
+/**
+ * Minimal, page-friendly runner adapter.
+ * Accepts the simplified graph format used by WorkflowPage:
+ *  {
+ *    nodes: [{ id, type, params }],
+ *    edges: [{ from, to }]
+ *  }
+ * where type is normalized (e.g., 'ingest','lensCorrection','applyPreset','export', etc.)
+ * This adapter maps normalized types to registry types and simulates progress callbacks.
+ */
+export async function runWorkflow(graph, ctx = {}) {
+  // Defensive defaults
+  const onNodeStart = ctx.onNodeStart || (() => {});
+  const onNodeProgress = ctx.onNodeProgress || (() => {});
+  const onNodeComplete = ctx.onNodeComplete || (() => {});
+  const onError = ctx.onError || (() => {});
+
+  // Map normalized types to registry types (align with nodes/* implementations)
+  const mapType = (t) => {
+    switch (t) {
+      case 'ingest': return 'IngestList';
+      case 'exif': return 'ReadEXIF';
+      case 'applyPreset': return 'ApplyPreset';
+      case 'autoWB': return 'AutoWB';
+      case 'splitRGB': return 'SplitRGB';
+      case 'watermark': return 'Watermark';
+      case 'export': return 'Export';
+      case 'lensCorrection':
+        // Not implemented in nodes/ yet; no-op for now
+        return null;
+      default:
+        return null;
+    }
+  };
+
+  // Build a trivial linear order based on provided edges (fallback to node order)
+  const nodes = Array.isArray(graph?.nodes) ? graph.nodes.slice() : [];
+  const edges = Array.isArray(graph?.edges) ? graph.edges.slice() : [];
+
+  // Simple topo: repeatedly pick nodes whose all predecessors are scheduled
+  const pred = new Map(nodes.map(n => [n.id, new Set()]));
+  for (const e of edges) {
+    if (!pred.has(e.to)) pred.set(e.to, new Set());
+    pred.get(e.to).add(e.from);
+  }
+  const scheduled = new Set();
+  const order = [];
+  let remaining = new Set(nodes.map(n => n.id));
+
+  while (remaining.size) {
+    let progressed = false;
+    for (const id of Array.from(remaining)) {
+      const req = pred.get(id) || new Set();
+      let ok = true;
+      for (const p of req) if (!scheduled.has(p)) { ok = false; break; }
+      if (ok) {
+        order.push(id);
+        scheduled.add(id);
+        remaining.delete(id);
+        progressed = true;
+      }
+    }
+    if (!progressed) {
+      // cycle or invalid, just append remaining in given order to avoid deadlock
+      for (const id of Array.from(remaining)) {
+        order.push(id);
+        scheduled.add(id);
+        remaining.delete(id);
+      }
+    }
+  }
+
+  // Execute in order; for now simulate progress and call registry if available
+  const registry = buildDefaultRegistry();
+
+  for (const nodeId of order) {
+    const node = nodes.find(n => n.id === nodeId);
+    const normType = String(node?.type || '').replace(/Node$/i, ''); // in case RF type leaked here
+    const regType = mapType(normType);
+
+    try {
+      onNodeStart(node.id, normType || node.type || 'node');
+
+      // If we have an implementation, call it; otherwise simulate work
+      if (regType && registry._map.has(regType)) {
+        // Minimal call signature — no real inputs wiring yet
+        const impl = registry.get(regType);
+        // Simulate progressive updates during impl with wrapper
+        let lastP = 0;
+        const onProgress = (p) => {
+          const clamped = Math.max(0, Math.min(1, Number(p) || 0));
+          // throttle trivial progress flooding
+          if (clamped - lastP >= 0.05 || clamped === 1) {
+            onNodeProgress(node.id, clamped);
+            lastP = clamped;
+          }
+        };
+        // Provide minimal fields expected by nodes
+        await impl({
+          inputs: [],
+          params: node.params || {},
+          context: { node, shared: {}, workflow: { nodes, edges, settings: { retry: 0 } } },
+          onProgress
+        });
+        onNodeProgress(node.id, 1);
+      } else {
+        // Fallback: simulate ~300ms of progress
+        for (let p = 0; p <= 10; p++) {
+          await new Promise(r => setTimeout(r, 30));
+          onNodeProgress(node.id, p / 10);
+        }
+      }
+
+      onNodeComplete(node.id, normType || node.type || 'node');
+    } catch (err) {
+      try { onError(node.id, err); } catch {}
+      throw err;
+    }
+  }
+}
