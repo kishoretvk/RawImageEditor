@@ -7,8 +7,8 @@
  *   await landscapeEnhanceV2.run(image, { strength: 50, skyBoost: true, textureBoost: true })
  * -> { editsDelta, masks, meta }
  */
-import { loadSegmentationModel, segment } from '../../segmentation';
-import * as F from '../../filters';
+import { segmentSky } from '../segmentation.js';
+import * as F from '../filters.js';
 
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 
@@ -25,12 +25,11 @@ export const landscapeEnhanceV2 = {
     const skyBoost = params.skyBoost !== false;
     const textureBoost = params.textureBoost !== false;
 
-    // 1) Segment sky / vegetation / ground (fallback to sky+person if model limited)
-    await loadSegmentationModel();
-    const seg = await segment(image, { classes: ['sky', 'vegetation', 'ground'] });
-    const skyMask = seg?.masks?.sky || null;
-    const vegMask = seg?.masks?.vegetation || null;
-    const groundMask = seg?.masks?.ground || null;
+    // 1) Segment sky (stub API only supports sky/person currently). Vegetation/ground are TODO.
+    const skySeg = await segmentSky(image, {});
+    const skyMask = skySeg?.mask || null;
+    const vegMask = null;    // TODO: add when segmentation supports vegetation
+    const groundMask = null; // TODO: add when segmentation supports ground
 
     // 2) Adaptive parameters
     const t = clamp01(strength / 100);

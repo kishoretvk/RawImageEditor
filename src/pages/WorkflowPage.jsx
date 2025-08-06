@@ -5,7 +5,7 @@ import InspectorPanel from '../components/workflow/InspectorPanel.jsx';
 import '../styles/WorkflowPage.css';
 import Button from '../components/ui/Button.jsx';
 import '../styles/tokens.css';
-import * as Runner from '../utils/workflow/runner';
+import * as Runner from '../utils/workflow/runner.js';
 import { JobStore } from '../utils/db/indexedDb';
 
 /**
@@ -193,8 +193,6 @@ export default function WorkflowPage() {
 
       if (Runner.runWorkflow) {
         await Runner.runWorkflow(runnerGraph, ctx);
-      } else if (Runner.default) {
-        await Runner.default(runnerGraph, ctx);
       } else {
         throw new Error('runWorkflow export not found in utils/workflow/runner.js');
       }

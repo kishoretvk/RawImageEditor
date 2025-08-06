@@ -7,16 +7,22 @@
  *   await bgMatteV2.blur(image, { strength: 50 })    -> { editsDelta, masks, meta }
  *   await bgMatteV2.remove(image, { feather: 2.0 })  -> { editsDelta, masks, meta }
  */
-import { loadSegmentationModel, segment } from '../../segmentation';
-import { matteRefine } from '../../matteRefine';
+import { segmentPerson } from '../segmentation.js';
+import { guidedRefine } from '../matteRefine.js';
 
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 
 async function subjectMask(image) {
-  await loadSegmentationModel();
-  const seg = await segment(image, { classes: ['person', 'main'] }); // model-dependent
-  const m = seg?.masks?.person || seg?.masks?.main || null;
-  return m ? await matteRefine(image, m, { iterations: 2 }) : null;
+  const seg = await segmentPerson(image, {});
+  const m = seg?.mask || null;
+  if (!m) return null;
+  // guidedRefine is a stub that returns meta; keep original mask for now
+  await guidedRefine(
+    { width: image?.width, height: image?.height },
+    { width: image?.width, height: image?.height },
+    { radius: 2, feather: 2.0 }
+  );
+  return m;
 }
 
 export const bgMatteV2 = {

@@ -7,9 +7,9 @@
  *   await portraitEnhanceV2.run(image, { strength: 50, preserveSkinTone: true })
  * -> { editsDelta, masks, meta }
  */
-import { loadSegmentationModel, segment } from '../../segmentation';
-import { matteRefine } from '../../matteRefine';
-import * as F from '../../filters';
+import { segmentPerson } from '../segmentation.js';
+import { guidedRefine } from '../matteRefine.js';
+import * as F from '../filters.js';
 
 // Utility: clamp 0..1
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
@@ -26,13 +26,18 @@ export const portraitEnhanceV2 = {
     const strength = Number.isFinite(params.strength) ? params.strength : 50;
     const preserveSkin = params.preserveSkinTone !== false;
 
-    // 1) Segment person regions
-    await loadSegmentationModel();
-    const seg = await segment(image, { classes: ['person'] });
-    const personMask = seg?.masks?.person || null;
+    // 1) Segment person regions (stubbed segmentation API)
+    const seg = await segmentPerson(image, {});
+    const personMask = seg?.mask || null;
 
-    // 2) Matte refine to improve edges for hair/shoulders
-    const refinedMask = personMask ? await matteRefine(image, personMask, { iterations: 2 }) : null;
+  // 2) Matte refine to improve edges for hair/shoulders (stub: guidedRefine returns meta; keep original mask)
+  const refinedMask = personMask
+    ? (await guidedRefine(
+        { width: image?.width, height: image?.height },
+        { width: image?.width, height: image?.height },
+        { radius: 2, feather: 1.0 }
+      )) && personMask
+    : null;
 
     // 3) Compute adaptive parameters from strength
     const t = clamp01(strength / 100);
