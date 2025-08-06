@@ -1,4 +1,7 @@
 import React from 'react';
+import '../../styles/tokens.css';
+import Panel from '../ui/Panel.jsx';
+import Button from '../ui/Button.jsx';
 
 const AdvancedPanel = ({ advanced = {}, onChange }) => {
   const defaultAdvanced = {
@@ -12,16 +15,25 @@ const AdvancedPanel = ({ advanced = {}, onChange }) => {
     advancedVignetting: 0,
     filmGrain: 0
   };
-  
+
   const currentAdvanced = { ...defaultAdvanced, ...advanced };
-  
+
   const handleChange = (key, value) => {
     onChange({ ...currentAdvanced, [key]: value });
   };
-  
+
+  const handleReset = () => {
+    onChange({ ...defaultAdvanced });
+  };
+
   return (
-    <div className="space-y-4">
-      <div>
+    <Panel
+      title="Advanced"
+      actions={<Button size="sm" variant="secondary" onClick={handleReset}>Reset</Button>}
+      className="is-compact"
+    >
+      <div className="space-y-4">
+        <div>
         <label className="block text-gray-300 font-medium mb-2 text-sm">
           Tone Mapping / HDR
           <span className="text-gray-500 ml-2">{currentAdvanced.hdr.toFixed(2)}</span>
@@ -164,7 +176,8 @@ const AdvancedPanel = ({ advanced = {}, onChange }) => {
           className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
         />
       </div>
-    </div>
+      </div>
+    </Panel>
   );
 };
 

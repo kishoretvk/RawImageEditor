@@ -1,4 +1,7 @@
 import React from 'react';
+import '../../styles/tokens.css';
+import Panel from '../ui/Panel.jsx';
+import Button from '../ui/Button.jsx';
 
 const GeometryPanel = ({ geometry = {}, onChange }) => {
   const defaultGeometry = {
@@ -16,10 +19,27 @@ const GeometryPanel = ({ geometry = {}, onChange }) => {
     onChange({ ...currentGeometry, [key]: value });
   };
   
+  const handleReset = () => {
+    const defaults = {
+      crop: 0,
+      rotate: 0,
+      flip: 'none',
+      perspective: 0,
+      keystone: 0,
+      distortion: 0
+    };
+    onChange(defaults);
+  };
+
   return (
-    <div className="space-y-4">
-      <div>
-        <label className="block text-gray-300 font-medium mb-2 text-sm">
+    <Panel
+      title="Geometry"
+      actions={<Button size="sm" variant="secondary" onClick={handleReset}>Reset</Button>}
+      className="is-compact"
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="block text-gray-300 font-medium mb-2 text-sm">
           Crop
           <span className="text-gray-500 ml-2">{currentGeometry.crop.toFixed(2)}</span>
         </label>
@@ -112,7 +132,8 @@ const GeometryPanel = ({ geometry = {}, onChange }) => {
           <option value="vertical">Vertical</option>
         </select>
       </div>
-    </div>
+      </div>
+    </Panel>
   );
 };
 

@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronRightIcon, CameraIcon, AdjustmentsHorizontalIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import '../styles/tokens.css';
+import Button from '../components/ui/Button.jsx';
+import Card from '../components/ui/Card.jsx';
 
 // Import images
 import cheetah from '../assets/images/cheetah-horizontal.jpg';
@@ -281,35 +284,24 @@ const Home = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row justify-center gap-4 mb-16">
-              <button
-                className="group bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold px-8 py-4 rounded-xl shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"
-                onClick={() => window.location.href = '/upload'}
-              >
+              <Button variant="primary" size="lg" onClick={() => (window.location.href = '/upload')}>
                 <div className="flex items-center justify-center gap-2">
                   <span>Start Processing</span>
-                  <ChevronRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+                  <ChevronRightIcon className="w-5 h-5" />
                 </div>
-              </button>
-              
-              <button
-                className="group bg-white/10 backdrop-blur-sm border border-white/20 text-white font-bold px-8 py-4 rounded-xl hover:bg-white/20 transition-all duration-300 transform hover:scale-105"
-                onClick={() => window.location.href = '/editor'}
-              >
+              </Button>
+              <Button variant="secondary" size="lg" onClick={() => (window.location.href = '/editor')}>
                 <div className="flex items-center justify-center gap-2">
                   <AdjustmentsHorizontalIcon className="w-5 h-5" />
                   <span>Try Live Demo</span>
                 </div>
-              </button>
-              
-              <button
-                className="group bg-white/10 backdrop-blur-sm border border-white/20 text-white font-bold px-8 py-4 rounded-xl hover:bg-white/20 transition-all duration-300 transform hover:scale-105"
-                onClick={() => window.location.href = '/demo'}
-              >
+              </Button>
+              <Button variant="ghost" size="lg" onClick={() => (window.location.href = '/demo')}>
                 <div className="flex items-center justify-center gap-2">
                   <SparklesIcon className="w-5 h-5" />
                   <span>View Features</span>
                 </div>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -335,7 +327,19 @@ const Home = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
             {showcaseFilters.map((filter, index) => (
-              <FilterPreviewCard key={index} {...filter} index={index} />
+              <Card
+                key={index}
+                title={filter.filterName}
+                subtitle={filter.description}
+                actions={
+                  <Button size="sm" variant="secondary" onClick={() => (window.location.href = '/editor')}>
+                    Edit This Style
+                  </Button>
+                }
+                variant="elevated"
+              >
+                <FilterPreviewCard {...filter} index={index} />
+              </Card>
             ))}
           </div>
           

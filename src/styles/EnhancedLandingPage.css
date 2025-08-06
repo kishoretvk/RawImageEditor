@@ -52,23 +52,18 @@
   margin-bottom: 40px;
 }
 
+/* Neutralize legacy button classes to avoid conflicts with ui/Button */
 .btn-primary,
 .btn-secondary,
 .btn-cta,
 .btn-outline {
-  padding: 16px 32px;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
+  all: unset;
 }
 
+/* handled by ui/Button */
 .btn-primary,
 .btn-cta {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-  color: white;
+  all: unset;
 }
 
 .btn-primary:hover,
@@ -77,18 +72,16 @@
   box-shadow: 0 4px 20px rgba(0, 123, 255, 0.3);
 }
 
+/* handled by ui/Button */
 .btn-secondary,
 .btn-outline {
-  background: transparent;
-  color: #007bff;
-  border: 2px solid #007bff;
+  all: unset;
 }
 
+/* handled by ui/Button */
 .btn-secondary:hover,
 .btn-outline:hover {
-  background: #007bff;
-  color: white;
-  transform: translateY(-2px);
+  all: unset;
 }
 
 .hero-stats {
@@ -386,8 +379,8 @@
 }
 
 /* Loading states */
+/* handled by ui/Button */
 .btn-primary:disabled,
 .btn-cta:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+  all: unset;
 }

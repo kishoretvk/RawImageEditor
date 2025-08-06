@@ -1,5 +1,8 @@
 import React from 'react';
 import SliderControl from '../SliderControl';
+import '../../styles/tokens.css';
+import Panel from '../ui/Panel.jsx';
+import Button from '../ui/Button.jsx';
 
 // Defaults confirmed by plan
 const DEFAULTS = {
@@ -14,11 +17,14 @@ const DEFAULTS = {
 export default function DetailPanel({ detail = DEFAULTS, onChange }) {
   const val = { ...DEFAULTS, ...(detail || {}) };
   const update = (k, v) => onChange && onChange({ ...val, [k]: v });
+  const handleReset = () => onChange && onChange({ ...DEFAULTS });
 
   return (
-    <div className="panel-content">
-      <h3 className="panel-title">Detail</h3>
-
+    <Panel
+      title="Detail (NR + Sharpen)"
+      actions={<Button size="sm" variant="secondary" onClick={handleReset}>Reset</Button>}
+      className="is-compact"
+    >
       <div className="space-y-4">
         <section>
           <h4 className="text-sm font-medium mb-2">Noise Reduction</h4>
@@ -75,17 +81,7 @@ export default function DetailPanel({ detail = DEFAULTS, onChange }) {
             onChange={(v) => update('sharpenMasking', v)}
           />
         </section>
-
-        <div className="flex gap-2">
-          <button
-            className="header-button"
-            onClick={() => onChange && onChange({ ...DEFAULTS })}
-            title="Reset Detail"
-          >
-            Reset
-          </button>
-        </div>
       </div>
-    </div>
+    </Panel>
   );
 }

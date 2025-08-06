@@ -1,0 +1,110 @@
+@import "../../styles/tokens.css";
+
+.ui-btn {
+  --_bg: var(--color-primary);
+  --_bg-hover: var(--color-primary-hover);
+  --_bg-active: var(--color-primary-active);
+  --_fg: #fff;
+  --_border: transparent;
+  --_pad-y: 8px;
+  --_pad-x: 14px;
+  --_radius: var(--radius-md);
+  --_shadow: var(--shadow-sm);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: 1;
+
+  padding: var(--_pad-y) var(--_pad-x);
+  border-radius: var(--_radius);
+  border: 1px solid var(--_border);
+
+  background: var(--_bg);
+  color: var(--_fg);
+  box-shadow: var(--_shadow);
+
+  cursor: pointer;
+  user-select: none;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .02s ease;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ui-btn:hover {
+  background: var(--_bg-hover);
+}
+
+.ui-btn:active {
+  background: var(--_bg-active);
+  transform: translateY(0.5px);
+}
+
+.ui-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--_shadow), var(--ring);
+}
+
+.ui-btn.is-disabled,
+.ui-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Variants */
+.ui-btn--primary { /* defaults already set */ }
+
+.ui-btn--secondary {
+  --_bg: var(--color-elev-1);
+  --_bg-hover: var(--color-elev-2);
+  --_bg-active: var(--color-elev-2);
+  --_fg: var(--color-text);
+  --_border: var(--color-border);
+}
+
+.ui-btn--ghost {
+  --_bg: transparent;
+  --_bg-hover: rgba(255,255,255,0.06);
+  --_bg-active: rgba(255,255,255,0.10);
+  --_fg: var(--color-text);
+  --_border: transparent;
+  --_shadow: none;
+  border: 1px solid transparent;
+}
+
+/* Sizes */
+.ui-btn--sm {
+  --_pad-y: 6px;
+  --_pad-x: 12px;
+  font-size: var(--text-sm);
+}
+
+.ui-btn--md {
+  --_pad-y: 8px;
+  --_pad-x: 14px;
+  font-size: var(--text-md);
+}
+
+.ui-btn--lg {
+  --_pad-y: 12px;
+  --_pad-x: 18px;
+  font-size: var(--text-lg);
+}
+
+/* Slots */
+.ui-btn__icon {
+  display: inline-flex;
+  width: 1.2em;
+  height: 1.2em;
+  line-height: 1;
+}
+
+.ui-btn__label {
+  display: inline-block;
+}

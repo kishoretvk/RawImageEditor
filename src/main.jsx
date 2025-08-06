@@ -4,6 +4,12 @@ import { BrowserRouter as Router } from 'react-router-dom'
 import AppRouter from './AppRouter.jsx'
 import './index.css'
 
+// Dev-only console annotation for extension-originated errors
+import { installExtensionNoiseGuard } from './utils/dev/extensionNoiseGuard.js'
+if (import.meta.env && import.meta.env.DEV) {
+  try { installExtensionNoiseGuard() } catch {}
+}
+
 // Disable service worker registration during development
 const isDevelopment = import.meta.env.DEV;
 

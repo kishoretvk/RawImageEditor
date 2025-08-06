@@ -5,6 +5,44 @@ export default function NodePalette({ onAdd }) {
   const types = listNodeTypes();
   const grouped = groupBy(types, (t) => t.category);
 
+  // Provide sensible default params per known type so Inspector shows values immediately
+  const defaultsFor = (type) => {
+    switch (type) {
+      case 'ingest':
+      case 'ingestNode':
+        return { source: 'upload' };
+      case 'lensCorrection':
+      case 'lensCorrectionNode':
+        return { profile: 'auto', distortion: 0, caRed: 0, caBlue: 0, vignette: 0 };
+      case 'applyPreset':
+      case 'applyPresetNode':
+        return { presetId: '' };
+      case 'splitRGB':
+      case 'splitRGBNode':
+        return { source: 'processed' };
+      case 'export':
+      case 'exportNode':
+        return { format: 'image/jpeg', sizeMB: 4, quality: 0.9, filename: 'export' };
+      default:
+        return {};
+    }
+  };
+
+  const handleAdd = (type) => {
+    // Pass richer payload if consumer supports it; otherwise fall back to old signature
+    const params = defaultsFor(type);
+    // Consumers like WorkflowCanvasRF may accept just type, or an object. Try object first.
+    if (onAdd?.length && onAdd.length >= 1) {
+      try {
+        onAdd({ type, params });
+      } catch {
+        onAdd(type);
+      }
+    } else {
+      onAdd?.({ type, params });
+    }
+  };
+
   return (
     <div className="node-palette">
       <h3 className="palette-title">Nodes</h3>
@@ -16,7 +54,7 @@ export default function NodePalette({ onAdd }) {
               <button
                 key={nt.type}
                 className="palette-item"
-                onClick={() => onAdd?.(nt.type)}
+                onClick={() => handleAdd(nt.type)}
                 title={nt.name}
               >
                 {nt.name}

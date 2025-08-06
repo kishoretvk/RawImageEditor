@@ -7,6 +7,8 @@ import natureImg from '../assets/images/nature-horizontal.jpg';
 import newyorkImg from '../assets/images/newyork-night.jpg';
 import northernlightsImg from '../assets/images/northernlights.jpg';
 import FileUploader from './FileUploader';
+import Button from './ui/Button.jsx';
+import '../styles/tokens.css';
 import './LandingPageNew.css';
 
 
@@ -115,15 +117,16 @@ const LandingPage = () => {
           <div className="hero-content">
             <h1 className="hero-title">Professional Image Editing & Conversion</h1>
             <p className="hero-subtitle">Transform your RAW images with precision and style</p>
-            <div className="flex gap-4">
-              <Link to="/editor" className="cta-button">Start Editing</Link>
-              <Link to="/demo" className="cta-button secondary">View Demo</Link>
-              <button 
-                className="cta-button tertiary" 
-                onClick={handleSeeTheDifference}
-              >
+            <div className="flex gap-4" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <Button asChild variant="primary" size="lg">
+                <Link to="/editor">Start Editing</Link>
+              </Button>
+              <Button asChild variant="secondary" size="lg">
+                <Link to="/demo">View Demo</Link>
+              </Button>
+              <Button variant="ghost" size="lg" onClick={handleSeeTheDifference}>
                 See the Difference
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -133,47 +136,35 @@ const LandingPage = () => {
       <section className="editing-styles" style={{padding: '2rem 0', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'}}>
         <div className="container">
           <h2 className="section-title" style={{textAlign: 'center', marginBottom: '2rem'}}>Choose Your Editing Style</h2>
-          <div style={{display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap'}}>
-            <button 
-              className="cta-button" 
-              style={{padding: '0.8rem 1.5rem', fontSize: '1rem', minWidth: '180px'}}
-              onClick={() => {
-                // Navigate to editor with wildlife preset
-                window.location.hash = '/editor';
-              }}
+          <div style={{display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap'}}>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => { window.location.hash = '/editor'; }}
             >
               Wildlife Photography
-            </button>
-            <button 
-              className="cta-button secondary" 
-              style={{padding: '0.8rem 1.5rem', fontSize: '1rem', minWidth: '180px'}}
-              onClick={() => {
-                // Navigate to editor with landscape preset
-                window.location.hash = '/editor';
-              }}
+            </Button>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => { window.location.hash = '/editor'; }}
             >
               Landscape Enhancement
-            </button>
-            <button 
-              className="cta-button tertiary" 
-              style={{padding: '0.8rem 1.5rem', fontSize: '1rem', minWidth: '180px'}}
-              onClick={() => {
-                // Navigate to editor with urban night preset
-                window.location.hash = '/editor';
-              }}
+            </Button>
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => { window.location.hash = '/editor'; }}
             >
               Urban Night Scene
-            </button>
-            <button 
-              className="cta-button" 
-              style={{background: 'linear-gradient(45deg, #9c27b0, #7b1fa2)', padding: '0.8rem 1.5rem', fontSize: '1rem', minWidth: '180px'}}
-              onClick={() => {
-                // Navigate to editor with aurora preset
-                window.location.hash = '/editor';
-              }}
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => { window.location.hash = '/editor'; }}
             >
               Aurora Enhancement
-            </button>
+            </Button>
           </div>
         </div>
       </section>
@@ -188,30 +179,30 @@ const LandingPage = () => {
           <div style={{position: 'relative', maxWidth: 900, margin: '0 auto'}}>
             {/* Overlay Controls */}
             <div style={{position: 'absolute', top: 18, right: 18, zIndex: 20, display: 'flex', gap: 8}}>
-              <button
-                className="cta-button secondary"
-                style={{padding: '0.5rem 1.2rem', fontSize: 15, minWidth: 0, borderRadius: 18, boxShadow: '0 2px 8px rgba(33,150,243,0.13)'}}
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setShowOriginal(o => !o)}
               >
                 {showOriginal ? 'Minimize Original' : 'Show Original'}
-              </button>
-              <button
-                className="cta-button tertiary"
-                style={{padding: '0.5rem 1.2rem', fontSize: 15, minWidth: 0, borderRadius: 18, boxShadow: '0 2px 8px rgba(255,152,0,0.13)'}}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setToolbarMinimized(m => !m)}
               >
                 {toolbarMinimized ? 'Show Toolbar' : 'Minimize Toolbar'}
-              </button>
+              </Button>
             </div>
             {/* Grouped Toolbar (Demo Only) */}
             {!toolbarMinimized && (
               <div style={{position: 'absolute', bottom: 18, left: '50%', transform: 'translateX(-50%)', zIndex: 10, display: 'flex', gap: 12, background: 'rgba(255,255,255,0.92)', borderRadius: 18, boxShadow: '0 2px 12px rgba(0,0,0,0.10)', padding: '0.5rem 1.2rem'}}>
-                <button className="cta-button" style={{padding: '0.3rem 1.1rem', fontSize: 15, minWidth: 0, borderRadius: 14}}>Pan</button>
-                <button className="cta-button secondary" style={{padding: '0.3rem 1.1rem', fontSize: 15, minWidth: 0, borderRadius: 14}}>Zoom</button>
-                <button className="cta-button tertiary" style={{padding: '0.3rem 1.1rem', fontSize: 15, minWidth: 0, borderRadius: 14}}>←</button>
-                <button className="cta-button tertiary" style={{padding: '0.3rem 1.1rem', fontSize: 15, minWidth: 0, borderRadius: 14}}>→</button>
-                <button className="cta-button secondary" style={{padding: '0.3rem 1.1rem', fontSize: 15, minWidth: 0, borderRadius: 14}}>Undo</button>
-                <button className="cta-button secondary" style={{padding: '0.3rem 1.1rem', fontSize: 15, minWidth: 0, borderRadius: 14}}>Redo</button>
+                <Button size="sm" variant="primary">Pan</Button>
+                <Button size="sm" variant="secondary">Zoom</Button>
+                <Button size="sm" variant="ghost">←</Button>
+                <Button size="sm" variant="ghost">→</Button>
+                <Button size="sm" variant="secondary">Undo</Button>
+                <Button size="sm" variant="secondary">Redo</Button>
               </div>
             )}
             {/* Demo Preview: Show uploaded image if present, else demo */}

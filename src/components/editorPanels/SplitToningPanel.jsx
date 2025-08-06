@@ -1,5 +1,8 @@
 import React from 'react';
 import SliderControl from '../SliderControl';
+import '../../styles/tokens.css';
+import Panel from '../ui/Panel.jsx';
+import Button from '../ui/Button.jsx';
 
 export default function SplitToningPanel({ edits, onEditsChange }) {
   const handleChange = (key, value) => {
@@ -20,10 +23,19 @@ export default function SplitToningPanel({ edits, onEditsChange }) {
     balance: 0
   };
 
+  const handleReset = () => {
+    onEditsChange({
+      ...edits,
+      splitToning: { highlightsHue: 0, highlightsSat: 0, shadowsHue: 0, shadowsSat: 0, balance: 0 }
+    });
+  };
+
   return (
-    <div className="panel-content">
-      <h3 className="panel-title">Split Toning</h3>
-      
+    <Panel
+      title="Split Toning"
+      actions={<Button size="sm" variant="secondary" onClick={handleReset}>Reset</Button>}
+      className="is-compact"
+    >
       <div className="space-y-4">
         <div>
           <h4 className="text-sm font-medium mb-2">Highlights</h4>
@@ -78,6 +90,6 @@ export default function SplitToningPanel({ edits, onEditsChange }) {
           onChange={(v) => handleChange('balance', v)}
         />
       </div>
-    </div>
+    </Panel>
   );
 }

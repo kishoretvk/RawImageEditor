@@ -7,15 +7,15 @@
  */
 import React, { useState } from 'react';
 import { toJPEGTargetSize } from '../utils/imageProcessing';
+import '../styles/tokens.css';
+import Button from './ui/Button.jsx';
+import Panel from './ui/Panel.jsx';
 
 export default function ExportDialog({
   onExport,
-  // New props (optional, safe to omit)
   onRequestSplitChannels,   // (useAdjusted:boolean) => void
   onExportTargetSize,       // (targetMB:number, options:{ tolerance:number, allowDownscale:boolean }) => void
-  // Optional: direct processed canvas supplier to run target-size export here
   getProcessedCanvas,       // () => HTMLCanvasElement | Promise<HTMLCanvasElement>
-  // Optional: hints for export UX
   hasAlphaBackgroundRemoved = false
 }) {
   const [format, setFormat] = useState(hasAlphaBackgroundRemoved ? 'png' : 'jpeg');
@@ -79,79 +79,79 @@ export default function ExportDialog({
 
   return (
     <div className="flex flex-col gap-3">
-      <label className="text-xs font-semibold">Export Image</label>
-
-      <div className="flex gap-2 items-center">
-        <span className="text-xs">Format</span>
-        <select value={format} onChange={e => setFormat(e.target.value)}>
-          <option value="jpeg">JPEG</option>
-          <option value="png">PNG</option>
-          <option value="tiff">TIFF</option>
-        </select>
-      </div>
-      {hasAlphaBackgroundRemoved && (
-        <label className="text-[11px] flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={preserveTransparency}
-            onChange={e => {
-              setPreserveTransparency(e.target.checked);
-              if (e.target.checked && format !== 'png') setFormat('png');
-            }}
-          />
-          Preserve transparency (background removed)
-        </label>
-      )}
-
-      <div className="flex gap-2 items-center">
-        <span className="text-xs">Quality</span>
-        <input
-          type="range"
-          min="10"
-          max="100"
-          value={quality}
-          onChange={e => setQuality(Number(e.target.value))}
-          disabled={targetMode} // disabled when target size is used
-        />
-        <span className="text-xs">{quality}%</span>
-      </div>
-
-      <div className="flex gap-2 items-center">
-        <span className="text-xs">Filename</span>
-        <input type="text" value={filename} onChange={e => setFilename(e.target.value)} />
-      </div>
-
-      <button className="bg-success text-white px-2 py-1 rounded" onClick={handleExport}>
-        Export
-      </button>
-
-      {/* Split Channels */}
-      <div className="mt-3 p-2 rounded border border-white/10 bg-white/5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold">Split Channels (R/G/B)</span>
-          <div className="flex items-center gap-2">
-            <label className="text-[11px] flex items-center gap-1">
-              <input
-                type="checkbox"
-                checked={useAdjusted}
-                onChange={e => setUseAdjusted(e.target.checked)}
-              />
-              Use current adjustments
-            </label>
-            <button
-              className="px-2 py-1 rounded bg-blue-600/80 text-white text-xs"
-              onClick={handleSplitChannels}
-              title="Export R/G/B mono images"
-            >
-              Split
-            </button>
-          </div>
+      <Panel title="Export Image">
+        <div className="flex gap-2 items-center">
+          <span className="text-xs">Format</span>
+          <select value={format} onChange={e => setFormat(e.target.value)}>
+            <option value="jpeg">JPEG</option>
+            <option value="png">PNG</option>
+            <option value="tiff">TIFF</option>
+          </select>
         </div>
-      </div>
+        {hasAlphaBackgroundRemoved && (
+          <label className="text-[11px] flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={preserveTransparency}
+              onChange={e => {
+                setPreserveTransparency(e.target.checked);
+                if (e.target.checked && format !== 'png') setFormat('png');
+              }}
+            />
+            Preserve transparency (background removed)
+          </label>
+        )}
 
-      {/* Target Size Export */}
-      <div className="p-2 rounded border border-white/10 bg-white/5">
-        <div className="text-xs font-semibold mb-2">Target Size (MB) Export</div>
+        <div className="flex gap-2 items-center">
+          <span className="text-xs">Quality</span>
+          <input
+            type="range"
+            min="10"
+            max="100"
+            value={quality}
+            onChange={e => setQuality(Number(e.target.value))}
+            disabled={targetMode}
+          />
+          <span className="text-xs">{quality}%</span>
+        </div>
+
+        <div className="flex gap-2 items-center">
+          <span className="text-xs">Filename</span>
+          <input type="text" value={filename} onChange={e => setFilename(e.target.value)} />
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <Button variant="primary" size="sm" onClick={handleExport}>Export</Button>
+          <Button variant="ghost" size="sm" onClick={() => {
+            // noop close: hosting modal handles closing
+            const ev = new CustomEvent('export-dialog-close');
+            window.dispatchEvent(ev);
+          }}>Close</Button>
+        </div>
+      </Panel>
+
+      <Panel title="Split Channels (R/G/B)">
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={useAdjusted}
+              onChange={e => setUseAdjusted(e.target.checked)}
+            />
+            Use current adjustments
+          </label>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleSplitChannels}
+            title="Export R/G/B mono images"
+          >
+            Split
+          </Button>
+        </div>
+      </Panel>
+
+      <Panel title="Target Size (MB) Export">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-xs w-24">Target Size</span>
           <input
@@ -183,14 +183,28 @@ export default function ExportDialog({
           />
           Allow auto downscale if needed
         </label>
-        <button
-          className="px-2 py-1 rounded bg-emerald-600/80 text-white text-xs"
-          onClick={handleTargetSizeExport}
-          title="Encode JPEG to meet target size"
-        >
-          Export at Target Size
-        </button>
-      </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleTargetSizeExport}
+            title="Encode JPEG to meet target size"
+          >
+            Export at Target Size
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setTargetMB('');
+              setTolerancePct(5);
+              setAllowDownscale(false);
+            }}
+          >
+            Reset
+          </Button>
+        </div>
+      </Panel>
     </div>
   );
 }

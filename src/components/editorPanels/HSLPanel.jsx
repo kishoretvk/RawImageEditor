@@ -1,4 +1,7 @@
 import React from 'react';
+import '../../styles/tokens.css';
+import Panel from '../ui/Panel.jsx';
+import Button from '../ui/Button.jsx';
 
 const BANDS = [
   { key: 'red', label: 'Red' },
@@ -46,10 +49,10 @@ export default function HSLPanel({ hsl = defaultHSLState(), onChange }) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <Panel title="HSL / Color Mixer" className="flex flex-col gap-3">
       <div className="flex justify-between items-center">
         <div className="text-sm opacity-80">Adjust hue, saturation, and luminance for specific color ranges.</div>
-        <button className="header-button" onClick={resetAll} title="Reset all HSL bands">Reset All</button>
+        <Button size="sm" variant="ghost" onClick={resetAll} title="Reset all HSL bands">Reset All</Button>
       </div>
 
       {BANDS.map(({ key, label }) => {
@@ -58,7 +61,7 @@ export default function HSLPanel({ hsl = defaultHSLState(), onChange }) {
           <div key={key} className="p-2 rounded border border-white/10 bg-white/5">
             <div className="flex justify-between items-center mb-2">
               <div className="text-sm font-semibold">{label}</div>
-              <button className="header-button" onClick={() => resetBand(key)} title={`Reset ${label}`}>Reset</button>
+              <Button size="sm" variant="secondary" onClick={() => resetBand(key)} title={`Reset ${label}`}>Reset</Button>
             </div>
 
             <LabeledSlider
@@ -88,7 +91,7 @@ export default function HSLPanel({ hsl = defaultHSLState(), onChange }) {
           </div>
         );
       })}
-    </div>
+    </Panel>
   );
 }
 
