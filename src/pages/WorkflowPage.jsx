@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import WorkflowCanvasRF from '../components/workflow/WorkflowCanvasRF.jsx';
+import InspectorPanel from '../components/workflow/InspectorPanel.jsx';
 import '../styles/WorkflowPage.css';
 import Button from '../components/ui/Button.jsx';
 import '../styles/tokens.css';
@@ -47,6 +48,7 @@ export default function WorkflowPage() {
 
   const [isRunning, setIsRunning] = useState(false);
   const [runLog, setRunLog] = useState([]);
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
 
   const onGraphChange = useCallback((next) => {
     setGraph(next);
@@ -70,6 +72,41 @@ export default function WorkflowPage() {
     setRunLog((l) => [...l, `[${new Date().toLocaleTimeString()}] ${msg}`]);
   }, []);
 
+  const clearLog = useCallback(() => setRunLog([]), []);
+
+  // simple schema validation per node type
+  const validateGraph = useCallback((runnerGraph) => {
+    const errors = [];
+    for (const n of runnerGraph.nodes) {
+      const p = n.params || {};
+      switch (n.type) {
+        case 'ingest':
+          if (!['upload', 'gallery', undefined].includes(p.source)) errors.push(`${n.id}: invalid source`);
+          break;
+        case 'lensCorrection':
+          if (!['auto', 'generic', undefined].includes(p.profile)) errors.push(`${n.id}: invalid profile`);
+          ['distortion', 'caRed', 'caBlue', 'vignette'].forEach(k => {
+            if (p[k] != null && typeof p[k] !== 'number') errors.push(`${n.id}: ${k} must be number`);
+          });
+          break;
+        case 'applyPreset':
+          // optional presetId ok
+          break;
+        case 'splitRGB':
+          if (!['original', 'processed', undefined].includes(p.source)) errors.push(`${n.id}: invalid source`);
+          break;
+        case 'export':
+          if (p.format && !['image/jpeg', 'image/png'].includes(p.format)) errors.push(`${n.id}: invalid format`);
+          if (p.quality != null && (typeof p.quality !== 'number' || p.quality < 0 || p.quality > 1)) errors.push(`${n.id}: quality 0..1`);
+          if (p.sizeMB != null && (typeof p.sizeMB !== 'number' || p.sizeMB < 0)) errors.push(`${n.id}: sizeMB >= 0`);
+          break;
+        default:
+          break;
+      }
+    }
+    return errors;
+  }, []);
+
   const handleRun = useCallback(async () => {
     if (isRunning) return;
     setRunLog([]);
@@ -77,6 +114,13 @@ export default function WorkflowPage() {
     try {
       // Map graph for runner
       const runnerGraph = mapRFToRunner(graph);
+
+      // Validate before run
+      const errs = validateGraph(runnerGraph);
+      if (errs.length) {
+        errs.forEach(e => appendLog(`Validation error: ${e}`));
+        throw new Error('Validation failed. See log for details.');
+      }
 
       // Hook progress callbacks into runner
       const ctx = {
@@ -109,7 +153,7 @@ export default function WorkflowPage() {
     } finally {
       setIsRunning(false);
     }
-  }, [graph, isRunning, updateNodeProgress, appendLog]);
+  }, [graph, isRunning, updateNodeProgress, appendLog, validateGraph]);
 
   const handleSave = useCallback(async () => {
     try {
@@ -155,6 +199,9 @@ export default function WorkflowPage() {
           <Button onClick={handleLoad} disabled={isRunning} variant="secondary" size="md">
             Load
           </Button>
+          <Button onClick={clearLog} disabled={isRunning} variant="ghost" size="md">
+            Clear Log
+          </Button>
         </div>
       </div>
       <div className="workflow-body">
@@ -163,18 +210,39 @@ export default function WorkflowPage() {
             initialNodes={graph.nodes}
             initialEdges={graph.edges}
             onGraphChange={onGraphChange}
+            onSelectionChange={(ids) => setSelectedNodeId(Array.isArray(ids) ? ids[0] : ids || null)}
           />
         </div>
         <div className="workflow-inspector">
-          {/* Replace ad-hoc inspector box with reusable Panel */}
-          {/* Actions area can host quick controls (e.g., Clear Log) */}
-          {/* Panel provides consistent header, body, padding, and scroll */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div className="u-surface" style={{ padding: '12px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px' }}>Inspector</h3>
-              <p style={{ marginTop: '8px', color: 'var(--color-text-dim)' }}>
-                Select a node to edit its settings.
-              </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
+            <div className="u-surface" style={{ padding: '12px', minHeight: 0 }}>
+              <InspectorPanel
+                node={(graph.nodes || []).find(n => n.id === selectedNodeId) ? {
+                  id: selectedNodeId,
+                  type: (graph.nodes || []).find(n => n.id === selectedNodeId)?.type?.replace('Node', '') || (graph.nodes || []).find(n => n.id === selectedNodeId)?.type,
+                  params: (graph.nodes || []).find(n => n.id === selectedNodeId)?.data?.params || {},
+                  enabled: (graph.nodes || []).find(n => n.id === selectedNodeId)?.data?.enabled !== false
+                } : null}
+                onChange={(nextNode) => {
+                  // write-through to graph state
+                  setGraph((g) => {
+                    const nodes = g.nodes.map(n => {
+                      if (n.id !== nextNode.id) return n;
+                      const data = {
+                        ...(n.data || {}),
+                        params: nextNode.params || {},
+                        enabled: nextNode.enabled !== false
+                      };
+                      return { ...n, data };
+                    });
+                    return { ...g, nodes };
+                  });
+                }}
+                onOpenLogs={() => {
+                  // no-op placeholder; logs are below
+                }}
+                onRefreshPresets={() => {}}
+              />
             </div>
 
             <div className="u-surface" style={{ padding: '12px' }}>
@@ -184,7 +252,6 @@ export default function WorkflowPage() {
               </div>
             </div>
           </div>
-          {/* TODO: bind real selected-node inspector */}
         </div>
       </div>
     </div>

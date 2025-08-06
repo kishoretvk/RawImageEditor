@@ -7,6 +7,7 @@ import Modal from './Modal';
 export default function InspectorPanel({ node, onChange, onOpenLogs, onRefreshPresets }) {
   const [modal, setModal] = React.useState({ open: false, kind: null });
 
+  // Early empty state
   if (!node) {
     return (
       <aside className="inspector-panel">
@@ -19,13 +20,87 @@ export default function InspectorPanel({ node, onChange, onOpenLogs, onRefreshPr
     );
   }
 
-  const def = nodeDefinitions[node.type] || { name: node.type, inspector: [] };
+  // Map canvas node.type (already normalized by caller) to definition
+  const normalizedType = node?.type;
+
+  // Merge defaults for known node types if not defined in fallback nodeDefinitions
+  const dynamicDefs = {
+    ingest: {
+      name: 'Ingest',
+      inspector: [{ key: 'source', type: 'select', label: 'Source', options: ['upload', 'gallery'] }]
+    },
+    lensCorrection: {
+      name: 'Lens Correction',
+      inspector: [
+        { key: 'profile', type: 'select', label: 'Profile', options: ['auto', 'generic'] },
+        { key: 'distortion', type: 'number', label: 'Distortion', min: -100, max: 100, step: 1 },
+        { key: 'caRed', type: 'number', label: 'CA Red', min: -5, max: 5, step: 0.1 },
+        { key: 'caBlue', type: 'number', label: 'CA Blue', min: -5, max: 5, step: 0.1 },
+        { key: 'vignette', type: 'number', label: 'Vignette', min: -100, max: 100, step: 1 }
+      ]
+    },
+    applyPreset: {
+      name: 'Apply Preset',
+      inspector: [{ key: 'presetId', type: 'preset', label: 'Preset', presetType: 'export' }]
+    },
+    splitRGB: {
+      name: 'Split RGB',
+      inspector: [{ key: 'source', type: 'select', label: 'Source', options: ['original', 'processed'] }]
+    },
+    export: {
+      name: 'Export',
+      inspector: [
+        { key: 'format', type: 'select', label: 'Format', options: ['image/jpeg', 'image/png'] },
+        { key: 'sizeMB', type: 'number', label: 'Target Size (MB)', min: 0, max: 50, step: 0.1 },
+        { key: 'quality', type: 'number', label: 'Quality (0..1)', min: 0, max: 1, step: 0.01 },
+        { key: 'filename', type: 'text', label: 'Filename Pattern' }
+      ]
+    }
+  };
+
+  const def = (normalizedType && (nodeDefinitions[normalizedType] || dynamicDefs[normalizedType])) || { name: node?.type || 'Node', inspector: [] };
 
   const openPresetEditor = (kind) => setModal({ open: true, kind });
   const closePresetEditor = () => {
     setModal({ open: false, kind: null });
     onRefreshPresets?.();
   };
+
+  // (empty state handled earlier)
+
+  // Ensure params object exists; apply sensible defaults if missing for known types
+  const withDefaults = (params, type) => {
+    const p = { ...(params || {}) };
+    switch (type) {
+      case 'ingest':
+        if (p.source == null) p.source = 'upload';
+        break;
+      case 'lensCorrection':
+        if (p.profile == null) p.profile = 'auto';
+        if (typeof p.distortion !== 'number') p.distortion = 0;
+        if (typeof p.caRed !== 'number') p.caRed = 0;
+        if (typeof p.caBlue !== 'number') p.caBlue = 0;
+        if (typeof p.vignette !== 'number') p.vignette = 0;
+        break;
+      case 'applyPreset':
+        // presetId optional
+        break;
+      case 'splitRGB':
+        if (p.source == null) p.source = 'processed';
+        break;
+      case 'export':
+        if (p.format == null) p.format = 'image/jpeg';
+        if (typeof p.quality !== 'number') p.quality = 0.9;
+        if (typeof p.sizeMB !== 'number') p.sizeMB = 4;
+        if (p.filename == null) p.filename = 'export';
+        break;
+      default:
+        break;
+    }
+    return p;
+  };
+
+  const effectiveParams = withDefaults(node.params || {}, normalizedType);
 
   return (
     <aside className="inspector-panel">
@@ -45,8 +120,9 @@ export default function InspectorPanel({ node, onChange, onOpenLogs, onRefreshPr
       </div>
 
       <div className="inspector-body">
-        {renderFields(def.inspector || [], node.params || {}, (key, val) => {
-          onChange({ ...node, params: { ...node.params, [key]: val } });
+        {renderFields(def.inspector || [], effectiveParams, (key, val) => {
+          // push change upward; preserve other fields
+          onChange({ ...node, params: { ...effectiveParams, [key]: val } });
         }, { openPresetEditor })}
       </div>
 
@@ -156,7 +232,7 @@ const nodeDefinitions = {
   AutoWB: { name: 'Auto White Balance', inspector: [{ key: 'mode', type: 'select', label: 'Mode', options: ['set', 'region'] }, { key: 'rect', type: 'region', label: 'Region' }] },
   Watermark: { name: 'Watermark', inspector: [{ key: 'presetId', type: 'preset', label: 'Preset', presetType: 'watermark' }] },
   SplitRGB: { name: 'Split Channels (RGB)', inspector: [{ key: 'useAdjusted', type: 'boolean', label: 'Use Adjusted' }] },
-  Export: { name: 'Export', inspector: [{ key: 'presetId', type: 'preset', label: 'Preset', presetType: 'export' }] },
+  Export: { name: 'Export', inspector: [{ key: 'presetId', type: 'preset', label: 'Preset', presetType: 'export' }] }
 };
 
 function PresetDropdown({ presetType, value, onChange }) {
