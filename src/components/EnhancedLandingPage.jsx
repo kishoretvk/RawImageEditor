@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BeforeAfterSlider from './BeforeAfterSlider';
 import Button from '../components/ui/Button.jsx';
+import AdSenseBox from './AdSenseBox.jsx';
 import '../styles/EnhancedLandingPage.css';
 import '../styles/tokens.css';
 
@@ -37,6 +38,17 @@ const EnhancedLandingPage = () => {
       img.onerror = () => setLoadedImages(prev => prev + 1);
       img.src = src;
     });
+
+    // Inject required AdSense meta tag into head (page-scoped)
+    const META_NAME = 'google-adsense-account';
+    const META_CONTENT = 'ca-pub-3347414112529675';
+    const existing = document.head.querySelector(`meta[name="${META_NAME}"]`);
+    if (!existing) {
+      const meta = document.createElement('meta');
+      meta.setAttribute('name', META_NAME);
+      meta.setAttribute('content', META_CONTENT);
+      document.head.appendChild(meta);
+    }
   }, []);
 
   const handleOpenDemo = () => {
@@ -57,7 +69,11 @@ const EnhancedLandingPage = () => {
   return (
     <div className="enhanced-landing">
       <div className="landing-hero">
-        <div className="hero-content">
+        <div className="hero-content" style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 280px) 1fr', gap: 16 }}>
+          {/* Left free space panel: non-distracting ad */}
+          <div className="hero-left-rail" aria-hidden="false">
+            <AdSenseBox layout="landing" />
+          </div>
           <div className="hero-headline">
             <h1 className="hero-title">
               Pro‑grade RAW Editor

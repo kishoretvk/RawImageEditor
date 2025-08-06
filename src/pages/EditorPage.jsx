@@ -22,6 +22,7 @@ import LocalAdjustmentsPanel from '../components/LocalAdjustmentsPanel';
 import GradientMaskOverlay from '../components/GradientMaskOverlay';
 import { buildLUTsFromCurves } from '../utils/curveUtils';
 import FileUploader from '../components/FileUploader';
+import AdSenseBox from '../components/AdSenseBox.jsx';
 import EditorUploadPlaceholder from '../components/EditorUploadPlaceholder';
 import EnhancedImageCanvas from '../components/EnhancedImageCanvas';
 import ExportDialog from '../components/ExportDialog';
@@ -543,8 +544,12 @@ const EditorPage = () => {
         <div className="editor-main">
           <div className="canvas-container" style={{ minHeight: 320 }}>
             {!uploadedImage ? (
-              <div className="upload-placeholder">
+              <div className="upload-placeholder" style={{ display: 'grid', gap: 12 }}>
                 <FileUploader onFileUpload={handleFileUpload} />
+                {/* Non-distracting ad below upload button */}
+                <div aria-hidden="false" style={{ justifySelf: 'start' }}>
+                  <AdSenseBox layout="editor" />
+                </div>
               </div>
             ) : (
               <>
