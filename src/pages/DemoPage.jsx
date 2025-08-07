@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ImageSlider from '../components/ImageSlider';
 import BeforeAfterDemo from '../components/BeforeAfterDemo';
+import EnhancedImageCanvas from '../components/EnhancedImageCanvas';
 import './DemoPage.css';
 import '../styles/tokens.css';
 import Card from '../components/ui/Card.jsx';
@@ -96,6 +97,41 @@ const DemoPage = () => {
   const withBase = (p) => p.startsWith('/demo-images') ? p : p;
 
   // Effect orchestration — incremental wiring
+
+  // Persist and rehydrate demo session
+  useEffect(() => {
+    // rehydrate on mount
+    try {
+      const raw = localStorage.getItem('demo-session-current');
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s?.layers) setLayers(s.layers);
+        if (s?.selectedEffectKey) setSelectedEffectKey(s.selectedEffectKey);
+        if (s?.selectedSample) {
+          const found = samples.find(x => x.key === s.selectedSample?.key);
+          if (found) setSelectedSample(found);
+        }
+        if (s?.uploadedAsset?.url) setUploaded(s.uploadedAsset);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // debounce save
+    const t = setTimeout(() => {
+      try {
+        const payload = {
+          layers,
+          selectedEffectKey,
+          selectedSample: { key: selectedSample?.key },
+          uploadedAsset: uploaded ? { url: uploaded.url } : null
+        };
+        localStorage.setItem('demo-session-current', JSON.stringify(payload));
+      } catch {}
+    }, 150);
+    return () => clearTimeout(t);
+  }, [layers, selectedEffectKey, selectedSample, uploaded]);
 
   // Add or select an effect layer, then run it
   const addOrSelectEffect = async (key) => {
@@ -235,11 +271,19 @@ const DemoPage = () => {
       <div className="demo-content">
         {activeTab === 'slider' ? (
           <div className="slider-demo">
-            <ImageSlider
-              beforeSrc={withBase(selectedSample.before)}
-              afterSrc={withBase(selectedSample.after)}
-              alt={`${selectedSample.name} before/after`}
-            />
+            {/* Use EnhancedImageCanvas for live AI-driven preview */}
+            <div className="demo-canvas-wrap" style={{ width: '100%', height: 420 }}>
+              <EnhancedImageCanvas
+                imageSrc={currentImage}
+                edits={edits}
+                showSlider={false}
+                sliderPosition={50}
+                // For demo, do not pass ai mask/alpha; the services return deltas; future: route masks from services
+                ai={null}
+                hasAlphaBackgroundRemoved={!!edits?.hasAlphaBackgroundRemoved}
+                featherPx={2}
+              />
+            </div>
           </div>
         ) : (
           <div className="gallery-demo">
