@@ -1,103 +1,130 @@
 /* eslint-disable no-restricted-globals */
-// ai.worker.js — production-oriented baseline worker with robust schema & real actions.
-//
-// Message protocol:
-//  Incoming:  { id: string, type: string, payload?: any }
-//  Outgoing:  { id: string, ok: boolean, type: string, payload?: any, error?: string }
-//
-// Implemented actions (baseline):
-//  - init                         → initialize worker, report backend
-//  - backgroundRemove             → returns { applied: true, transparent: true }
-//  - backgroundBlur               → returns { applied: true, blurStrength }
-//  - portraitEnhance              → returns simple params for client-side filters
-//  - landscapeEnhance             → returns simple params for client-side filters
-//  - autoHorizon                  → returns { angleDeg, crop: {x,y,w,h} } detected on downscaled luminance
-//
-// This file is ready to be extended with real TF.js models via dynamic imports and caching.
+/**
+ * AI Web Worker
+ * - Initializes ONNX Runtime Web (via dynamic import in utils)
+ * - Preloads and caches models in IndexedDB
+ * - Runs segmentation and returns a low-res matte (Float32Array serialized)
+ *
+ * Messages in:
+ *  { id, type: 'initRuntime', payload: { preferWebGPU?: boolean } }
+ *  { id, type: 'preloadModels', payload: { list: [{ name, version, urls }] } }
+ *  { id, type: 'personSeg', payload: { targetSize?: number, imageBitmapTransfer?: boolean } , transfer: [ImageBitmap] }
+ *     If imageBitmapTransfer=true, the payload must include imageBitmap; otherwise, we will try to capture via OffscreenCanvas path in future work.
+ *
+ * Messages out:
+ *  { id, ok: true, type, backend?, payload? } or { id, ok: false, error }
+ */
 
-const ctx = self;
+importScripts("../utils/dev/extensionNoiseGuard.js"); // no-op guard if exists
 
-function respond(id, type, payload, ok = true, error = null) {
-  ctx.postMessage({ id, ok, type, payload, error });
+let runtimeReady = false;
+let backend = "wasm";
+const sessions = new Map(); // key: `${name}@${version}` -> ORT session
+
+// Lazy dynamic imports inside worker (Vite supports importScripts? We'll rely on ESM import.)
+async function importUtils() {
+  const [{ initRuntime, getBackendInfo }, { getModelSession }, seg] = await Promise.all([
+    import("../utils/ai/runtime.js"),
+    import("../utils/ai/modelCache.js"),
+    import("../utils/ai/segmentation.js").catch(() => ({ ensurePersonSegSession: async () => { throw new Error("segmentation.js missing"); }, runPersonSeg: async () => { throw new Error("segmentation.js missing"); } })),
+  ]);
+  return { initRuntime, getBackendInfo, getModelSession, seg };
 }
 
-ctx.onmessage = async (event) => {
-  const { id, type, payload = {} } = event.data || {};
+// Serialize Float32Array into a transferable ArrayBuffer to reduce copy time
+function packFloat32(mask) {
+  if (mask instanceof Float32Array) {
+    return mask.buffer;
+  }
+  if (mask && mask.buffer) return mask.buffer;
+  return new Float32Array(0).buffer;
+}
+
+async function handleInitRuntime(id, payload) {
   try {
-    switch (type) {
-      case 'init': {
-        // In real impl: lazy-load tfjs + select backend & warmup
-        respond(id, type, { status: 'ready', backend: 'baseline' });
-        break;
-      }
+    const { initRuntime, getBackendInfo } = await importUtils();
+    const res = await initRuntime({ preferWebGPU: payload?.preferWebGPU !== false });
+    runtimeReady = !!res.ok;
+    backend = res.backend || getBackendInfo().backend || "wasm";
+    postMessage({ id, ok: true, type: "initRuntime", backend });
+  } catch (e) {
+    postMessage({ id, ok: false, type: "initRuntime", error: String(e) });
+  }
+}
 
-      // Production background ops (client will composite)
-      case 'backgroundRemove': {
-        // Future: use segmentation + matte refine → alpha matte
-        respond(id, type, { applied: true, transparent: true });
-        break;
-      }
-
-      case 'backgroundBlur': {
-        const { blurStrength = 10 } = payload || {};
-        respond(id, type, { applied: true, blurStrength });
-        break;
-      }
-
-      // Lightweight param generators (client applies filters)
-      case 'portraitEnhance': {
-        const { strength = 50 } = payload || {};
-        const k = Math.max(0, Math.min(1, strength / 100));
-        respond(id, type, {
-          params: {
-            exposureDelta: +(0.10 * k).toFixed(3),
-            contrastMid: +(0.15 * k).toFixed(3),
-            warmthBias: +(0.08 * k).toFixed(3),
-            clarityDelta: +(-0.05 * k).toFixed(3),
-            saturationDelta: +(0.05 * k).toFixed(3),
-            vibranceDelta: +(0.04 * k).toFixed(3)
-          }
+async function handlePreloadModels(id, payload) {
+  try {
+    const { getModelSession } = await importUtils();
+    const list = Array.isArray(payload?.list) ? payload.list : [];
+    const loaded = [];
+    for (const m of list) {
+      const key = `${m.name}@${m.version}`;
+      if (!sessions.has(key)) {
+        const { session, backend: be } = await getModelSession({
+          name: m.name,
+          version: m.version,
+          urls: m.urls,
+          preferredBackend: payload?.preferredBackend || "webgpu",
         });
-        break;
-      }
-
-      case 'landscapeEnhance': {
-        const { strength = 50 } = payload || {};
-        const k = Math.max(0, Math.min(1, strength / 100));
-        respond(id, type, {
-          params: {
-            sky: { dehazeLite: +(0.12 * k).toFixed(3), hueShift: +(0.04 * k).toFixed(3), clarity: +(0.08 * k).toFixed(3) },
-            ground: { vibrance: +(0.10 * k).toFixed(3), texture: +(0.08 * k).toFixed(3) },
-            global: { curveMid: +(0.08 * k).toFixed(3) }
-          }
-        });
-        break;
-      }
-
-      // Auto horizon detection baseline (fast heuristic)
-      case 'autoHorizon': {
-        const { width = 1024, height = 768 } = payload || {};
-        // Placeholder heuristic: return tiny angle when width >> height
-        const aspect = width / Math.max(1, height);
-        // Map aspect deviation to small angle (for demo); to be replaced with Hough-based estimation.
-        const angleDeg = Math.abs(aspect - 1.5) < 0.2 ? 0 : (aspect > 1.5 ? -0.8 : 0.8);
-        // Safe crop box (keep 95% area)
-        const cropMargin = 0.025;
-        const crop = {
-          x: Math.round(width * cropMargin),
-          y: Math.round(height * cropMargin),
-          w: Math.round(width * (1 - 2 * cropMargin)),
-          h: Math.round(height * (1 - 2 * cropMargin)),
-        };
-        respond(id, type, { angleDeg, crop });
-        break;
-      }
-
-      default: {
-        respond(id, type, null, false, `Unknown message type: ${type}`);
+        sessions.set(key, session);
+        backend = be || backend;
+        loaded.push(key);
+      } else {
+        loaded.push(key); // already present
       }
     }
-  } catch (err) {
-    respond(id, type, null, false, err?.message || String(err));
+    postMessage({ id, ok: true, type: "preloadModels", backend, payload: { loaded } });
+  } catch (e) {
+    postMessage({ id, ok: false, type: "preloadModels", error: String(e) });
+  }
+}
+
+async function handlePersonSeg(id, payload) {
+  const t0 = performance.now();
+  try {
+    const { seg } = await importUtils();
+    const targetSize = Math.max(128, Math.min(1024, payload?.targetSize || 384));
+    const imageBitmap = payload?.imageBitmap || null;
+
+    if (!imageBitmap) {
+      throw new Error("personSeg requires payload.imageBitmap (transferred ImageBitmap)");
+    }
+
+    // Ensure session ready inside segmentation helper (it uses modelCache + runtime)
+    const result = await seg.runPersonSeg(imageBitmap, { targetSize });
+    // result: { mask: Float32Array(wh), w, h, timeMs }
+    const t1 = performance.now();
+    const timeMs = Math.round(result?.timeMs ?? (t1 - t0));
+    const buffer = packFloat32(result.mask);
+    // Transfer the underlying buffer to avoid copying
+    postMessage(
+      { id, ok: true, type: "personSeg", backend, payload: { w: result.w, h: result.h, timeMs, maskBuffer: buffer } },
+      [buffer]
+    );
+  } catch (e) {
+    postMessage({ id, ok: false, type: "personSeg", error: String(e) });
+  } finally {
+    try {
+      if (payload?.imageBitmap && typeof payload.imageBitmap.close === "function") {
+        payload.imageBitmap.close();
+      }
+    } catch {}
+  }
+}
+
+self.onmessage = async (e) => {
+  const msg = e.data || {};
+  const { id, type, payload } = msg;
+  if (!id || !type) return;
+
+  switch (type) {
+    case "initRuntime":
+      return void handleInitRuntime(id, payload);
+    case "preloadModels":
+      return void handlePreloadModels(id, payload);
+    case "personSeg":
+      return void handlePersonSeg(id, payload);
+    default:
+      postMessage({ id, ok: false, error: `Unknown message type: ${type}` });
   }
 };
