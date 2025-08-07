@@ -18,10 +18,19 @@ const EnhancedImageCanvas = ({
   // Channel split export: when requested, return blobs for R/G/B
   onExtractChannels = null,
   extractChannelsFrom = 'processed', // 'processed' | 'original'
+  // AI/matte-aware compose props
+  ai = null, // expected: { subjectMask?: { data: Float32Array, w:number, h:number } }
+  hasAlphaBackgroundRemoved = false,
+  featherPx = 2
 }) => {
   const canvasRef = useRef(null);
   const originalCanvasRef = useRef(null);
   const processedCanvasRef = useRef(null);
+  // Cache for matte-based background blur to avoid recomputing on small changes
+  const matteCacheRef = useRef({
+    key: null,         // cache key based on dims/blur/mask hash
+    blurredBG: null    // OffscreenCanvas with pre-blurred background
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
 
@@ -80,6 +89,16 @@ const EnhancedImageCanvas = ({
       // Apply edits
       processedCtx.drawImage(img, 0, 0);
       await applyImageEdits(processedCanvas, edits, curveLUTs);
+
+      // Optional matte-aware compose (background blur / alpha remove)
+      if (ai?.subjectMask || hasAlphaBackgroundRemoved || (edits?.effects?.blur > 0)) {
+        try {
+          await applyMatteAwareCompose(processedCanvas, originalCanvas, edits, ai, { featherPx, removeAlpha: hasAlphaBackgroundRemoved });
+        } catch (e) {
+          // non-fatal; fall back to regular processed canvas
+          console.warn('[EnhancedImageCanvas] matte compose failed:', e);
+        }
+      }
 
       // Update display canvas
       updateDisplayCanvas();
@@ -438,6 +457,140 @@ const EnhancedImageCanvas = ({
       ctx.putImageData(base, 0, 0);
     }
   };
+
+  /**
+   * Matte-aware compose:
+   * - If effects.blur > 0: blur background only, keep subject sharp via subject mask
+   * - If removeAlpha: apply subject mask as alpha (background transparent)
+   * Uses a small cache so feather tweaks avoid recomputing heavy blur.
+   */
+  const applyMatteAwareCompose = async (procCanvas, origCanvas, edits, ai, { featherPx = 2, removeAlpha = false } = {}) => {
+    const blurAmt = Math.max(0, Math.min(100, Number(edits?.effects?.blur || 0)));
+    const hasBlur = blurAmt > 0;
+    const maskObj = ai?.subjectMask || null;
+    if (!maskObj && !removeAlpha && !hasBlur) return; // nothing to do
+
+    const W = procCanvas.width | 0;
+    const H = procCanvas.height | 0;
+    if (W <= 0 || H <= 0) return;
+
+    // Create working contexts
+    const procCtx = procCanvas.getContext('2d');
+    const baseImg = procCtx.getImageData(0, 0, W, H);
+    const bd = baseImg.data;
+
+    // Prepare/resize mask to image dimensions if present
+    let mask = null;
+    if (maskObj && maskObj.data && maskObj.w && maskObj.h) {
+      mask = resizeMaskToImage(maskObj.data, maskObj.w, maskObj.h, W, H);
+      if (featherPx > 0.1) {
+        featherFloatMask(mask, W, H, featherPx);
+      }
+    }
+
+    // Remove alpha using mask (subject opaque, background transparent)
+    if (removeAlpha && mask) {
+      const alpha = new Uint8ClampedArray(W * H);
+      for (let i = 0; i < alpha.length; i++) {
+        alpha[i] = Math.max(0, Math.min(255, Math.round(mask[i] * 255)));
+      }
+      for (let i = 0, p = 0; i < alpha.length; i++, p += 4) {
+        bd[p + 3] = alpha[i];
+      }
+      procCtx.putImageData(baseImg, 0, 0);
+    }
+
+    // Background blur while preserving subject
+    if (hasBlur) {
+      // Build cache key
+      const maskHash = mask ? `${W}x${H}@${Math.round(featherPx)}@${hashMask(mask, W, H)}` : `${W}x${H}@no-mask`;
+      const key = `${maskHash}#blur:${blurAmt}`;
+      let blurredBG = null;
+
+      if (matteCacheRef.current.key === key && matteCacheRef.current.blurredBG) {
+        blurredBG = matteCacheRef.current.blurredBG;
+      } else {
+        // Create blurred background from the current processed image
+        blurredBG = new OffscreenCanvas(W, H);
+        const bctx = blurredBG.getContext('2d');
+        bctx.putImageData(baseImg, 0, 0);
+        // Approximate Gaussian blur using canvas filter (fast path)
+        try {
+          bctx.filter = `blur(${(blurAmt / 100) * 12}px)`; // 0..12px scale
+          bctx.drawImage(blurredBG, 0, 0);
+          bctx.filter = 'none';
+        } catch {
+          // Fallback: simple separable blur on CPU if filter unsupported
+          const src = bctx.getImageData(0, 0, W, H);
+          const tmp = new Uint8ClampedArray(src.data.length);
+          separableGaussianRGBA(src.data, tmp, W, H, 0.5 + (blurAmt / 100) * 3.0);
+          const out = new ImageData(tmp, W, H);
+          bctx.putImageData(out, 0, 0);
+        }
+        matteCacheRef.current.key = key;
+        matteCacheRef.current.blurredBG = blurredBG;
+      }
+
+      // Compose: subject from baseImg, background from blurredBG, masked by (1 - mask)
+      const bimg = (blurredBG.getContext && blurredBG.getContext('2d').getImageData(0, 0, W, H)) || null;
+      const bb = bimg ? bimg.data : null;
+      if (!bb) return;
+
+      if (mask) {
+        for (let i = 0, p = 0; i < W * H; i++, p += 4) {
+          const m = mask[i]; // 0 bg, 1 subject
+          const inv = 1 - m;
+          // background contribution
+          bd[p]     = clamp8(bd[p] * m + bb[p] * inv);
+          bd[p + 1] = clamp8(bd[p + 1] * m + bb[p + 1] * inv);
+          bd[p + 2] = clamp8(bd[p + 2] * m + bb[p + 2] * inv);
+          // alpha already set by previous step if removeAlpha; otherwise keep opaque
+          if (!removeAlpha) bd[p + 3] = 255;
+        }
+      } else {
+        // No mask: global blur (fallback)
+        for (let i = 0; i < bd.length; i++) bd[i] = bb[i];
+      }
+
+      procCtx.putImageData(baseImg, 0, 0);
+    }
+  };
+
+  // Resize Float32 mask (nearest neighbor)
+  function resizeMaskToImage(srcMask, mw, mh, W, H) {
+    if (mw === W && mh === H) return srcMask;
+    const out = new Float32Array(W * H);
+    for (let y = 0; y < H; y++) {
+      const sy = Math.min(mh - 1, Math.round((y / H) * mh));
+      for (let x = 0; x < W; x++) {
+        const sx = Math.min(mw - 1, Math.round((x / W) * mw));
+        out[y * W + x] = srcMask[sy * mw + sx];
+      }
+    }
+    return out;
+  }
+
+  // Feather Float32 mask using small separable blur in mask space
+  function featherFloatMask(mask, W, H, px) {
+    const sigma = Math.max(0.25, px / 2.5);
+    separableGaussianGray(mask, W, H, sigma);
+    // Normalize to 0..1
+    for (let i = 0; i < mask.length; i++) {
+      const v = mask[i];
+      mask[i] = v < 0 ? 0 : v > 1 ? 1 : v;
+    }
+  }
+
+  // Light hash for cache key
+  function hashMask(mask, W, H) {
+    // sample a few points
+    let h = 0;
+    const step = Math.max(1, Math.floor((W * H) / 1024));
+    for (let i = 0; i < mask.length; i += step) {
+      h = (h * 1664525 + Math.round(mask[i] * 255) + 1013904223) | 0;
+    }
+    return (h >>> 0).toString(16);
+  }
 
   // Utility: clamp to 0..255
   function clamp8(v) {
