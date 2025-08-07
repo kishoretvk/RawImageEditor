@@ -597,7 +597,7 @@ const EditorPage = () => {
               </div>
             ) : (
               <>
-                {/* safe no-op AI props for now */}
+                {/* matte-aware EnhancedImageCanvas with AI and alpha removal */}
                 <EnhancedImageCanvas
                   imageSrc={editedImageUrl}
                   edits={allEdits}
@@ -607,6 +607,8 @@ const EditorPage = () => {
                   onSliderChange={setSliderPosition}
                   curveLUTs={lutR && lutG && lutB ? { lutR, lutG, lutB } : null}
                   ai={ai}
+                  hasAlphaBackgroundRemoved={hasAlphaBackgroundRemoved}
+                  featherPx={2}
                   // WB Region Select wiring
                   wbGains={{
                     rGain: whiteBalance.multipliers.r,
@@ -915,6 +917,8 @@ const EditorPage = () => {
                 onApplyBgBlur={onApplyBgBlur}
                 onPreviewBgRemove={onPreviewBgRemove}
                 onApplyBgRemove={onApplyBgRemove}
+                // Wire BackgroundToolsPanel preload button to worker preload
+                onPreloadModels={() => preloadAIModels()}
               />
             </div>
           </div>
