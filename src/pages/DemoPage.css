@@ -124,9 +124,229 @@
 
 /* Responsive styles */
 @media (max-width: 768px) {
+.demo-page {
+  padding: 16px;
+  color: var(--color-text, #e6e6e6);
+}
+
+.demo-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--color-bg-elev, #0f1216);
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: grid;
+  gap: 8px;
+}
+
+.demo-header h1 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.demo-header p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.demo-upload {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.demo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.demo-actions label input[type="checkbox"] {
+  accent-color: #667eea;
+}
+
+.demo-samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 0;
+  align-items: center;
+}
+
+.sample-chip {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: inherit;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sample-chip.active {
+  background: rgba(102,126,234,0.18);
+  border-color: rgba(102,126,234,0.65);
+}
+
+.open-in-editor-chip {
+  margin-left: auto;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: linear-gradient(180deg, rgba(102,126,234,0.2), rgba(102,126,234,0.05));
+  color: #cfd6ff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.demo-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.tab-button {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: inherit;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tab-button.active {
+  background: rgba(102,126,234,0.18);
+  border-color: rgba(102,126,234,0.65);
+}
+
+.demo-content {
+  padding: 8px 0 12px;
+}
+
+.slider-demo,
+.gallery-demo {
+  background: #0b0e12;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.demo-canvas-wrap {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Effects list (left) and side panel (right) layout on larger screens */
+@media (min-width: 980px) {
   .demo-page {
-    padding: 20px 10px;
+    display: grid;
+    grid-template-columns: 260px 1fr 320px;
+    grid-template-areas:
+      "header header header"
+      "left   center right"
+      "cta    cta    cta";
+    gap: 12px;
   }
+
+  .demo-header {
+    grid-area: header;
+    border-radius: 12px;
+  }
+
+  .demo-effects-list {
+    grid-area: left;
+    position: sticky;
+    top: 64px;
+    align-self: start;
+  }
+
+  .demo-content {
+    grid-area: center;
+  }
+
+  .demo-sidepanel {
+    grid-area: right;
+    position: sticky;
+    top: 64px;
+    align-self: start;
+  }
+
+  .demo-cta {
+    grid-area: cta;
+  }
+}
+
+/* Stack vertically on small screens */
+@media (max-width: 979px) {
+  .demo-effects-list,
+  .demo-sidepanel {
+    margin-top: 12px;
+  }
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.field label {
+  font-size: 12px;
+  opacity: 0.9;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.demo-cta {
+  margin-top: 16px;
+}
+
+.demo-sidepanel .field input[type="range"] {
+  width: 100%;
+  accent-color: #667eea;
+}
+
+.demo-sidepanel .field input[type="number"],
+.demo-sidepanel .field select {
+  width: 100%;
+  background: #0c1015;
+  color: #e6e6e6;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.demo-effects-list .effect-row {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.demo-upload input[type="file"] {
+  background: transparent;
+  color: #cfd6ff;
+}
+
+.demo-canvas-wrap {
+  background: #0b0e12;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.demo-header {
+  backdrop-filter: saturate(120%) blur(6px);
+}
 
   .demo-header h1 {
     font-size: 2rem;

@@ -10,19 +10,32 @@ export default function NodePalette({ onAdd }) {
     switch (type) {
       case 'ingest':
       case 'ingestNode':
+      case 'IngestList':
         return { source: 'upload' };
       case 'lensCorrection':
       case 'lensCorrectionNode':
         return { profile: 'auto', distortion: 0, caRed: 0, caBlue: 0, vignette: 0 };
       case 'applyPreset':
       case 'applyPresetNode':
+      case 'ApplyPreset':
         return { presetId: '' };
       case 'splitRGB':
       case 'splitRGBNode':
+      case 'SplitRGB':
         return { source: 'processed' };
       case 'export':
       case 'exportNode':
+      case 'Export':
         return { format: 'image/jpeg', sizeMB: 4, quality: 0.9, filename: 'export' };
+      // AI v2 workflow nodes
+      case 'PortraitEnhanceV2':
+        return { strength: 50, preserveSkinTone: true };
+      case 'LandscapeEnhanceV2':
+        return { strength: 50, skyBoost: true, textureBoost: true };
+      case 'BackgroundBlurV2':
+        return { strength: 50 };
+      case 'BackgroundRemoveV2':
+        return { feather: 2.0 };
       default:
         return {};
     }

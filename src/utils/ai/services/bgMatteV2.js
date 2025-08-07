@@ -7,16 +7,47 @@
  *   await bgMatteV2.blur(image, { strength: 50 })    -> { editsDelta, masks, meta }
  *   await bgMatteV2.remove(image, { feather: 2.0 })  -> { editsDelta, masks, meta }
  */
-import { segmentPerson } from '../segmentation.js';
+import { runPersonSeg } from '../segmentation.js';
 import { guidedRefine } from '../matteRefine.js';
 
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 
 async function subjectMask(image) {
-  const seg = await segmentPerson(image, {});
-  const m = seg?.mask || null;
+  // Ensure we have an ImageBitmap input for runPersonSeg
+  let bitmap = image;
+  if (!(bitmap instanceof ImageBitmap)) {
+    try {
+      if (image instanceof HTMLCanvasElement) {
+        bitmap = await createImageBitmap(image);
+      } else if (image instanceof OffscreenCanvas) {
+        bitmap = await createImageBitmap(image.transferToImageBitmap());
+      } else if (image instanceof HTMLImageElement) {
+        bitmap = await createImageBitmap(image);
+      } else if (image && typeof image.width === 'number' && typeof image.height === 'number' && image.data) {
+        // ImageData-like
+        const off = new OffscreenCanvas(image.width, image.height);
+        off.getContext('2d').putImageData(new ImageData(image.data, image.width, image.height), 0, 0);
+        bitmap = await createImageBitmap(off);
+      }
+    } catch (e) {
+      bitmap = null;
+    }
+  }
+
+  let m = null;
+  if (bitmap) {
+    try {
+      const seg = await runPersonSeg(bitmap, { targetSize: 384 });
+      m = seg?.mask || null;
+    } catch (e) {
+      m = null;
+    } finally {
+      try { if (bitmap && typeof bitmap.close === 'function') bitmap.close(); } catch {}
+    }
+  }
   if (!m) return null;
-  // guidedRefine is a stub that returns meta; keep original mask for now
+
+  // guidedRefine is currently a stub; keep original mask but run to produce meta/telemetry
   await guidedRefine(
     { width: image?.width, height: image?.height },
     { width: image?.width, height: image?.height },

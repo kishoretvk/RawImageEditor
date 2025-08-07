@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ImageSlider from '../components/ImageSlider';
 import BeforeAfterDemo from '../components/BeforeAfterDemo';
+import EnhancedImageCanvas from '../components/EnhancedImageCanvas';
 import './DemoPage.css';
 import '../styles/tokens.css';
 import Card from '../components/ui/Card.jsx';
@@ -31,11 +32,22 @@ const DemoPage = () => {
   // Composition of effects: [{ id, type, params, enabled, result }]
   const [layers, setLayers] = useState([]);
 
+  // Masks returned by effects, indexed by effect key
+  const [masksIndex, setMasksIndex] = useState({});
+  // Autorun toggle: run effect when params change
+  const [autorun, setAutorun] = useState(true);
+
   // Selected effect for the right-side dynamic panel
   const [selectedEffectKey, setSelectedEffectKey] = useState(null);
 
   // Derived final edits for preview
   const { edits } = useMemo(() => reduceComposition(layers), [layers]);
+
+  // Merge commonly used masks for preview
+  const subjectMask = useMemo(() => {
+    // Prefer explicit alpha from bgRemove, else subject from bgBlur
+    return masksIndex?.bgRemove?.alpha || masksIndex?.bgBlur?.subject || null;
+  }, [masksIndex]);
 
   // Helpers for registry utilities (export, rgb split)
   const helpers = useMemo(() => ({
@@ -97,6 +109,41 @@ const DemoPage = () => {
 
   // Effect orchestration — incremental wiring
 
+  // Persist and rehydrate demo session
+  useEffect(() => {
+    // rehydrate on mount
+    try {
+      const raw = localStorage.getItem('demo-session-current');
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s?.layers) setLayers(s.layers);
+        if (s?.selectedEffectKey) setSelectedEffectKey(s.selectedEffectKey);
+        if (s?.selectedSample) {
+          const found = samples.find(x => x.key === s.selectedSample?.key);
+          if (found) setSelectedSample(found);
+        }
+        if (s?.uploadedAsset?.url) setUploaded(s.uploadedAsset);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // debounce save
+    const t = setTimeout(() => {
+      try {
+        const payload = {
+          layers,
+          selectedEffectKey,
+          selectedSample: { key: selectedSample?.key },
+          uploadedAsset: uploaded ? { url: uploaded.url } : null
+        };
+        localStorage.setItem('demo-session-current', JSON.stringify(payload));
+      } catch {}
+    }, 150);
+    return () => clearTimeout(t);
+  }, [layers, selectedEffectKey, selectedSample, uploaded]);
+
   // Add or select an effect layer, then run it
   const addOrSelectEffect = async (key) => {
     setSelectedEffectKey(key);
@@ -125,6 +172,9 @@ const DemoPage = () => {
     setLayers((prev) =>
       prev.map((l) => (l.type === key ? { ...l, params: { ...(l.params || {}), ...(partial || {}) } } : l))
     );
+    if (autorun) {
+      queueMicrotask(() => runEffect(key));
+    }
   };
 
   const runEffect = async (key) => {
@@ -139,6 +189,9 @@ const DemoPage = () => {
       setLayers((prev) =>
         prev.map((l) => (l.type === key ? { ...l, result: res } : l))
       );
+      if (res?.masks) {
+        setMasksIndex((prev) => ({ ...prev, [key]: res.masks }));
+      }
     } catch (e) {
       console.warn('Effect run failed', key, e);
     }
@@ -182,6 +235,10 @@ const DemoPage = () => {
 
         {/* Action buttons row */}
         <div className="demo-actions">
+          {/* Autorun toggle */}
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginRight: 8 }}>
+            <input type="checkbox" checked={autorun} onChange={(e) => setAutorun(e.target.checked)} /> Auto-run
+          </label>
           <Button size="sm" variant="secondary" onClick={() => addOrSelectEffect('portrait')}>Portrait Enhance</Button>
           <Button size="sm" variant="secondary" onClick={() => addOrSelectEffect('landscape')}>Landscape Enhance</Button>
           <Button size="sm" variant="secondary" onClick={() => addOrSelectEffect('hslPop')}>HSL Pop</Button>
@@ -235,11 +292,19 @@ const DemoPage = () => {
       <div className="demo-content">
         {activeTab === 'slider' ? (
           <div className="slider-demo">
-            <ImageSlider
-              beforeSrc={withBase(selectedSample.before)}
-              afterSrc={withBase(selectedSample.after)}
-              alt={`${selectedSample.name} before/after`}
-            />
+            {/* Use EnhancedImageCanvas for live AI-driven preview */}
+            <div className="demo-canvas-wrap" style={{ width: '100%', height: 420 }}>
+              <EnhancedImageCanvas
+                imageSrc={currentImage}
+                edits={edits}
+                showSlider={false}
+                sliderPosition={50}
+                // Route subject/alpha masks from effects for demo preview
+                ai={{ subjectMask }}
+                hasAlphaBackgroundRemoved={!!edits?.hasAlphaBackgroundRemoved}
+                featherPx={2}
+              />
+            </div>
           </div>
         ) : (
           <div className="gallery-demo">
@@ -274,54 +339,81 @@ const DemoPage = () => {
         </div>
       )}
 
-      {/* Right-side dynamic panel (minimal placeholder) */}
+      {/* Right-side dynamic panel with advanced controls */}
       {selectedEffectKey && (
         <div className="demo-sidepanel">
           <Panel title={`Effect: ${effectsRegistry[selectedEffectKey]?.label || selectedEffectKey}`}>
             <div style={{ display: 'grid', gap: 8 }}>
-              {/* Minimal param controls per common keys; detailed per-effect UIs will be added later */}
-              {effectsRegistry[selectedEffectKey]?.defaults?.strength !== undefined && (
-                <div className="field">
-                  <label>Strength</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={layers.find(l => l.type === selectedEffectKey)?.params?.strength ?? effectsRegistry[selectedEffectKey].defaults.strength}
-                    onChange={(e) => updateLayerParams(selectedEffectKey, { strength: Number(e.target.value) })}
-                  />
-                </div>
-              )}
-              {selectedEffectKey === 'landscape' && (
-                <>
-                  <div className="field">
-                    <label><input
-                      type="checkbox"
-                      checked={!!(layers.find(l => l.type === 'landscape')?.params?.skyBoost ?? true)}
-                      onChange={(e) => updateLayerParams('landscape', { skyBoost: e.target.checked })}
-                    /> Sky Boost</label>
-                  </div>
-                  <div className="field">
-                    <label><input
-                      type="checkbox"
-                      checked={!!(layers.find(l => l.type === 'landscape')?.params?.textureBoost ?? true)}
-                      onChange={(e) => updateLayerParams('landscape', { textureBoost: e.target.checked })}
-                    /> Texture Boost</label>
-                  </div>
-                </>
-              )}
-              {selectedEffectKey === 'bgRemove' && (
-                <div className="field">
-                  <label>Feather</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={layers.find(l => l.type === 'bgRemove')?.params?.feather ?? effectsRegistry['bgRemove'].defaults.feather}
-                    onChange={(e) => updateLayerParams('bgRemove', { feather: Number(e.target.value) })}
-                  />
-                </div>
-              )}
+              {/* Auto-generated controls from registry schema */}
+              {(() => {
+                const reg = effectsRegistry[selectedEffectKey];
+                const fields = reg?.controls?.fields || [];
+                const params = layers.find(l => l.type === selectedEffectKey)?.params || reg?.defaults || {};
+                return fields.map((f) => {
+                  const key = f.key;
+                  const val = params[key] ?? reg?.defaults?.[key];
+                  if (f.type === 'range') {
+                    return (
+                      <div className="field" key={key}>
+                        <label>{f.label || key}</label>
+                        <input
+                          type="range"
+                          min={f.min ?? 0}
+                          max={f.max ?? 100}
+                          step={f.step ?? 1}
+                          value={Number(val ?? 0)}
+                          onChange={(e) => updateLayerParams(selectedEffectKey, { [key]: Number(e.target.value) })}
+                        />
+                      </div>
+                    );
+                  }
+                  if (f.type === 'number') {
+                    return (
+                      <div className="field" key={key}>
+                        <label>{f.label || key}</label>
+                        <input
+                          type="number"
+                          min={f.min}
+                          max={f.max}
+                          step={f.step}
+                          value={Number(val ?? 0)}
+                          onChange={(e) => updateLayerParams(selectedEffectKey, { [key]: Number(e.target.value) })}
+                        />
+                      </div>
+                    );
+                  }
+                  if (f.type === 'checkbox') {
+                    return (
+                      <div className="field" key={key}>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={!!val}
+                            onChange={(e) => updateLayerParams(selectedEffectKey, { [key]: e.target.checked })}
+                          />
+                          {f.label || key}
+                        </label>
+                      </div>
+                    );
+                  }
+                  if (f.type === 'select') {
+                    return (
+                      <div className="field" key={key}>
+                        <label>{f.label || key}</label>
+                        <select
+                          value={String(val ?? (f.options?.[0]?.value ?? ''))}
+                          onChange={(e) => updateLayerParams(selectedEffectKey, { [key]: e.target.value })}
+                        >
+                          {(f.options || []).map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label ?? opt.value}</option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  }
+                  return null;
+                });
+              })()}
 
               <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                 <Button size="sm" variant="primary" onClick={() => runEffect(selectedEffectKey)}>Run</Button>
@@ -329,6 +421,17 @@ const DemoPage = () => {
                   {layers.find(l => l.type === selectedEffectKey)?.enabled === false ? 'Enable' : 'Disable'}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => removeLayer(selectedEffectKey)}>Remove</Button>
+
+                {/* Utilities when selected effect is utility */}
+                {selectedEffectKey === 'export2MB' && (
+                  <Button size="sm" variant="primary" onClick={() => runEffect('export2MB')}>Export</Button>
+                )}
+                {selectedEffectKey === 'rgbSplit' && (
+                  <>
+                    <Button size="sm" variant="secondary" onClick={() => effectsRegistry.rgbSplit.run(currentImage, { source: 'original' }, helpers)}>Split Original</Button>
+                    <Button size="sm" variant="primary" onClick={() => effectsRegistry.rgbSplit.run(currentImage, { source: 'processed' }, helpers)}>Split Processed</Button>
+                  </>
+                )}
               </div>
             </div>
           </Panel>

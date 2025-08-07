@@ -7,7 +7,7 @@
  *   await portraitEnhanceV2.run(image, { strength: 50, preserveSkinTone: true })
  * -> { editsDelta, masks, meta }
  */
-import { segmentPerson } from '../segmentation.js';
+import { runPersonSeg } from '../segmentation.js';
 import { guidedRefine } from '../matteRefine.js';
 import * as F from '../filters.js';
 
@@ -26,9 +26,39 @@ export const portraitEnhanceV2 = {
     const strength = Number.isFinite(params.strength) ? params.strength : 50;
     const preserveSkin = params.preserveSkinTone !== false;
 
-    // 1) Segment person regions (stubbed segmentation API)
-    const seg = await segmentPerson(image, {});
-    const personMask = seg?.mask || null;
+    // 1) Segment person regions using runPersonSeg
+    // Ensure we have an ImageBitmap input for the segmentation helper
+    let bitmap = image;
+    if (!(bitmap instanceof ImageBitmap)) {
+      try {
+        if (image instanceof HTMLCanvasElement) {
+          bitmap = await createImageBitmap(image);
+        } else if (image instanceof OffscreenCanvas) {
+          bitmap = await createImageBitmap(image.transferToImageBitmap());
+        } else if (image instanceof HTMLImageElement) {
+          bitmap = await createImageBitmap(image);
+        } else if (image && typeof image.width === 'number' && typeof image.height === 'number' && image.data) {
+          // ImageData-like
+          const off = new OffscreenCanvas(image.width, image.height);
+          off.getContext('2d').putImageData(new ImageData(image.data, image.width, image.height), 0, 0);
+          bitmap = await createImageBitmap(off);
+        }
+      } catch (e) {
+        // fallback: no segmentation
+        bitmap = null;
+      }
+    }
+    let personMask = null;
+    if (bitmap) {
+      try {
+        const seg = await runPersonSeg(bitmap, { targetSize: 384 });
+        personMask = seg?.mask || null;
+      } catch (e) {
+        personMask = null;
+      } finally {
+        try { if (bitmap && typeof bitmap.close === 'function') bitmap.close(); } catch {}
+      }
+    }
 
   // 2) Matte refine to improve edges for hair/shoulders (stub: guidedRefine returns meta; keep original mask)
   const refinedMask = personMask
