@@ -15,7 +15,10 @@
  *  { id, ok: true, type, backend?, payload? } or { id, ok: false, error }
  */
 
-importScripts("../utils/dev/extensionNoiseGuard.js"); // no-op guard if exists
+try {
+  // In module workers, importScripts is not supported; use dynamic import instead.
+  await import("../utils/dev/extensionNoiseGuard.js");
+} catch {}
 
 let runtimeReady = false;
 let backend = "wasm";

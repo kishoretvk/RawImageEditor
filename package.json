@@ -44,6 +44,7 @@
     "gh-pages": "^6.3.0",
     "jszip": "^3.10.1",
     "lucide-react": "^0.525.0",
+    "onnxruntime-web": "^1.22.0",
     "piexifjs": "^1.0.6",
     "prop-types": "^15.8.1",
     "react": "^19.1.0",
