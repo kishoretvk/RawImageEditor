@@ -129,6 +129,7 @@ const EditorPage = () => {
 
   // AI: Edit | AI segmented toggle
   const [mode, setMode] = useState('edit'); // 'edit' | 'ai'
+  const [aiBackend, setAiBackend] = useState(null); // webgpu | webgl | wasm
   // AI state slice (non-destructive, stubs)
   const [ai, setAi] = useState({
     personMask: null,
@@ -342,9 +343,19 @@ const EditorPage = () => {
       // Create worker via constructor (Vite supports new URL with import.meta.url)
       try {
         aiWorkerRef.current = new Worker(new URL('../workers/ai.worker.js', import.meta.url), { type: 'module' });
-        // init
+        // init runtime and capture backend label
         const id = 'init-' + Date.now();
-        aiWorkerRef.current.postMessage({ id, type: 'init', payload: {} });
+        const worker = aiWorkerRef.current;
+        const onMsg = (e) => {
+          const msg = e.data || {};
+          if (msg.id !== id) return;
+          worker.removeEventListener('message', onMsg);
+          if (msg.ok && msg.type === 'initRuntime') {
+            setAiBackend(msg.backend || null);
+          }
+        };
+        worker.addEventListener('message', onMsg);
+        worker.postMessage({ id, type: 'initRuntime', payload: { preferWebGPU: true } });
       } catch (err) {
         console.warn('AI worker init failed (stub):', err);
       }
@@ -385,6 +396,29 @@ const EditorPage = () => {
         resolve({ ok: false, id, error: 'postMessage-failed', detail: String(err) });
       }
     });
+
+  // Helper to preload models (person-seg) via worker
+  const preloadAIModels = React.useCallback(async () => {
+    const worker = aiWorkerRef.current;
+    if (!worker) return;
+    const id = 'preload-' + Math.random().toString(36).slice(2);
+    const list = [
+      { name: 'person-seg', version: 'v1', urls: [`${import.meta.env.BASE_URL || '/'}models/person-seg-v1.onnx`] }
+    ];
+    return new Promise((resolve) => {
+      const onMsg = (e) => {
+        const msg = e.data || {};
+        if (msg.id !== id) return;
+        worker.removeEventListener('message', onMsg);
+        if (msg.ok) {
+          if (msg.backend) setAiBackend(msg.backend);
+        }
+        resolve(msg);
+      };
+      worker.addEventListener('message', onMsg);
+      worker.postMessage({ id, type: 'preloadModels', payload: { list, preferredBackend: 'webgpu' } });
+    });
+  }, []);
 
   // AI Preview/Apply handlers (stub)
   // Map portrait params from worker into editor adjustments for visible change
@@ -501,6 +535,11 @@ const EditorPage = () => {
         <div className="header-left">
           <Link to="/" className="back-button">← Back to Home</Link>
           <h1>RAW Image Editor</h1>
+          {mode === 'ai' && (
+            <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.8 }} title="AI Backend">
+              AI: {aiBackend || '…'}
+            </span>
+          )}
         </div>
         <div className="header-right">
           <Button size="sm" variant="ghost" onClick={onUndo}>Undo</Button>
@@ -537,6 +576,16 @@ const EditorPage = () => {
         >
           AI
         </Button>
+        {mode === 'ai' && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => preloadAIModels()}
+            title="Preload AI models into cache"
+          >
+            Preload AI
+          </Button>
+        )}
       </div>
 
       <div className="editor-content">

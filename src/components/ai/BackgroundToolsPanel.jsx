@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 export default function BackgroundToolsPanel({
   defaultBlur = 10,
   onBlurChange,
+  onPreloadModels, // optional callback to warm up AI model cache
 }) {
   const [blurStrength, setBlurStrength] = useState(defaultBlur);
 
@@ -14,6 +15,21 @@ export default function BackgroundToolsPanel({
 
   return (
     <div>
+      {/* Header row actions */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div style={{ fontWeight: 600 }}>Background Tools</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="btn secondary"
+            type="button"
+            onClick={() => onPreloadModels && onPreloadModels()}
+            title="Preload AI models into cache to speed up first run"
+          >
+            Preload Models
+          </button>
+        </div>
+      </div>
+
       <div style={{ marginBottom: 10 }}>
         <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6 }}>
           Blur Strength <span style={{ opacity: 0.7 }}>{blurStrength}</span>
