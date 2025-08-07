@@ -128,6 +128,63 @@ export const NodeTypes = {
       { key: 'download', label: 'Download', type: 'boolean' },
     ],
   },
+
+  /**
+   * AI v2 Effects (Workflow)
+   */
+  PortraitEnhanceV2: {
+    type: 'PortraitEnhanceV2',
+    name: 'Portrait Enhance v2',
+    category: NodeCategories.adjustments,
+    defaults: () => ({
+      strength: 50,
+      preserveSkinTone: true,
+    }),
+    inspector: [
+      { key: 'strength', label: 'Strength', type: 'number', min: 0, max: 100, step: 1 },
+      { key: 'preserveSkinTone', label: 'Preserve Skin Tone', type: 'boolean' },
+    ],
+  },
+
+  LandscapeEnhanceV2: {
+    type: 'LandscapeEnhanceV2',
+    name: 'Landscape Enhance v2',
+    category: NodeCategories.adjustments,
+    defaults: () => ({
+      strength: 50,
+      skyBoost: true,
+      textureBoost: true,
+    }),
+    inspector: [
+      { key: 'strength', label: 'Strength', type: 'number', min: 0, max: 100, step: 1 },
+      { key: 'skyBoost', label: 'Sky Boost', type: 'boolean' },
+      { key: 'textureBoost', label: 'Texture Boost', type: 'boolean' },
+    ],
+  },
+
+  BackgroundBlurV2: {
+    type: 'BackgroundBlurV2',
+    name: 'Background Blur v2',
+    category: NodeCategories.adjustments,
+    defaults: () => ({
+      strength: 50,
+    }),
+    inspector: [
+      { key: 'strength', label: 'Strength', type: 'number', min: 0, max: 100, step: 1 },
+    ],
+  },
+
+  BackgroundRemoveV2: {
+    type: 'BackgroundRemoveV2',
+    name: 'Background Remove v2',
+    category: NodeCategories.adjustments,
+    defaults: () => ({
+      feather: 2.0,
+    }),
+    inspector: [
+      { key: 'feather', label: 'Feather (px)', type: 'number', min: 0, max: 10, step: 0.5 },
+    ],
+  },
 };
 
 /**

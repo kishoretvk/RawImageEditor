@@ -344,210 +344,76 @@ const DemoPage = () => {
         <div className="demo-sidepanel">
           <Panel title={`Effect: ${effectsRegistry[selectedEffectKey]?.label || selectedEffectKey}`}>
             <div style={{ display: 'grid', gap: 8 }}>
-              {/* Portrait controls */}
-              {selectedEffectKey === 'portrait' && (
-                <>
-                  <div className="field">
-                    <label>Strength</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={layers.find(l => l.type === 'portrait')?.params?.strength ?? (effectsRegistry['portrait'].defaults?.strength || 50)}
-                      onChange={(e) => updateLayerParams('portrait', { strength: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div className="field">
-                    <label><input
-                      type="checkbox"
-                      checked={!!(layers.find(l => l.type === 'portrait')?.params?.preserveSkinTone ?? true)}
-                      onChange={(e) => updateLayerParams('portrait', { preserveSkinTone: e.target.checked })}
-                    /> Preserve Skin Tone</label>
-                  </div>
-                </>
-              )}
-
-              {/* Landscape controls */}
-              {selectedEffectKey === 'landscape' && (
-                <>
-                  <div className="field">
-                    <label>Strength</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={layers.find(l => l.type === 'landscape')?.params?.strength ?? (effectsRegistry['landscape'].defaults?.strength || 50)}
-                      onChange={(e) => updateLayerParams('landscape', { strength: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div className="field">
-                    <label><input
-                      type="checkbox"
-                      checked={!!(layers.find(l => l.type === 'landscape')?.params?.skyBoost ?? true)}
-                      onChange={(e) => updateLayerParams('landscape', { skyBoost: e.target.checked })}
-                    /> Sky Boost</label>
-                  </div>
-                  <div className="field">
-                    <label><input
-                      type="checkbox"
-                      checked={!!(layers.find(l => l.type === 'landscape')?.params?.textureBoost ?? true)}
-                      onChange={(e) => updateLayerParams('landscape', { textureBoost: e.target.checked })}
-                    /> Texture Boost</label>
-                  </div>
-                </>
-              )}
-
-              {/* Background Blur controls */}
-              {selectedEffectKey === 'bgBlur' && (
-                <>
-                  <div className="field">
-                    <label>Strength</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={layers.find(l => l.type === 'bgBlur')?.params?.strength ?? (effectsRegistry['bgBlur'].defaults?.strength || 50)}
-                      onChange={(e) => updateLayerParams('bgBlur', { strength: Number(e.target.value) })}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Background Remove controls */}
-              {selectedEffectKey === 'bgRemove' && (
-                <div className="field">
-                  <label>Feather</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={layers.find(l => l.type === 'bgRemove')?.params?.feather ?? (effectsRegistry['bgRemove'].defaults?.feather || 2)}
-                    onChange={(e) => updateLayerParams('bgRemove', { feather: Number(e.target.value) })}
-                  />
-                </div>
-              )}
-
-              {/* HSL Pop controls */}
-              {selectedEffectKey === 'hslPop' && (
-                <>
-                  <div className="field">
-                    <label>Target</label>
-                    <select
-                      value={layers.find(l => l.type === 'hslPop')?.params?.target ?? 'auto'}
-                      onChange={(e) => updateLayerParams('hslPop', { target: e.target.value })}
-                    >
-                      <option value="auto">Auto</option>
-                      <option value="blues">Blues</option>
-                      <option value="greens">Greens</option>
-                      <option value="reds">Reds</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Saturation Boost</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={layers.find(l => l.type === 'hslPop')?.params?.saturationBoost ?? 15}
-                      onChange={(e) => updateLayerParams('hslPop', { saturationBoost: Number(e.target.value) })}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Split Toning Mood controls */}
-              {selectedEffectKey === 'splitToningMood' && (
-                <div className="field">
-                  <label>Preset</label>
-                  <select
-                    value={layers.find(l => l.type === 'splitToningMood')?.params?.preset ?? 'cinematicWarm'}
-                    onChange={(e) => updateLayerParams('splitToningMood', { preset: e.target.value })}
-                  >
-                    <option value="cinematicWarm">Cinematic Warm</option>
-                    <option value="tealOrangeLight">Teal & Orange Light</option>
-                    <option value="coolNight">Cool Night</option>
-                  </select>
-                </div>
-              )}
-
-              {/* Detail Cleanup controls */}
-              {selectedEffectKey === 'detailCleanup' && (
-                <>
-                  <div className="field">
-                    <label>Luma NR</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={layers.find(l => l.type === 'detailCleanup')?.params?.lumaNR ?? 20}
-                      onChange={(e) => updateLayerParams('detailCleanup', { lumaNR: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div className="field">
-                    <label>Chroma NR</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={layers.find(l => l.type === 'detailCleanup')?.params?.chromaNR ?? 15}
-                      onChange={(e) => updateLayerParams('detailCleanup', { chromaNR: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div className="field">
-                    <label>Sharpen Bias</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={layers.find(l => l.type === 'detailCleanup')?.params?.sharpenBias ?? 10}
-                      onChange={(e) => updateLayerParams('detailCleanup', { sharpenBias: Number(e.target.value) })}
-                    />
-                  </div>
-                </>
-              )}
-              {/* Minimal param controls per common keys; detailed per-effect UIs will be added later */}
-              {effectsRegistry[selectedEffectKey]?.defaults?.strength !== undefined && (
-                <div className="field">
-                  <label>Strength</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={layers.find(l => l.type === selectedEffectKey)?.params?.strength ?? effectsRegistry[selectedEffectKey].defaults.strength}
-                    onChange={(e) => updateLayerParams(selectedEffectKey, { strength: Number(e.target.value) })}
-                  />
-                </div>
-              )}
-              {selectedEffectKey === 'landscape' && (
-                <>
-                  <div className="field">
-                    <label><input
-                      type="checkbox"
-                      checked={!!(layers.find(l => l.type === 'landscape')?.params?.skyBoost ?? true)}
-                      onChange={(e) => updateLayerParams('landscape', { skyBoost: e.target.checked })}
-                    /> Sky Boost</label>
-                  </div>
-                  <div className="field">
-                    <label><input
-                      type="checkbox"
-                      checked={!!(layers.find(l => l.type === 'landscape')?.params?.textureBoost ?? true)}
-                      onChange={(e) => updateLayerParams('landscape', { textureBoost: e.target.checked })}
-                    /> Texture Boost</label>
-                  </div>
-                </>
-              )}
-              {selectedEffectKey === 'bgRemove' && (
-                <div className="field">
-                  <label>Feather</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={layers.find(l => l.type === 'bgRemove')?.params?.feather ?? effectsRegistry['bgRemove'].defaults.feather}
-                    onChange={(e) => updateLayerParams('bgRemove', { feather: Number(e.target.value) })}
-                  />
-                </div>
-              )}
+              {/* Auto-generated controls from registry schema */}
+              {(() => {
+                const reg = effectsRegistry[selectedEffectKey];
+                const fields = reg?.controls?.fields || [];
+                const params = layers.find(l => l.type === selectedEffectKey)?.params || reg?.defaults || {};
+                return fields.map((f) => {
+                  const key = f.key;
+                  const val = params[key] ?? reg?.defaults?.[key];
+                  if (f.type === 'range') {
+                    return (
+                      <div className="field" key={key}>
+                        <label>{f.label || key}</label>
+                        <input
+                          type="range"
+                          min={f.min ?? 0}
+                          max={f.max ?? 100}
+                          step={f.step ?? 1}
+                          value={Number(val ?? 0)}
+                          onChange={(e) => updateLayerParams(selectedEffectKey, { [key]: Number(e.target.value) })}
+                        />
+                      </div>
+                    );
+                  }
+                  if (f.type === 'number') {
+                    return (
+                      <div className="field" key={key}>
+                        <label>{f.label || key}</label>
+                        <input
+                          type="number"
+                          min={f.min}
+                          max={f.max}
+                          step={f.step}
+                          value={Number(val ?? 0)}
+                          onChange={(e) => updateLayerParams(selectedEffectKey, { [key]: Number(e.target.value) })}
+                        />
+                      </div>
+                    );
+                  }
+                  if (f.type === 'checkbox') {
+                    return (
+                      <div className="field" key={key}>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={!!val}
+                            onChange={(e) => updateLayerParams(selectedEffectKey, { [key]: e.target.checked })}
+                          />
+                          {f.label || key}
+                        </label>
+                      </div>
+                    );
+                  }
+                  if (f.type === 'select') {
+                    return (
+                      <div className="field" key={key}>
+                        <label>{f.label || key}</label>
+                        <select
+                          value={String(val ?? (f.options?.[0]?.value ?? ''))}
+                          onChange={(e) => updateLayerParams(selectedEffectKey, { [key]: e.target.value })}
+                        >
+                          {(f.options || []).map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label ?? opt.value}</option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  }
+                  return null;
+                });
+              })()}
 
               <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                 <Button size="sm" variant="primary" onClick={() => runEffect(selectedEffectKey)}>Run</Button>
