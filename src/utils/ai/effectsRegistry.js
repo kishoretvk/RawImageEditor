@@ -107,6 +107,13 @@ export const effectsRegistry = {
     id: 'portrait',
     label: 'Portrait Enhance',
     defaults: { strength: 50, preserveSkinTone: true },
+    // UI controls schema to auto-render panels
+    controls: {
+      fields: [
+        { key: 'strength', type: 'range', min: 0, max: 100, step: 1, label: 'Strength' },
+        { key: 'preserveSkinTone', type: 'checkbox', label: 'Preserve Skin Tone' }
+      ]
+    },
     async run(image, params, helpers) {
       return await portraitEnhanceV2.run(image, params);
     }
@@ -115,6 +122,13 @@ export const effectsRegistry = {
     id: 'landscape',
     label: 'Landscape Enhance',
     defaults: { strength: 50, skyBoost: true, textureBoost: true },
+    controls: {
+      fields: [
+        { key: 'strength', type: 'range', min: 0, max: 100, step: 1, label: 'Strength' },
+        { key: 'skyBoost', type: 'checkbox', label: 'Sky Boost' },
+        { key: 'textureBoost', type: 'checkbox', label: 'Texture Boost' }
+      ]
+    },
     async run(image, params, helpers) {
       return await landscapeEnhanceV2.run(image, params);
     }
@@ -123,6 +137,11 @@ export const effectsRegistry = {
     id: 'bgBlur',
     label: 'Background Blur',
     defaults: { strength: 50 },
+    controls: {
+      fields: [
+        { key: 'strength', type: 'range', min: 0, max: 100, step: 1, label: 'Strength' }
+      ]
+    },
     async run(image, params, helpers) {
       return await bgMatteV2.blur(image, params);
     }
@@ -131,6 +150,11 @@ export const effectsRegistry = {
     id: 'bgRemove',
     label: 'Background Remove (PNG)',
     defaults: { feather: 2.0 },
+    controls: {
+      fields: [
+        { key: 'feather', type: 'number', min: 0, max: 10, step: 0.5, label: 'Feather (px)' }
+      ]
+    },
     async run(image, params, helpers) {
       return await bgMatteV2.remove(image, params);
     }
@@ -140,12 +164,19 @@ export const effectsRegistry = {
     id: 'hslPop',
     label: 'HSL Pop',
     defaults: { saturationBoost: 15, target: 'auto' }, // target: auto | blues | greens | reds
+    controls: {
+      fields: [
+        { key: 'target', type: 'select', options: [
+          { value: 'auto', label: 'Auto' },
+          { value: 'blues', label: 'Blues' },
+          { value: 'greens', label: 'Greens' },
+          { value: 'reds', label: 'Reds' }
+        ], label: 'Target' },
+        { key: 'saturationBoost', type: 'range', min: 0, max: 100, step: 1, label: 'Saturation Boost' }
+      ]
+    },
     async run(image, params, helpers) {
       const sat = Math.max(0, Math.min(100, Number(params?.saturationBoost ?? 15)));
-      // Simple default; future: detect dominant hue via histogram
-      const adjustments = {
-        // UI will interpret and turn into hslAdjustments bands
-      };
       return {
         editsDelta: {
           colorAdjustments: { saturation: sat },
@@ -159,6 +190,15 @@ export const effectsRegistry = {
     id: 'splitToningMood',
     label: 'Split Toning Mood',
     defaults: { preset: 'cinematicWarm' }, // cinematicWarm | tealOrangeLight | coolNight
+    controls: {
+      fields: [
+        { key: 'preset', type: 'select', options: [
+          { value: 'cinematicWarm', label: 'Cinematic Warm' },
+          { value: 'tealOrangeLight', label: 'Teal & Orange Light' },
+          { value: 'coolNight', label: 'Cool Night' }
+        ], label: 'Preset' }
+      ]
+    },
     async run(image, params) {
       const preset = params?.preset || 'cinematicWarm';
       let st = { highlightsHue: 205, highlightsSat: 8, shadowsHue: 35, shadowsSat: 6, balance: 0 };
@@ -174,6 +214,13 @@ export const effectsRegistry = {
     id: 'detailCleanup',
     label: 'Detail Cleanup',
     defaults: { lumaNR: 20, chromaNR: 15, sharpenBias: 10 },
+    controls: {
+      fields: [
+        { key: 'lumaNR', type: 'range', min: 0, max: 100, step: 1, label: 'Luma NR' },
+        { key: 'chromaNR', type: 'range', min: 0, max: 100, step: 1, label: 'Chroma NR' },
+        { key: 'sharpenBias', type: 'range', min: 0, max: 100, step: 1, label: 'Sharpen Bias' }
+      ]
+    },
     async run(image, params) {
       const lumaNR = Math.max(0, Math.min(100, Number(params?.lumaNR ?? 20)));
       const chromaNR = Math.max(0, Math.min(100, Number(params?.chromaNR ?? 15)));
@@ -195,13 +242,19 @@ export const effectsRegistry = {
     id: 'export2MB',
     label: 'Export 2 MB',
     defaults: { targetMB: 2.0, tolerance: 0.05, allowDownscale: false },
+    controls: {
+      fields: [
+        { key: 'targetMB', type: 'number', min: 0.1, max: 50, step: 0.1, label: 'Target Size (MB)' },
+        { key: 'tolerance', type: 'number', min: 0.01, max: 0.5, step: 0.01, label: 'Tolerance' },
+        { key: 'allowDownscale', type: 'checkbox', label: 'Allow Downscale' }
+      ]
+    },
     async run(image, params, helpers) {
-      // helpers.getProcessedCanvas required
       const canvas = helpers?.getProcessedCanvas?.();
       if (!canvas) {
         return { editsDelta: {}, meta: { error: 'no-canvas' } };
       }
-      const { toJPEGTargetSize } = await import('../imageProcessing.js');
+      const { toJPEGTargetSize } = await import('../../imageProcessing');
       const { blob } = await toJPEGTargetSize(canvas, params?.targetMB ?? 2.0, {
         tolerance: params?.tolerance ?? 0.05,
         allowDownscale: params?.allowDownscale ?? false
@@ -213,8 +266,15 @@ export const effectsRegistry = {
     id: 'rgbSplit',
     label: 'RGB Split',
     defaults: { source: 'processed' }, // processed | original
+    controls: {
+      fields: [
+        { key: 'source', type: 'select', options: [
+          { value: 'processed', label: 'Processed' },
+          { value: 'original', label: 'Original' }
+        ], label: 'Source' }
+      ]
+    },
     async run(image, params, helpers) {
-      // helpers.onSplitChannels expected to trigger split
       helpers?.onSplitChannels?.(params?.source === 'original' ? 'original' : 'processed');
       return { editsDelta: {}, meta: { triggered: true } };
     }

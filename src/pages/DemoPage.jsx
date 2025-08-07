@@ -32,11 +32,22 @@ const DemoPage = () => {
   // Composition of effects: [{ id, type, params, enabled, result }]
   const [layers, setLayers] = useState([]);
 
+  // Masks returned by effects, indexed by effect key
+  const [masksIndex, setMasksIndex] = useState({});
+  // Autorun toggle: run effect when params change
+  const [autorun, setAutorun] = useState(true);
+
   // Selected effect for the right-side dynamic panel
   const [selectedEffectKey, setSelectedEffectKey] = useState(null);
 
   // Derived final edits for preview
   const { edits } = useMemo(() => reduceComposition(layers), [layers]);
+
+  // Merge commonly used masks for preview
+  const subjectMask = useMemo(() => {
+    // Prefer explicit alpha from bgRemove, else subject from bgBlur
+    return masksIndex?.bgRemove?.alpha || masksIndex?.bgBlur?.subject || null;
+  }, [masksIndex]);
 
   // Helpers for registry utilities (export, rgb split)
   const helpers = useMemo(() => ({
@@ -161,6 +172,9 @@ const DemoPage = () => {
     setLayers((prev) =>
       prev.map((l) => (l.type === key ? { ...l, params: { ...(l.params || {}), ...(partial || {}) } } : l))
     );
+    if (autorun) {
+      queueMicrotask(() => runEffect(key));
+    }
   };
 
   const runEffect = async (key) => {
@@ -175,6 +189,9 @@ const DemoPage = () => {
       setLayers((prev) =>
         prev.map((l) => (l.type === key ? { ...l, result: res } : l))
       );
+      if (res?.masks) {
+        setMasksIndex((prev) => ({ ...prev, [key]: res.masks }));
+      }
     } catch (e) {
       console.warn('Effect run failed', key, e);
     }
@@ -218,6 +235,10 @@ const DemoPage = () => {
 
         {/* Action buttons row */}
         <div className="demo-actions">
+          {/* Autorun toggle */}
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginRight: 8 }}>
+            <input type="checkbox" checked={autorun} onChange={(e) => setAutorun(e.target.checked)} /> Auto-run
+          </label>
           <Button size="sm" variant="secondary" onClick={() => addOrSelectEffect('portrait')}>Portrait Enhance</Button>
           <Button size="sm" variant="secondary" onClick={() => addOrSelectEffect('landscape')}>Landscape Enhance</Button>
           <Button size="sm" variant="secondary" onClick={() => addOrSelectEffect('hslPop')}>HSL Pop</Button>
@@ -278,8 +299,8 @@ const DemoPage = () => {
                 edits={edits}
                 showSlider={false}
                 sliderPosition={50}
-                // For demo, do not pass ai mask/alpha; the services return deltas; future: route masks from services
-                ai={null}
+                // Route subject/alpha masks from effects for demo preview
+                ai={{ subjectMask }}
                 hasAlphaBackgroundRemoved={!!edits?.hasAlphaBackgroundRemoved}
                 featherPx={2}
               />
@@ -318,11 +339,172 @@ const DemoPage = () => {
         </div>
       )}
 
-      {/* Right-side dynamic panel (minimal placeholder) */}
+      {/* Right-side dynamic panel with advanced controls */}
       {selectedEffectKey && (
         <div className="demo-sidepanel">
           <Panel title={`Effect: ${effectsRegistry[selectedEffectKey]?.label || selectedEffectKey}`}>
             <div style={{ display: 'grid', gap: 8 }}>
+              {/* Portrait controls */}
+              {selectedEffectKey === 'portrait' && (
+                <>
+                  <div className="field">
+                    <label>Strength</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={layers.find(l => l.type === 'portrait')?.params?.strength ?? (effectsRegistry['portrait'].defaults?.strength || 50)}
+                      onChange={(e) => updateLayerParams('portrait', { strength: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="field">
+                    <label><input
+                      type="checkbox"
+                      checked={!!(layers.find(l => l.type === 'portrait')?.params?.preserveSkinTone ?? true)}
+                      onChange={(e) => updateLayerParams('portrait', { preserveSkinTone: e.target.checked })}
+                    /> Preserve Skin Tone</label>
+                  </div>
+                </>
+              )}
+
+              {/* Landscape controls */}
+              {selectedEffectKey === 'landscape' && (
+                <>
+                  <div className="field">
+                    <label>Strength</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={layers.find(l => l.type === 'landscape')?.params?.strength ?? (effectsRegistry['landscape'].defaults?.strength || 50)}
+                      onChange={(e) => updateLayerParams('landscape', { strength: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="field">
+                    <label><input
+                      type="checkbox"
+                      checked={!!(layers.find(l => l.type === 'landscape')?.params?.skyBoost ?? true)}
+                      onChange={(e) => updateLayerParams('landscape', { skyBoost: e.target.checked })}
+                    /> Sky Boost</label>
+                  </div>
+                  <div className="field">
+                    <label><input
+                      type="checkbox"
+                      checked={!!(layers.find(l => l.type === 'landscape')?.params?.textureBoost ?? true)}
+                      onChange={(e) => updateLayerParams('landscape', { textureBoost: e.target.checked })}
+                    /> Texture Boost</label>
+                  </div>
+                </>
+              )}
+
+              {/* Background Blur controls */}
+              {selectedEffectKey === 'bgBlur' && (
+                <>
+                  <div className="field">
+                    <label>Strength</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={layers.find(l => l.type === 'bgBlur')?.params?.strength ?? (effectsRegistry['bgBlur'].defaults?.strength || 50)}
+                      onChange={(e) => updateLayerParams('bgBlur', { strength: Number(e.target.value) })}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Background Remove controls */}
+              {selectedEffectKey === 'bgRemove' && (
+                <div className="field">
+                  <label>Feather</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={layers.find(l => l.type === 'bgRemove')?.params?.feather ?? (effectsRegistry['bgRemove'].defaults?.feather || 2)}
+                    onChange={(e) => updateLayerParams('bgRemove', { feather: Number(e.target.value) })}
+                  />
+                </div>
+              )}
+
+              {/* HSL Pop controls */}
+              {selectedEffectKey === 'hslPop' && (
+                <>
+                  <div className="field">
+                    <label>Target</label>
+                    <select
+                      value={layers.find(l => l.type === 'hslPop')?.params?.target ?? 'auto'}
+                      onChange={(e) => updateLayerParams('hslPop', { target: e.target.value })}
+                    >
+                      <option value="auto">Auto</option>
+                      <option value="blues">Blues</option>
+                      <option value="greens">Greens</option>
+                      <option value="reds">Reds</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Saturation Boost</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={layers.find(l => l.type === 'hslPop')?.params?.saturationBoost ?? 15}
+                      onChange={(e) => updateLayerParams('hslPop', { saturationBoost: Number(e.target.value) })}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Split Toning Mood controls */}
+              {selectedEffectKey === 'splitToningMood' && (
+                <div className="field">
+                  <label>Preset</label>
+                  <select
+                    value={layers.find(l => l.type === 'splitToningMood')?.params?.preset ?? 'cinematicWarm'}
+                    onChange={(e) => updateLayerParams('splitToningMood', { preset: e.target.value })}
+                  >
+                    <option value="cinematicWarm">Cinematic Warm</option>
+                    <option value="tealOrangeLight">Teal & Orange Light</option>
+                    <option value="coolNight">Cool Night</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Detail Cleanup controls */}
+              {selectedEffectKey === 'detailCleanup' && (
+                <>
+                  <div className="field">
+                    <label>Luma NR</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={layers.find(l => l.type === 'detailCleanup')?.params?.lumaNR ?? 20}
+                      onChange={(e) => updateLayerParams('detailCleanup', { lumaNR: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Chroma NR</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={layers.find(l => l.type === 'detailCleanup')?.params?.chromaNR ?? 15}
+                      onChange={(e) => updateLayerParams('detailCleanup', { chromaNR: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Sharpen Bias</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={layers.find(l => l.type === 'detailCleanup')?.params?.sharpenBias ?? 10}
+                      onChange={(e) => updateLayerParams('detailCleanup', { sharpenBias: Number(e.target.value) })}
+                    />
+                  </div>
+                </>
+              )}
               {/* Minimal param controls per common keys; detailed per-effect UIs will be added later */}
               {effectsRegistry[selectedEffectKey]?.defaults?.strength !== undefined && (
                 <div className="field">
@@ -373,6 +555,17 @@ const DemoPage = () => {
                   {layers.find(l => l.type === selectedEffectKey)?.enabled === false ? 'Enable' : 'Disable'}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => removeLayer(selectedEffectKey)}>Remove</Button>
+
+                {/* Utilities when selected effect is utility */}
+                {selectedEffectKey === 'export2MB' && (
+                  <Button size="sm" variant="primary" onClick={() => runEffect('export2MB')}>Export</Button>
+                )}
+                {selectedEffectKey === 'rgbSplit' && (
+                  <>
+                    <Button size="sm" variant="secondary" onClick={() => effectsRegistry.rgbSplit.run(currentImage, { source: 'original' }, helpers)}>Split Original</Button>
+                    <Button size="sm" variant="primary" onClick={() => effectsRegistry.rgbSplit.run(currentImage, { source: 'processed' }, helpers)}>Split Processed</Button>
+                  </>
+                )}
               </div>
             </div>
           </Panel>

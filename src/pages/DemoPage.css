@@ -164,6 +164,11 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
+  align-items: center;
+}
+
+.demo-actions label input[type="checkbox"] {
+  accent-color: #667eea;
 }
 
 .demo-samples {
@@ -289,15 +294,58 @@
 .field {
   display: grid;
   gap: 6px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  padding: 8px 10px;
 }
 
 .field label {
   font-size: 12px;
-  opacity: 0.85;
+  opacity: 0.9;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .demo-cta {
   margin-top: 16px;
+}
+
+.demo-sidepanel .field input[type="range"] {
+  width: 100%;
+  accent-color: #667eea;
+}
+
+.demo-sidepanel .field input[type="number"],
+.demo-sidepanel .field select {
+  width: 100%;
+  background: #0c1015;
+  color: #e6e6e6;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.demo-effects-list .effect-row {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.demo-upload input[type="file"] {
+  background: transparent;
+  color: #cfd6ff;
+}
+
+.demo-canvas-wrap {
+  background: #0b0e12;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.demo-header {
+  backdrop-filter: saturate(120%) blur(6px);
 }
 
   .demo-header h1 {
