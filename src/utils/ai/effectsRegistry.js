@@ -254,7 +254,7 @@ export const effectsRegistry = {
       if (!canvas) {
         return { editsDelta: {}, meta: { error: 'no-canvas' } };
       }
-      const { toJPEGTargetSize } = await import('../../imageProcessing');
+      const { toJPEGTargetSize } = await import('../imageProcessing');
       const { blob } = await toJPEGTargetSize(canvas, params?.targetMB ?? 2.0, {
         tolerance: params?.tolerance ?? 0.05,
         allowDownscale: params?.allowDownscale ?? false
