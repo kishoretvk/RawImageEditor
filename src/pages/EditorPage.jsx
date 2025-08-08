@@ -145,6 +145,13 @@ const EditorPage = () => {
     loading: false
   });
 
+  // Inpainting state
+  const [inpainting, setInpainting] = useState({
+    isPainting: false,
+    brushSize: 40,
+    mask: null, // This will hold the canvas mask
+  });
+
   // Unified tone curves state (master RGB + per-channel), normalized [0..1] point pairs
   const ID = [[0, 0], [1, 1]];
   const [curves, setCurves] = useState({
@@ -665,6 +672,10 @@ const EditorPage = () => {
                       selecting: false
                     }));
                   }}
+                  // Inpainting canvas props
+                  inpaintBrushSize={inpainting.brushSize}
+                  inpaintIsEnabled={inpainting.isPainting}
+                  onInpaintMaskUpdate={(maskCanvas) => setInpainting(p => ({ ...p, mask: maskCanvas }))}
                   // Split channels one-shot trigger
                   onExtractChannels={extractChannelsFrom ? handleExtractedChannels : null}
                   extractChannelsFrom={extractChannelsFrom || 'processed'}
@@ -960,6 +971,13 @@ const EditorPage = () => {
                 onApplyBgBlur={onApplyBgBlur}
                 onPreviewBgRemove={onPreviewBgRemove}
                 onApplyBgRemove={onApplyBgRemove}
+                // Inpainting
+                isInpainting={inpainting.isPainting}
+                brushSize={inpainting.brushSize}
+                setBrushSize={(val) => setInpainting(p => ({ ...p, brushSize: val }))}
+                onStartInpainting={() => setInpainting(p => ({ ...p, isPainting: true }))}
+                onCommitInpainting={() => console.log("Commit Inpainting")}
+                onCancelInpainting={() => setInpainting(p => ({ ...p, isPainting: false, mask: null }))}
                 // Wire BackgroundToolsPanel preload button to worker preload
                 onPreloadModels={() => preloadAIModels()}
               />

@@ -9,7 +9,8 @@
  * - enableWbSelect: (enabled: boolean) => void  // callback to toggle canvas WB selection overlay
  * - lastWbInfo: optional info object for display { avgR, avgG, avgB, rGain, gGain, bGain }
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Droplet, RotateCcw } from 'lucide-react';
 
 export default function WhiteBalanceTool({
   whiteBalance,
@@ -46,19 +47,19 @@ export default function WhiteBalanceTool({
         <button
           type="button"
           onClick={onStartWBSelect}
-          className="px-3 py-1 rounded text-xs font-semibold border bg-white/5 text-white/80 border-white/20"
-          title="Click, then drag a rectangle on the image to compute WB gains from a neutral region"
+          className="p-2 rounded text-xs font-semibold border bg-white/5 text-white/80 border-white/20 hover:bg-white/10"
+          title="Select a neutral color region on the image to automatically set the white balance."
         >
-          WB Region Select
+          <Droplet size={16} />
         </button>
 
         <button
           type="button"
           onClick={onResetWB}
-          className="px-3 py-1 rounded text-xs font-semibold bg-white/5 text-white/70 border border-white/20"
-          title="Clear WB per-channel gains"
+          className="p-2 rounded text-xs font-semibold bg-white/5 text-white/70 border border-white/20 hover:bg-white/10"
+          title="Reset white balance adjustments"
         >
-          Reset WB
+          <RotateCcw size={16} />
         </button>
       </div>
 

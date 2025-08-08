@@ -21,11 +21,16 @@ const EnhancedImageCanvas = ({
   // AI/matte-aware compose props
   ai = null, // expected: { subjectMask?: { data: Float32Array, w:number, h:number } }
   hasAlphaBackgroundRemoved = false,
-  featherPx = 2
+  featherPx = 2,
+  // Inpainting props
+  inpaintIsEnabled = false,
+  inpaintBrushSize = 40,
+  onInpaintMaskUpdate = null,
 }) => {
   const canvasRef = useRef(null);
   const originalCanvasRef = useRef(null);
   const processedCanvasRef = useRef(null);
+  const inpaintMaskCanvasRef = useRef(null);
   // Cache for matte-based background blur to avoid recomputing on small changes
   const matteCacheRef = useRef({
     key: null,         // cache key based on dims/blur/mask hash
@@ -822,7 +827,7 @@ const EnhancedImageCanvas = ({
       ctx.drawImage(processedCanvas, x, y, scaledWidth, scaledHeight);
     }
 
-    // If WB selection overlay is enabled and dragging, draw rectangle overlay
+      // If WB selection overlay is enabled and dragging, draw rectangle overlay
     if (wbSelectEnabled && wbDrag) {
       const startX = Math.min(wbDrag.startX, wbDrag.curX);
       const startY = Math.min(wbDrag.startY, wbDrag.curY);
@@ -833,6 +838,14 @@ const EnhancedImageCanvas = ({
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 4]);
       ctx.strokeRect(startX, startY, endX - startX, endY - startY);
+      ctx.restore();
+    }
+
+    // Draw inpainting mask overlay
+    if (inpaintIsEnabled && inpaintMaskCanvasRef.current) {
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.drawImage(inpaintMaskCanvasRef.current, x, y, scaledWidth, scaledHeight);
       ctx.restore();
     }
   };
@@ -871,6 +884,27 @@ const EnhancedImageCanvas = ({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    // Inpainting brush stroke
+    if (inpaintIsEnabled && e.buttons === 1) {
+      const maskCanvas = inpaintMaskCanvasRef.current;
+      const maskCtx = maskCanvas.getContext('2d');
+      
+      const scale = maskCanvas.width / rect.width;
+      const brushX = x * scale;
+      const brushY = y * scale;
+
+      maskCtx.fillStyle = 'rgba(255, 0, 0, 1)';
+      maskCtx.beginPath();
+      maskCtx.arc(brushX, brushY, inpaintBrushSize / 2 * scale, 0, 2 * Math.PI);
+      maskCtx.fill();
+      
+      updateDisplayCanvas();
+      if (onInpaintMaskUpdate) {
+        onInpaintMaskUpdate(maskCanvas);
+      }
+      return;
+    }
+
     // WB selection drag handling
     if (wbSelectEnabled && wbDrag) {
       setWbDrag((prev) => ({ ...prev, curX: x, curY: y }));
@@ -887,6 +921,31 @@ const EnhancedImageCanvas = ({
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    // Inpainting start
+    if (inpaintIsEnabled) {
+      const maskCanvas = inpaintMaskCanvasRef.current;
+      if (!maskCanvas.width || !maskCanvas.height) {
+        maskCanvas.width = imageDimensions.width;
+        maskCanvas.height = imageDimensions.height;
+      }
+      const maskCtx = maskCanvas.getContext('2d');
+      
+      const scale = maskCanvas.width / rect.width;
+      const brushX = x * scale;
+      const brushY = y * scale;
+
+      maskCtx.fillStyle = 'rgba(255, 0, 0, 1)';
+      maskCtx.beginPath();
+      maskCtx.arc(brushX, brushY, inpaintBrushSize / 2 * scale, 0, 2 * Math.PI);
+      maskCtx.fill();
+
+      updateDisplayCanvas();
+      if (onInpaintMaskUpdate) {
+        onInpaintMaskUpdate(maskCanvas);
+      }
+      return;
+    }
 
     // WB selection start
     if (wbSelectEnabled) {
@@ -1063,6 +1122,7 @@ const EnhancedImageCanvas = ({
       
       <canvas ref={originalCanvasRef} style={{ display: 'none' }} />
       <canvas ref={processedCanvasRef} style={{ display: 'none' }} />
+      <canvas ref={inpaintMaskCanvasRef} style={{ display: 'none' }} />
 
       {isLoading && (
         <div className="loading-overlay">
