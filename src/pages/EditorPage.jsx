@@ -4,6 +4,7 @@ import Button from '../components/ui/Button.jsx';
 import Panel from '../components/ui/Panel.jsx';
 import { convertRawToJpeg } from '../utils/imageProcessing';
 import { isRawFile } from '../utils/rawFileDetector';
+import { splitColorPlanes } from '../utils/imageProcessing';
 import Histogram from '../components/Histogram';
 import { Link } from 'react-router-dom';
 import '../styles/modern-editor.css';
@@ -31,6 +32,7 @@ import PresetManager from '../components/PresetManager';
 import UnifiedSlider from '../components/UnifiedSlider';
 import '../styles/unified-slider.css';
 import WhiteBalanceTool from '../components/WhiteBalanceTool';
+import ColorPlanesPanel from '../components/editorPanels/ColorPlanesPanel';
 
 // AI imports (stubs)
 import AITab from '../components/ai/AITab';
@@ -67,6 +69,8 @@ const EditorPage = () => {
   });
   const [uploadedImage, setUploadedImage] = useState(null);
   const [jpegPreview, setJpegPreview] = useState(null);
+  const [activePlane, setActivePlane] = useState(null);
+  const [planeImages, setPlaneImages] = useState({ r: null, g: null, b: null });
   const objectUrlRef = useRef(null);
   const [adjustments, setAdjustments] = useState({
     exposure: 0,
@@ -223,6 +227,22 @@ const EditorPage = () => {
         if (instantUrl) {
           setEditedImageUrl(instantUrl);
           setJpegPreview(instantUrl);
+          // Also generate color planes for non-raw images
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const planes = splitColorPlanes(canvas);
+            setPlaneImages({
+              r: planes.r.toDataURL(),
+              g: planes.g.toDataURL(),
+              b: planes.b.toDataURL(),
+            });
+          };
+          img.src = instantUrl;
         }
         setIsLoading(false);
         return;
@@ -249,6 +269,22 @@ const EditorPage = () => {
         if (displayUrl) {
           setJpegPreview(displayUrl);
           setEditedImageUrl(displayUrl);
+          // Also generate color planes for raw images
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const planes = splitColorPlanes(canvas);
+            setPlaneImages({
+              r: planes.r.toDataURL(),
+              g: planes.g.toDataURL(),
+              b: planes.b.toDataURL(),
+            });
+          };
+          img.src = displayUrl;
         } else {
           if (instantUrl) setJpegPreview(instantUrl);
         }
@@ -599,7 +635,7 @@ const EditorPage = () => {
               <>
                 {/* matte-aware EnhancedImageCanvas with AI and alpha removal */}
                 <EnhancedImageCanvas
-                  imageSrc={editedImageUrl}
+                  imageSrc={activePlane ? planeImages[activePlane] : editedImageUrl}
                   edits={allEdits}
                   localMasks={localMasks}
                   showSlider={showBeforeAfter}
@@ -817,6 +853,13 @@ const EditorPage = () => {
                   <ColorAdjustmentsPanel
                     colorAdjustments={colorAdjustments}
                     onChange={(next) => setColorAdjustments((prev) => ({ ...prev, ...(next || {}) }))}
+                  />
+                </CollapsibleControlPanel>
+
+                <CollapsibleControlPanel title="Color Planes" defaultOpen={false}>
+                  <ColorPlanesPanel
+                    activePlane={activePlane}
+                    onSelectPlane={setActivePlane}
                   />
                 </CollapsibleControlPanel>
 
