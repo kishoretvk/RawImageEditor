@@ -1,143 +1,205 @@
 /**
- * Lightweight FIFO job queue with cancellation and de-duplication.
- * Intended to drive AI worker requests without UI flicker or race conditions.
- *
- * Usage:
- *  const queue = new JobQueue({ coalesceKey: job => job.type }); // optional dedupe
- *  const { id, promise, cancel } = queue.enqueue(async signal => { ... });
- *  const result = await promise;
+ * jobQueue.js
+ * AI job queue management with priority and concurrency control
+ * Handles background AI processing with proper error handling and progress tracking
  */
-export class JobQueue {
-  constructor({ coalesceKey = null, onChange = null } = {}) {
-    this.queue = [];
-    this.active = null;
-    this.coalesceKey = typeof coalesceKey === "function" ? coalesceKey : null;
-    this.onChange = onChange || (() => {});
-    this._jobId = 0;
-  }
 
-  _emit() {
-    this.onChange({
-      size: this.queue.length + (this.active ? 1 : 0),
-      active: !!this.active,
-      pending: this.queue.length,
-    });
+class AIJobQueue {
+  constructor(maxConcurrency = 2) {
+    this.maxConcurrency = maxConcurrency;
+    this.queue = [];
+    this.running = new Map();
+    this.id = 0;
+    this.listeners = new Map();
   }
 
   /**
-   * Enqueue a new job.
-   * The executor receives an AbortSignal; it must check signal.aborted and abort work when set.
-   * Returns { id, promise, cancel }.
+   * Add a job to the queue
    */
-  enqueue(executor, meta = {}) {
-    // Coalesce duplicates if configured
-    if (this.coalesceKey) {
-      const key = this.coalesceKey(meta);
-      if (key != null) {
-        // remove any pending job with same key
-        this.queue = this.queue.filter(j => (j._coalesceKey || "__no__") !== key);
-      }
-      meta._coalesceKey = key;
-    }
-
-    const id = `job-${Date.now()}-${++this._jobId}`;
-    let resolve, reject;
-    const promise = new Promise((res, rej) => ((resolve = res), (reject = rej)));
-    const controller = new AbortController();
-
-    const job = {
+  add(job, priority = 0) {
+    const id = ++this.id;
+    const jobItem = {
       id,
-      meta,
-      controller,
-      resolve,
-      reject,
-      run: () => {
-        try {
-          const maybePromise = executor(controller.signal);
-          Promise.resolve(maybePromise).then(
-            (val) => {
-              if (!controller.signal.aborted) resolve(val);
-            },
-            (err) => {
-              if (!controller.signal.aborted) reject(err);
-            }
-          ).finally(() => {
-            if (this.active && this.active.id === id) {
-              this.active = null;
-              this._next();
-            }
-          });
-        } catch (e) {
-          if (!controller.signal.aborted) reject(e);
-          if (this.active && this.active.id === id) {
-            this.active = null;
-            this._next();
-          }
-        }
-      },
-      cancel: () => {
-        try { controller.abort(); } catch {}
-        // If it's pending, remove it. If active, active will observe abort and finish soon.
-        if (!this.active || this.active.id !== id) {
-          this.queue = this.queue.filter(j => j.id !== id);
-          reject(new DOMException("Aborted", "AbortError"));
-          this._emit();
-        }
-      },
-      _coalesceKey: meta._coalesceKey,
+      job,
+      priority,
+      status: 'queued',
+      created: Date.now(),
+      started: null,
+      completed: null,
+      error: null,
+      progress: 0
     };
 
-    this.queue.push(job);
-    this._emit();
-    this._kick();
-    return { id, promise, cancel: job.cancel };
+    // Insert based on priority (higher priority first)
+    const insertIndex = this.queue.findIndex(item => item.priority < priority);
+    if (insertIndex === -1) {
+      this.queue.push(jobItem);
+    } else {
+      this.queue.splice(insertIndex, 0, jobItem);
+    }
+
+    this.emit('jobAdded', jobItem);
+    this.processQueue();
+    
+    return id;
   }
 
   /**
-   * Cancel all queued jobs (not the active one).
-   * Optionally abort the active one too (force = true).
+   * Process the queue
    */
-  cancelAll({ force = false } = {}) {
-    // Cancel pending
-    for (const j of this.queue) {
-      try { j.cancel(); } catch {}
+  async processQueue() {
+    while (this.running.size < this.maxConcurrency && this.queue.length > 0) {
+      const jobItem = this.queue.shift();
+      this.running.set(jobItem.id, jobItem);
+      
+      jobItem.status = 'running';
+      jobItem.started = Date.now();
+      
+      this.emit('jobStarted', jobItem);
+      
+      try {
+        const result = await this.executeJob(jobItem);
+        jobItem.status = 'completed';
+        jobItem.completed = Date.now();
+        jobItem.result = result;
+        
+        this.emit('jobCompleted', jobItem);
+      } catch (error) {
+        jobItem.status = 'failed';
+        jobItem.completed = Date.now();
+        jobItem.error = error.message || error.toString();
+        
+        this.emit('jobFailed', jobItem);
+      } finally {
+        this.running.delete(jobItem.id);
+      }
     }
+  }
+
+  /**
+   * Execute a single job
+   */
+  async executeJob(jobItem) {
+    const { job } = jobItem;
+    
+    // Create progress callback
+    const onProgress = (progress) => {
+      jobItem.progress = Math.min(100, Math.max(0, progress));
+      this.emit('jobProgress', jobItem);
+    };
+
+    try {
+      // Execute the job with progress tracking
+      const result = await job(onProgress);
+      return result;
+    } catch (error) {
+      console.error('Job execution failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get job status
+   */
+  getStatus(jobId) {
+    // Check running jobs
+    const runningJob = this.running.get(jobId);
+    if (runningJob) return runningJob;
+
+    // Check if it's in the queue
+    const queuedJob = this.queue.find(item => item.id === jobId);
+    if (queuedJob) return queuedJob;
+
+    return null;
+  }
+
+  /**
+   * Cancel a job
+   */
+  cancel(jobId) {
+    // Remove from queue
+    const queueIndex = this.queue.findIndex(item => item.id === jobId);
+    if (queueIndex !== -1) {
+      const jobItem = this.queue.splice(queueIndex, 1)[0];
+      jobItem.status = 'cancelled';
+      jobItem.completed = Date.now();
+      this.emit('jobCancelled', jobItem);
+      return true;
+    }
+
+    // Can't cancel running jobs (would need abort controller)
+    return false;
+  }
+
+  /**
+   * Clear all queued jobs
+   */
+  clear() {
+    const cancelledJobs = [...this.queue];
     this.queue = [];
-    // Cancel active
-    if (force && this.active) {
-      try { this.active.controller.abort(); } catch {}
-    }
-    this._emit();
-  }
-
-  _kick() {
-    if (!this.active) this._next();
-  }
-
-  _next() {
-    if (this.active) return;
-    const next = this.queue.shift();
-    if (!next) {
-      this._emit();
-      return;
-    }
-    this.active = next;
-    this._emit();
-    // Run on next microtask to allow callers to attach handlers
-    queueMicrotask(() => next.run());
-  }
-}
-
-/**
- * Convenience: create a single shared queue instance.
- * Example coalescing: only keep the latest job per "type".
- */
-let sharedQueue = null;
-export function getSharedAIQueue() {
-  if (!sharedQueue) {
-    sharedQueue = new JobQueue({
-      coalesceKey: (meta) => meta && meta.type ? meta.type : null,
+    
+    cancelledJobs.forEach(jobItem => {
+      jobItem.status = 'cancelled';
+      jobItem.completed = Date.now();
+      this.emit('jobCancelled', jobItem);
     });
   }
-  return sharedQueue;
+
+  /**
+   * Get queue statistics
+   */
+  getStats() {
+    return {
+      queued: this.queue.length,
+      running: this.running.size,
+      total: this.queue.length + this.running.size,
+      maxConcurrency: this.maxConcurrency
+    };
+  }
+
+  /**
+   * Event handling
+   */
+  on(event, callback) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
+    }
+    this.listeners.get(event).push(callback);
+  }
+
+  off(event, callback) {
+    if (this.listeners.has(event)) {
+      const callbacks = this.listeners.get(event);
+      const index = callbacks.indexOf(callback);
+      if (index !== -1) {
+        callbacks.splice(index, 1);
+      }
+    }
+  }
+
+  emit(event, data) {
+    if (this.listeners.has(event)) {
+      this.listeners.get(event).forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error('Event callback error:', error);
+        }
+      });
+    }
+  }
 }
+
+// Global instance
+const globalQueue = new AIJobQueue();
+
+// Export both the class and global instance
+export { AIJobQueue };
+export default globalQueue;
+
+// Convenience functions for global queue
+export const addAIJob = (job, priority = 0) => globalQueue.add(job, priority);
+export const getAIJobStatus = (jobId) => globalQueue.getStatus(jobId);
+export const cancelAIJob = (jobId) => globalQueue.cancel(jobId);
+export const clearAIJobs = () => globalQueue.clear();
+export const getAIJobStats = () => globalQueue.getStats();

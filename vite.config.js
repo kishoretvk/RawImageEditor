@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  // Allow overriding base path via env. On Vercel, set VITE_BASE_PATH='/' when deploying at root.
-  const base = env.VITE_BASE_PATH || '/RawImageEditor/'
+  // Deploy at root for Vercel
+  const base = '/'
 
   return {
     plugins: [react()],
@@ -41,7 +41,20 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
-      open: true
+      open: true,
+      // Ensure proper MIME types for WASM files in development
+      headers: {
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+        'Cross-Origin-Opener-Policy': 'same-origin',
+      },
+      // Configure static file serving for ONNX Runtime WASM files
+      fs: {
+        allow: ['..'] // Allow serving from parent directories if needed
+      }
+    },
+    optimizeDeps: {
+      // Ensure onnxruntime-web is properly bundled
+      include: ['onnxruntime-web']
     }
   }
 })
