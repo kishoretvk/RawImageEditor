@@ -4,7 +4,7 @@
  */
 
 import { ModelLoader } from './modelLoader';
-import { segmentation } from './segmentation';
+import { runPersonSeg as segmentation } from './segmentation';
 
 const MODELS = {
   // segmentation model for person/sky

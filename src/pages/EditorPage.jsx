@@ -868,6 +868,7 @@ const EditorPage = () => {
                     onStartWBSelect={() => setWhiteBalance(prev => ({ ...prev, selecting: true }))}
                     onChangeSamplingSpace={(val) => setWhiteBalance(prev => ({ ...prev, samplingSpace: val }))}
                     onResetWB={() => setWhiteBalance({ multipliers: { r: 1, g: 1, b: 1 }, temperature: 0, tint: 0, samplingSpace: 'original', selecting: false })}
+                    onTemperatureTintChange={({ temperature, tint }) => setWhiteBalance(prev => ({ ...prev, temperature, tint }))}
                   />
                 </CollapsibleControlPanel>
 

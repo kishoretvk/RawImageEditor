@@ -16,7 +16,8 @@ export default function WhiteBalanceTool({
   whiteBalance,
   onStartWBSelect,
   onChangeSamplingSpace,
-  onResetWB
+  onResetWB,
+  onTemperatureTintChange
 }) {
   const [temp, setTemp] = useState(whiteBalance?.temperature ?? 0);
   const [tint, setTint] = useState(whiteBalance?.tint ?? 0);
@@ -26,19 +27,25 @@ export default function WhiteBalanceTool({
     setTint(whiteBalance?.tint ?? 0);
   }, [whiteBalance?.temperature, whiteBalance?.tint]);
 
+  useEffect(() => {
+    if (onTemperatureTintChange) {
+      onTemperatureTintChange({ temperature: temp, tint });
+    }
+  }, [temp, tint]);
+
   return (
     <div className="flex flex-col gap-3">
       <label className="text-xs font-semibold">White Balance</label>
 
       {/* Derived Temp/Tint (read-only preview from computed WB) */}
       <div className="flex gap-2 items-center">
-        <span className="text-xs w-20">Derived Temp</span>
-        <input type="range" min="-255" max="255" value={temp} readOnly className="flex-1 opacity-60" />
+        <span className="text-xs w-20">Temperature</span>
+        <input type="range" min="-100" max="100" value={temp} onChange={(e) => setTemp(parseInt(e.target.value, 10))} className="flex-1" />
         <span className="text-xs w-14 text-right">{Number.isFinite(temp) ? temp.toFixed(0) : 0}</span>
       </div>
       <div className="flex gap-2 items-center">
-        <span className="text-xs w-20">Derived Tint</span>
-        <input type="range" min="-128" max="128" value={tint} readOnly className="flex-1 opacity-60" />
+        <span className="text-xs w-20">Tint</span>
+        <input type="range" min="-100" max="100" value={tint} onChange={(e) => setTint(parseInt(e.target.value, 10))} className="flex-1" />
         <span className="text-xs w-14 text-right">{Number.isFinite(tint) ? tint.toFixed(0) : 0}</span>
       </div>
 
