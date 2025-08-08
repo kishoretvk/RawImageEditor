@@ -3,6 +3,7 @@ import AICard from './AICard';
 import PortraitEnhancePanel from './PortraitEnhancePanel';
 import LandscapeEnhancePanel from './LandscapeEnhancePanel';
 import BackgroundToolsPanel from './BackgroundToolsPanel';
+import InpaintingPanel from '../editorPanels/InpaintingPanel';
 
 export default function AITab({
   onPreviewPortrait,
@@ -13,7 +14,14 @@ export default function AITab({
   onApplyBgBlur,
   onPreviewBgRemove,
   onApplyBgRemove,
-  loading = false
+  // Inpainting props
+  onStartInpainting,
+  onCommitInpainting,
+  onCancelInpainting,
+  isInpainting,
+  brushSize,
+  setBrushSize,
+  loading = false,
 }) {
   return (
     <div className="ai-tab" style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
@@ -59,6 +67,22 @@ export default function AITab({
         }
       >
         <BackgroundToolsPanel />
+      </AICard>
+
+      <AICard
+        title="Object Removal"
+        description="Paint over objects, people, or defects to remove them."
+        loading={loading}
+        actions={<></>}
+      >
+        <InpaintingPanel
+          onStartInpainting={onStartInpainting}
+          onCommitInpainting={onCommitInpainting}
+          onCancelInpainting={onCancelInpainting}
+          isInpainting={isInpainting}
+          brushSize={brushSize}
+          setBrushSize={setBrushSize}
+        />
       </AICard>
     </div>
   );

@@ -4,6 +4,7 @@ import Button from '../components/ui/Button.jsx';
 import Panel from '../components/ui/Panel.jsx';
 import { convertRawToJpeg } from '../utils/imageProcessing';
 import { isRawFile } from '../utils/rawFileDetector';
+import { splitColorPlanes } from '../utils/imageProcessing';
 import Histogram from '../components/Histogram';
 import { Link } from 'react-router-dom';
 import '../styles/modern-editor.css';
@@ -31,9 +32,12 @@ import PresetManager from '../components/PresetManager';
 import UnifiedSlider from '../components/UnifiedSlider';
 import '../styles/unified-slider.css';
 import WhiteBalanceTool from '../components/WhiteBalanceTool';
+import ColorPlanesPanel from '../components/editorPanels/ColorPlanesPanel';
 
 // AI imports (stubs)
 import AITab from '../components/ai/AITab';
+import { callAI } from '../utils/ai/worker';
+import { inpaint } from '../utils/ai/services/inpaint';
 
 function CollapsibleControlPanel({ title, children, defaultOpen = true }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -67,6 +71,8 @@ const EditorPage = () => {
   });
   const [uploadedImage, setUploadedImage] = useState(null);
   const [jpegPreview, setJpegPreview] = useState(null);
+  const [activePlane, setActivePlane] = useState(null);
+  const [planeImages, setPlaneImages] = useState({ r: null, g: null, b: null });
   const objectUrlRef = useRef(null);
   const [adjustments, setAdjustments] = useState({
     exposure: 0,
@@ -139,6 +145,13 @@ const EditorPage = () => {
     bg: { blurStrength: 10, removed: false },
     lastRun: null,
     loading: false
+  });
+
+  // Inpainting state
+  const [inpainting, setInpainting] = useState({
+    isPainting: false,
+    brushSize: 40,
+    mask: null, // This will hold the canvas mask
   });
 
   // Unified tone curves state (master RGB + per-channel), normalized [0..1] point pairs
@@ -223,6 +236,22 @@ const EditorPage = () => {
         if (instantUrl) {
           setEditedImageUrl(instantUrl);
           setJpegPreview(instantUrl);
+          // Also generate color planes for non-raw images
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const planes = splitColorPlanes(canvas);
+            setPlaneImages({
+              r: planes.r.toDataURL(),
+              g: planes.g.toDataURL(),
+              b: planes.b.toDataURL(),
+            });
+          };
+          img.src = instantUrl;
         }
         setIsLoading(false);
         return;
@@ -249,6 +278,22 @@ const EditorPage = () => {
         if (displayUrl) {
           setJpegPreview(displayUrl);
           setEditedImageUrl(displayUrl);
+          // Also generate color planes for raw images
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const planes = splitColorPlanes(canvas);
+            setPlaneImages({
+              r: planes.r.toDataURL(),
+              g: planes.g.toDataURL(),
+              b: planes.b.toDataURL(),
+            });
+          };
+          img.src = displayUrl;
         } else {
           if (instantUrl) setJpegPreview(instantUrl);
         }
@@ -363,39 +408,6 @@ const EditorPage = () => {
     return () => {};
   }, [mode]);
 
-  // Safe worker call with timeout to avoid dangling async listeners
-  const callAI = (type, payload = {}, { timeoutMs = 10000 } = {}) =>
-    new Promise((resolve) => {
-      const worker = aiWorkerRef.current;
-      if (!worker) return resolve({ ok: false, error: 'worker-not-ready' });
-      const id = type + '-' + Math.random().toString(36).slice(2);
-
-      let settled = false;
-      const handler = (e) => {
-        const msg = e.data;
-        if (!msg || msg.id !== id) return;
-        worker.removeEventListener('message', handler);
-        settled = true;
-        resolve(msg);
-      };
-
-      worker.addEventListener('message', handler);
-
-      // Failsafe timeout to prevent "async response but channel closed" errors
-      const to = setTimeout(() => {
-        if (settled) return;
-        try { worker.removeEventListener('message', handler); } catch {}
-        resolve({ ok: false, id, error: 'timeout', type });
-      }, timeoutMs);
-
-      try {
-        worker.postMessage({ id, type, payload });
-      } catch (err) {
-        clearTimeout(to);
-        try { worker.removeEventListener('message', handler); } catch {}
-        resolve({ ok: false, id, error: 'postMessage-failed', detail: String(err) });
-      }
-    });
 
   // Helper to preload models (person-seg) via worker
   const preloadAIModels = React.useCallback(async () => {
@@ -464,7 +476,7 @@ const EditorPage = () => {
 
   const onPreviewPortrait = async () => {
     setAi((prev) => ({ ...prev, loading: true }));
-    const res = await callAI('portraitEnhance', { strength: ai.portrait?.strength ?? 50 });
+    const res = await callAI(aiWorkerRef.current, 'portraitEnhance', { strength: ai.portrait?.strength ?? 50 });
     const params = res?.payload?.params || null;
     // Apply directly for visible preview
     applyPortraitParamsToEdits(params);
@@ -501,7 +513,7 @@ const EditorPage = () => {
 
   const onPreviewLandscape = async () => {
     setAi((prev) => ({ ...prev, loading: true }));
-    const res = await callAI('landscapeEnhance', { strength: ai.landscape?.strength ?? 50 });
+    const res = await callAI(aiWorkerRef.current, 'landscapeEnhance', { strength: ai.landscape?.strength ?? 50 });
     const params = res?.payload?.params || null;
     applyLandscapeParamsToEdits(params);
     setAi((prev) => ({ ...prev, landscape: { ...prev.landscape, params }, lastRun: 'landscapePreview', loading: false }));
@@ -510,7 +522,7 @@ const EditorPage = () => {
   // Background blur: approximate visibly by adding slight global blur in Effects panel for now
   const onPreviewBgBlur = async () => {
     setAi((prev) => ({ ...prev, loading: true }));
-    const res = await callAI('backgroundBlur', { blurStrength: ai.bg?.blurStrength ?? 10 });
+    const res = await callAI(aiWorkerRef.current, 'backgroundBlur', { blurStrength: ai.bg?.blurStrength ?? 10 });
     const blurStrength = res?.payload?.blurStrength ?? ai.bg?.blurStrength ?? 10;
     setEffects(prev => ({ ...prev, blur: Math.min(100, Math.max(0, blurStrength)) }));
     setAi((prev) => ({ ...prev, bg: { ...prev.bg, blurStrength }, lastRun: 'bgBlurPreview', loading: false }));
@@ -520,7 +532,7 @@ const EditorPage = () => {
   // Background remove: set a state flag so Export can default to PNG; canvas can later respect alpha when masks arrive
   const onPreviewBgRemove = async () => {
     setAi((prev) => ({ ...prev, loading: true }));
-    const res = await callAI('backgroundRemove', {});
+    const res = await callAI(aiWorkerRef.current, 'backgroundRemove', {});
     const ok = !!(res?.payload?.transparent);
     if (ok) {
       setHasAlphaBackgroundRemoved(true);
@@ -599,7 +611,7 @@ const EditorPage = () => {
               <>
                 {/* matte-aware EnhancedImageCanvas with AI and alpha removal */}
                 <EnhancedImageCanvas
-                  imageSrc={editedImageUrl}
+                  imageSrc={activePlane ? planeImages[activePlane] : editedImageUrl}
                   edits={allEdits}
                   localMasks={localMasks}
                   showSlider={showBeforeAfter}
@@ -629,6 +641,10 @@ const EditorPage = () => {
                       selecting: false
                     }));
                   }}
+                  // Inpainting canvas props
+                  inpaintBrushSize={inpainting.brushSize}
+                  inpaintIsEnabled={inpainting.isPainting}
+                  onInpaintMaskUpdate={(maskCanvas) => setInpainting(p => ({ ...p, mask: maskCanvas }))}
                   // Split channels one-shot trigger
                   onExtractChannels={extractChannelsFrom ? handleExtractedChannels : null}
                   extractChannelsFrom={extractChannelsFrom || 'processed'}
@@ -820,6 +836,24 @@ const EditorPage = () => {
                   />
                 </CollapsibleControlPanel>
 
+                <CollapsibleControlPanel title="Color Planes" defaultOpen={false}>
+                  <ColorPlanesPanel
+                    activePlane={activePlane}
+                    onSelectPlane={setActivePlane}
+                    onDownloadPlane={(plane) => {
+                      const planeImage = planeImages[plane];
+                      if (planeImage) {
+                        const link = document.createElement('a');
+                        link.href = planeImage;
+                        link.download = `plane-${plane}.png`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }
+                    }}
+                  />
+                </CollapsibleControlPanel>
+
                 <CollapsibleControlPanel title="HSL / Color Mixer" defaultOpen={false}>
                   <HSLPanel
                     hsl={hslAdjustments}
@@ -845,6 +879,7 @@ const EditorPage = () => {
                     onStartWBSelect={() => setWhiteBalance(prev => ({ ...prev, selecting: true }))}
                     onChangeSamplingSpace={(val) => setWhiteBalance(prev => ({ ...prev, samplingSpace: val }))}
                     onResetWB={() => setWhiteBalance({ multipliers: { r: 1, g: 1, b: 1 }, temperature: 0, tint: 0, samplingSpace: 'original', selecting: false })}
+                    onTemperatureTintChange={({ temperature, tint }) => setWhiteBalance(prev => ({ ...prev, temperature, tint }))}
                   />
                 </CollapsibleControlPanel>
 
@@ -917,6 +952,34 @@ const EditorPage = () => {
                 onApplyBgBlur={onApplyBgBlur}
                 onPreviewBgRemove={onPreviewBgRemove}
                 onApplyBgRemove={onApplyBgRemove}
+                // Inpainting
+                isInpainting={inpainting.isPainting}
+                brushSize={inpainting.brushSize}
+                setBrushSize={(val) => setInpainting(p => ({ ...p, brushSize: val }))}
+                onStartInpainting={() => setInpainting(p => ({ ...p, isPainting: true }))}
+                onCommitInpainting={async () => {
+                  if (!inpainting.mask) return;
+                  setAi(prev => ({ ...prev, loading: true }));
+                  try {
+                    const processedCanvas = document.querySelector('.enhanced-canvas')?.parentElement?.querySelector('canvas[style*="display: none"]:last-child') || null;
+                    if (!processedCanvas) throw new Error('Could not find processed canvas');
+                    
+                    const inpaintedImage = await inpaint(aiWorkerRef.current, processedCanvas, inpainting.mask);
+                    
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = inpaintedImage.width;
+                    tempCanvas.height = inpaintedImage.height;
+                    tempCanvas.getContext('2d').putImageData(inpaintedImage, 0, 0);
+
+                    setEditedImageUrl(tempCanvas.toDataURL());
+                    setInpainting(p => ({ ...p, isPainting: false, mask: null }));
+                  } catch (error) {
+                    console.error('Inpainting failed:', error);
+                  } finally {
+                    setAi(prev => ({ ...prev, loading: false }));
+                  }
+                }}
+                onCancelInpainting={() => setInpainting(p => ({ ...p, isPainting: false, mask: null }))}
                 // Wire BackgroundToolsPanel preload button to worker preload
                 onPreloadModels={() => preloadAIModels()}
               />

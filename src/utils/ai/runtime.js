@@ -1,70 +1,76 @@
 /**
- * AI Runtime bootstrap for on-device inference.
- * Prefers WebGPU, falls back to WebGL, then WASM.
- * Loads ONNX Runtime Web dynamically to avoid bloating initial bundle.
+ * runtime.js
+ * Main AI runtime that orchestrates model loading and inference.
  */
-let ort = null;
-let backend = null;
-let initialized = false;
 
-export async function initRuntime({ preferWebGPU = true } = {}) {
-  if (initialized) return { ok: true, backend };
-  try {
-    // Dynamic import to keep initial bundle lean
-    const mod = await import("onnxruntime-web");
-    ort = mod;
+import { ModelLoader } from './modelLoader';
+import { runPersonSeg as segmentation } from './segmentation';
 
-    // Detect capabilities
-    const supportsWebGPU = typeof navigator !== "undefined" && !!navigator.gpu;
-    const supportsWebGL = typeof document !== "undefined" && (document.createElement("canvas").getContext("webgl") || document.createElement("canvas").getContext("webgl2"));
-
-    const candidates = [];
-    if (preferWebGPU && supportsWebGPU) candidates.push("webgpu");
-    if (supportsWebGL) candidates.push("webgl");
-    candidates.push("wasm");
-
-    // Try backends in order
-    for (const candidate of candidates) {
-      try {
-        await ort.env.wasm.wasmPaths; // no-op, ensure env exists
-      } catch {}
-      // Configure preferred execution provider
-      const ep = candidate;
-      // For ORT Web GPU/WebGL/WASM selection is via session options EPs at session creation time.
-      backend = ep;
-      initialized = true;
-      return { ok: true, backend };
-    }
-
-    backend = "wasm";
-    initialized = true;
-    return { ok: true, backend };
-  } catch (e) {
-    backend = "unavailable";
-    initialized = false;
-    return { ok: false, backend, error: String(e) };
+const MODELS = {
+  // segmentation model for person/sky
+  'person-seg': {
+    url: '/models/person-seg-v1.onnx',
+    dims: [1, 3, 256, 256],
+    type: 'segmentation'
+  },
+  // Placeholder for inpainting model
+  'inpaint-v1': {
+    url: '/models/inpaint-v1.onnx',
+    dims: [1, 4, 512, 512], // image + mask
+    type: 'inpaint'
   }
-}
+};
 
-export function getBackendInfo() {
-  return { backend, initialized };
-}
+export class AIRuntime {
+  constructor() {
+    this.loader = new ModelLoader(MODELS);
+    this.backend = null;
+  }
 
-export function getORT() {
-  if (!initialized || !ort) throw new Error("ORT runtime not initialized");
-  return ort;
-}
+  async init({ preferWebGPU = true } = {}) {
+    const { backend } = await this.loader.init({ preferWebGPU });
+    this.backend = backend;
+    return { backend };
+  }
 
-/**
- * Create an ORT session for a given model buffer and options.
- * The caller should manage caching of the model bytes (e.g., IndexedDB).
- */
-export async function createSession(modelBuffer, { graphOptimizationLevel = "all", intraOpNumThreads = 1 } = {}) {
-  const ort = getORT();
-  const options = {
-    executionProviders: [backend || "wasm"],
-    graphOptimizationLevel: graphOptimizationLevel === "all" ? "all" : "basic",
-    intraOpNumThreads,
-  };
-  return await ort.InferenceSession.create(modelBuffer, options);
+  async preload(list) {
+    await this.loader.preload(list);
+  }
+
+  async runPortraitEnhance(payload) {
+    // Placeholder
+    return { params: { exposureDelta: 0.1, contrastMid: 0.05 } };
+  }
+
+  async runLandscapeEnhance(payload) {
+    // Placeholder
+    return { params: { vibrance: 0.1, texture: 0.05 } };
+  }
+
+  async runBackgroundBlur(payload) {
+    // Placeholder
+    return { blurStrength: payload.blurStrength };
+  }
+
+  async runBackgroundRemove(payload) {
+    // Placeholder
+    return { transparent: true };
+  }
+
+  async runInpainting(payload) {
+    const { image, mask } = payload;
+    const session = await this.loader.getSession('inpaint-v1');
+    
+    // Preprocess image and mask into tensors
+    // ...
+
+    // Run inference
+    // const results = await session.run(feeds);
+
+    // Postprocess results
+    // ...
+
+    // For now, return the original image
+    return { image };
+  }
 }

@@ -186,3 +186,62 @@ function canvasToJpeg(canvas, quality = 0.92) {
     canvas.toBlob((blob) => resolve(blob), 'image/jpeg', quality);
   });
 }
+
+/**
+ * Split a canvas into three monochrome canvases for R, G, B planes.
+ */
+export function splitColorPlanes(sourceCanvas) {
+  const { width, height } = sourceCanvas;
+  const ctx = sourceCanvas.getContext('2d');
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const { data } = imageData;
+
+  const rCanvas = document.createElement('canvas');
+  rCanvas.width = width;
+  rCanvas.height = height;
+  const rCtx = rCanvas.getContext('2d');
+  const rImageData = rCtx.createImageData(width, height);
+
+  const gCanvas = document.createElement('canvas');
+  gCanvas.width = width;
+  gCanvas.height = height;
+  const gCtx = gCanvas.getContext('2d');
+  const gImageData = gCtx.createImageData(width, height);
+
+  const bCanvas = document.createElement('canvas');
+  bCanvas.width = width;
+  bCanvas.height = height;
+  const bCtx = bCanvas.getContext('2d');
+  const bImageData = bCtx.createImageData(width, height);
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const a = data[i + 3];
+
+    // Red plane (monochrome)
+    rImageData.data[i] = r;
+    rImageData.data[i + 1] = r;
+    rImageData.data[i + 2] = r;
+    rImageData.data[i + 3] = a;
+
+    // Green plane (monochrome)
+    gImageData.data[i] = g;
+    gImageData.data[i + 1] = g;
+    gImageData.data[i + 2] = g;
+    gImageData.data[i + 3] = a;
+
+    // Blue plane (monochrome)
+    bImageData.data[i] = b;
+    bImageData.data[i + 1] = b;
+    bImageData.data[i + 2] = b;
+    bImageData.data[i + 3] = a;
+  }
+
+  rCtx.putImageData(rImageData, 0, 0);
+  gCtx.putImageData(gImageData, 0, 0);
+  bCtx.putImageData(bImageData, 0, 0);
+
+  return { r: rCanvas, g: gCanvas, b: bCanvas };
+}

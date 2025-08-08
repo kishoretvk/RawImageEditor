@@ -28,6 +28,7 @@ export default function ExportDialog({
   const [tolerancePct, setTolerancePct] = useState(5);
   const [allowDownscale, setAllowDownscale] = useState(false);
   const [preserveTransparency, setPreserveTransparency] = useState(!!hasAlphaBackgroundRemoved);
+  const [exportResult, setExportResult] = useState(null);
 
   const handleExport = () => {
     if (onExport) onExport({ format, quality, filename, preserveTransparency });
@@ -68,9 +69,13 @@ export default function ExportDialog({
           a.click();
           document.body.removeChild(a);
           setTimeout(() => URL.revokeObjectURL(url), 0);
+          setExportResult({ success: true, finalBytes });
+        } else {
+          setExportResult({ success: false, error: 'Could not generate image.' });
         }
       } catch (e) {
         console.warn('Target size export failed:', e);
+        setExportResult({ success: false, error: e.message });
       }
     }
   };
@@ -199,11 +204,19 @@ export default function ExportDialog({
               setTargetMB('');
               setTolerancePct(5);
               setAllowDownscale(false);
+              setExportResult(null);
             }}
           >
             Reset
           </Button>
         </div>
+        {exportResult && (
+          <div className={`mt-2 text-xs ${exportResult.success ? 'text-green-500' : 'text-red-500'}`}>
+            {exportResult.success
+              ? `Export successful! Final size: ${(exportResult.finalBytes / 1024 / 1024).toFixed(2)} MB`
+              : `Export failed: ${exportResult.error}`}
+          </div>
+        )}
       </Panel>
     </div>
   );
