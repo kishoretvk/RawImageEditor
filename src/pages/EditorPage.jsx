@@ -840,6 +840,17 @@ const EditorPage = () => {
                   <ColorPlanesPanel
                     activePlane={activePlane}
                     onSelectPlane={setActivePlane}
+                    onDownloadPlane={(plane) => {
+                      const planeImage = planeImages[plane];
+                      if (planeImage) {
+                        const link = document.createElement('a');
+                        link.href = planeImage;
+                        link.download = `plane-${plane}.png`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }
+                    }}
                   />
                 </CollapsibleControlPanel>
 
