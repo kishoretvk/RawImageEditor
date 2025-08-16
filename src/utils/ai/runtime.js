@@ -9,13 +9,13 @@ import { runPersonSeg as segmentation } from './segmentation';
 const MODELS = {
   // segmentation model for person/sky
   'person-seg': {
-    url: '/models/person-seg-v1.onnx',
+    url: `${import.meta.env.BASE_URL}models/person-seg-v1.onnx`,
     dims: [1, 3, 256, 256],
     type: 'segmentation'
   },
   // Placeholder for inpainting model
   'inpaint-v1': {
-    url: '/models/inpaint-v1.onnx',
+    url: `${import.meta.env.BASE_URL}models/inpaint-v1.onnx`,
     dims: [1, 4, 512, 512], // image + mask
     type: 'inpaint'
   }
