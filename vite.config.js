@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   // Deploy at root for Vercel
-  const base = '/'
+  const base = './'
 
   return {
     plugins: [react()],
