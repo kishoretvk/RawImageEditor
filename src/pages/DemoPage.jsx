@@ -11,9 +11,9 @@ import Panel from '../components/ui/Panel.jsx';
 import { effectsRegistry, reduceComposition, getEffect } from '../utils/ai/effectsRegistry';
 
 const samples = [
-  { key: 'color', name: 'Color', before: '/demo-images/color-before.jpg', after: '/demo-images/color-after.jpg' },
-  { key: 'landscape', name: 'Landscape', before: '/demo-images/landscape-before.jpg', after: '/demo-images/landscape-after.jpg' },
-  { key: 'portrait', name: 'Portrait', before: '/demo-images/portrait-before.jpg', after: '/demo-images/portrait-after.jpg' },
+  { key: 'color', name: 'Color', before: 'demo-images/color-before.jpg', after: 'demo-images/color-after.jpg' },
+  { key: 'landscape', name: 'Landscape', before: 'demo-images/landscape-before.jpg', after: 'demo-images/landscape-after.jpg' },
+  { key: 'portrait', name: 'Portrait', before: 'demo-images/portrait-before.jpg', after: 'demo-images/portrait-after.jpg' },
 ];
 
 const DemoPage = () => {
@@ -104,8 +104,6 @@ const DemoPage = () => {
     }
   }, []);
 
-  // Ensure sample paths are correct for Vite dev server (public/ is served at root)
-  const withBase = (p) => p.startsWith('/demo-images') ? p : p;
 
   // Effect orchestration — incremental wiring
 
@@ -182,7 +180,7 @@ const DemoPage = () => {
     if (!fx) return;
 
     // Resolve image source for the effect
-    const imageSrc = uploaded?.url || withBase(selectedSample.after);
+    const imageSrc = uploaded?.url || selectedSample.after;
     try {
       const params = (layers.find((l) => l.type === key)?.params) || (fx.defaults || {});
       const res = await fx.run(imageSrc, params, helpers);
